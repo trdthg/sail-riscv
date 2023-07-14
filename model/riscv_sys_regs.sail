@@ -167,6 +167,9 @@ function have_privLevel(priv : priv_level) -> bool =
     0b11 => true,
   }
 
+/* Zacas extension support. */
+function haveZacas()  -> bool = true
+
 bitfield Mstatush : bits(32) = {
   MBE  : 5,
   SBE  : 4
