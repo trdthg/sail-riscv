@@ -21,20 +21,26 @@ mapping zicond_mnemonic : zicondop <-> string = {
 mapping clause assembly = ZICOND_RTYPE(rs2, rs1, rd, op)
   <-> zicond_mnemonic(op) ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
-function clause execute (ZICOND_RTYPE(rs2, rs1, rd, RISCV_CZERO_EQZ)) = {
+function clause execute ZICOND_RTYPE(rs2, rs1, rd, RISCV_CZERO_EQZ) = {
   let value = X(rs1);
   let condition = X(rs2);
-  let result : xlenbits = if condition == zeros() then zeros()
-						    else value;
+  let result : xlenbits = if condition == zeros() then {
+    zeros()
+  } else {
+    value
+  };
   X(rd) = result;
   RETIRE_SUCCESS
 }
 
-function clause execute (ZICOND_RTYPE(rs2, rs1, rd, RISCV_CZERO_NEZ)) = {
+function clause execute ZICOND_RTYPE(rs2, rs1, rd, RISCV_CZERO_NEZ) = {
   let value = X(rs1);
   let condition = X(rs2);
-  let result : xlenbits = if (condition != zeros()) then zeros()
-						    else value;
+  let result : xlenbits = if condition != zeros() then {
+    zeros()
+  } else {
+    value
+  };
   X(rd) = result;
   RETIRE_SUCCESS
 }

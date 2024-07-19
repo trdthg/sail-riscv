@@ -7,7 +7,6 @@
 /*=======================================================================================*/
 
 /* Mapping of csr addresses to their names. */
-
 val csr_name_map : csreg <-> string
 
 scattered mapping csr_name_map
@@ -16,18 +15,22 @@ scattered mapping csr_name_map
 mapping clause csr_name_map = 0x000  <-> "ustatus"
 mapping clause csr_name_map = 0x004  <-> "uie"
 mapping clause csr_name_map = 0x005  <-> "utvec"
+
 /* user trap handling */
 mapping clause csr_name_map = 0x040  <-> "uscratch"
 mapping clause csr_name_map = 0x041  <-> "uepc"
 mapping clause csr_name_map = 0x042  <-> "ucause"
 mapping clause csr_name_map = 0x043  <-> "utval"
 mapping clause csr_name_map = 0x044  <-> "uip"
+
 /* user floating-point context */
 mapping clause csr_name_map = 0x001  <-> "fflags"
 mapping clause csr_name_map = 0x002  <-> "frm"
 mapping clause csr_name_map = 0x003  <-> "fcsr"
+
 /* user entropy source */
 mapping clause csr_name_map = 0x015  <-> "seed"
+
 /* counter/timers */
 mapping clause csr_name_map = 0xC00  <-> "cycle"
 mapping clause csr_name_map = 0xC01  <-> "time"
@@ -35,6 +38,7 @@ mapping clause csr_name_map = 0xC02  <-> "instret"
 mapping clause csr_name_map = 0xC80  <-> "cycleh"
 mapping clause csr_name_map = 0xC81  <-> "timeh"
 mapping clause csr_name_map = 0xC82  <-> "instreth"
+
 /* TODO: other hpm counters */
 /* supervisor trap setup */
 mapping clause csr_name_map = 0x100  <-> "sstatus"
@@ -43,22 +47,27 @@ mapping clause csr_name_map = 0x103  <-> "sideleg"
 mapping clause csr_name_map = 0x104  <-> "sie"
 mapping clause csr_name_map = 0x105  <-> "stvec"
 mapping clause csr_name_map = 0x106  <-> "scounteren"
+
 /* supervisor trap handling */
 mapping clause csr_name_map = 0x140  <-> "sscratch"
 mapping clause csr_name_map = 0x141  <-> "sepc"
 mapping clause csr_name_map = 0x142  <-> "scause"
 mapping clause csr_name_map = 0x143  <-> "stval"
 mapping clause csr_name_map = 0x144  <-> "sip"
+
 /* supervisor protection and translation */
 mapping clause csr_name_map = 0x180  <-> "satp"
+
 /* supervisor envcfg */
 mapping clause csr_name_map = 0x10A  <-> "senvcfg"
+
 /* machine information registers */
 mapping clause csr_name_map = 0xF11  <-> "mvendorid"
 mapping clause csr_name_map = 0xF12  <-> "marchid"
 mapping clause csr_name_map = 0xF13  <-> "mimpid"
 mapping clause csr_name_map = 0xF14  <-> "mhartid"
 mapping clause csr_name_map = 0xF15  <-> "mconfigptr"
+
 /* machine trap setup */
 mapping clause csr_name_map = 0x300  <-> "mstatus"
 mapping clause csr_name_map = 0x301  <-> "misa"
@@ -68,14 +77,17 @@ mapping clause csr_name_map = 0x304  <-> "mie"
 mapping clause csr_name_map = 0x305  <-> "mtvec"
 mapping clause csr_name_map = 0x306  <-> "mcounteren"
 mapping clause csr_name_map = 0x320  <-> "mcountinhibit"
+
 /* machine envcfg */
 mapping clause csr_name_map = 0x30A  <-> "menvcfg"
+
 /* machine trap handling */
 mapping clause csr_name_map = 0x340  <-> "mscratch"
 mapping clause csr_name_map = 0x341  <-> "mepc"
 mapping clause csr_name_map = 0x342  <-> "mcause"
 mapping clause csr_name_map = 0x343  <-> "mtval"
 mapping clause csr_name_map = 0x344  <-> "mip"
+
 /* machine protection and translation */
 mapping clause csr_name_map = 0x3A0  <-> "pmpcfg0"
 mapping clause csr_name_map = 0x3A1  <-> "pmpcfg1"
@@ -157,17 +169,20 @@ mapping clause csr_name_map = 0x3EC  <-> "pmpaddr60"
 mapping clause csr_name_map = 0x3ED  <-> "pmpaddr61"
 mapping clause csr_name_map = 0x3EE  <-> "pmpaddr62"
 mapping clause csr_name_map = 0x3EF  <-> "pmpaddr63"
+
 /* machine counters/timers */
 mapping clause csr_name_map = 0xB00  <-> "mcycle"
 mapping clause csr_name_map = 0xB02  <-> "minstret"
 mapping clause csr_name_map = 0xB80  <-> "mcycleh"
 mapping clause csr_name_map = 0xB82  <-> "minstreth"
+
 /* TODO: other hpm counters and events */
 /* trigger/debug */
 mapping clause csr_name_map = 0x7a0  <-> "tselect"
 mapping clause csr_name_map = 0x7a1  <-> "tdata1"
 mapping clause csr_name_map = 0x7a2  <-> "tdata2"
 mapping clause csr_name_map = 0x7a3  <-> "tdata3"
+
 /* vector csrs */
 mapping clause csr_name_map = 0x008  <-> "vstart"
 mapping clause csr_name_map = 0x009  <-> "vxsat"
@@ -186,11 +201,9 @@ overload to_str = {csr_name}
  * The default implementation provides access to the CSRs added by the 'N'
  * extension.
  */
-
-
 /* returns whether a CSR exists
  */
-val ext_is_CSR_defined : (csreg) -> bool
+val ext_is_CSR_defined : csreg -> bool
 scattered function ext_is_CSR_defined
 
 /* returns the value of the CSR if it is defined */

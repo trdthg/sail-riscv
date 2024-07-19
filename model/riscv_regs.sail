@@ -7,24 +7,22 @@
 /*=======================================================================================*/
 
 /* program counter */
-
-register PC       : xlenbits
-register nextPC   : xlenbits
+register PC : xlenbits
+register nextPC : xlenbits
 
 /* internal state to hold instruction bits for faulting instructions */
 register instbits : xlenbits
 
 /* register file and accessors */
-
-register x1  : regtype
-register x2  : regtype
-register x3  : regtype
-register x4  : regtype
-register x5  : regtype
-register x6  : regtype
-register x7  : regtype
-register x8  : regtype
-register x9  : regtype
+register x1 : regtype
+register x2 : regtype
+register x3 : regtype
+register x4 : regtype
+register x5 : regtype
+register x6 : regtype
+register x7 : regtype
+register x8 : regtype
+register x9 : regtype
 register x10 : regtype
 register x11 : regtype
 register x12 : regtype
@@ -48,69 +46,71 @@ register x29 : regtype
 register x30 : regtype
 register x31 : regtype
 
-function rX (r : regno) -> xlenbits = {
-  let v : regtype =
-    match r {
-      0 => zero_reg,
-      1 => x1,
-      2 => x2,
-      3 => x3,
-      4 => x4,
-      5 => x5,
-      6 => x6,
-      7 => x7,
-      8 => x8,
-      9 => x9,
-      10 => x10,
-      11 => x11,
-      12 => x12,
-      13 => x13,
-      14 => x14,
-      15 => x15,
-      16 => x16,
-      17 => x17,
-      18 => x18,
-      19 => x19,
-      20 => x20,
-      21 => x21,
-      22 => x22,
-      23 => x23,
-      24 => x24,
-      25 => x25,
-      26 => x26,
-      27 => x27,
-      28 => x28,
-      29 => x29,
-      30 => x30,
-      31 => x31,
-      _  => {assert(false, "invalid register number"); zero_reg}
-    };
+function rX r : regno -> xlenbits = {
+  let v : regtype = match r {
+    0 => zero_reg,
+    1 => x1,
+    2 => x2,
+    3 => x3,
+    4 => x4,
+    5 => x5,
+    6 => x6,
+    7 => x7,
+    8 => x8,
+    9 => x9,
+    10 => x10,
+    11 => x11,
+    12 => x12,
+    13 => x13,
+    14 => x14,
+    15 => x15,
+    16 => x16,
+    17 => x17,
+    18 => x18,
+    19 => x19,
+    20 => x20,
+    21 => x21,
+    22 => x22,
+    23 => x23,
+    24 => x24,
+    25 => x25,
+    26 => x26,
+    27 => x27,
+    28 => x28,
+    29 => x29,
+    30 => x30,
+    31 => x31,
+    _ => {
+      assert(false, "invalid register number");
+      zero_reg
+    },
+  };
   regval_from_reg(v)
 }
 
 $ifdef RVFI_DII
-function rvfi_wX (r : regno, v : xlenbits) -> unit = {
+function rvfi_wX(r : regno, v : xlenbits) -> unit = {
   rvfi_int_data[rvfi_rd_wdata] = zero_extend(v);
-  rvfi_int_data[rvfi_rd_addr] = to_bits(8,r);
-  rvfi_int_data_present = true;
+  rvfi_int_data[rvfi_rd_addr] = to_bits(8, r);
+  rvfi_int_data_present = true
 }
 $else
-function rvfi_wX (r : regno, v : xlenbits) -> unit = ()
+function rvfi_wX(r : regno, v : xlenbits) -> unit = ()
 $endif
 
-function wX (r : regno, in_v : xlenbits) -> unit = {
+function wX(r : regno, in_v : xlenbits) -> unit = {
   let v = regval_into_reg(in_v);
   match r {
-    0  => (),
-    1  => x1 = v,
-    2  => x2 = v,
-    3  => x3 = v,
-    4  => x4 = v,
-    5  => x5 = v,
-    6  => x6 = v,
-    7  => x7 = v,
-    8  => x8 = v,
-    9  => x9 = v,
+    0 => (),
+    1 => x1 = v,
+    2 => x2 = v,
+    3 => x3 = v,
+    4 => x4 = v,
+    5 => x5 = v,
+    6 => x6 = v,
+    7 => x7 = v,
+    8 => x8 = v,
+    9 => x9 = v,
     10 => x10 = v,
     11 => x11 = v,
     12 => x12 = v,
@@ -133,25 +133,25 @@ function wX (r : regno, in_v : xlenbits) -> unit = {
     29 => x29 = v,
     30 => x30 = v,
     31 => x31 = v,
-    _  => assert(false, "invalid register number")
+    _ => assert(false, "invalid register number"),
   };
-  if (r != 0) then {
-     rvfi_wX(r, in_v);
-     if   get_config_print_reg()
-     then print_reg("x" ^ dec_str(r) ^ " <- " ^ RegStr(v));
+  if r != 0 then {
+    rvfi_wX(r, in_v);
+    if get_config_print_reg() then {
+      print_reg("x" ^ dec_str(r) ^ " <- " ^ RegStr(v))
+    }
   }
 }
 
-function rX_bits(i: regidx) -> xlenbits = rX(unsigned(i))
+function rX_bits i : regidx -> xlenbits = rX(unsigned(i))
 
-function wX_bits(i: regidx, data: xlenbits) -> unit = {
+function wX_bits(i : regidx, data : xlenbits) -> unit = {
   wX(unsigned(i)) = data
 }
 
 overload X = {rX_bits, wX_bits, rX, wX}
 
 /* mappings for assembly */
-
 val reg_name : regidx <-> string
 mapping reg_name = {
     0b00000 <-> "zero",
@@ -201,15 +201,15 @@ mapping creg_name : cregidx <-> string = {
 
 val init_base_regs : unit -> unit
 function init_base_regs () = {
-  x1  = zero_reg;
-  x2  = zero_reg;
-  x3  = zero_reg;
-  x4  = zero_reg;
-  x5  = zero_reg;
-  x6  = zero_reg;
-  x7  = zero_reg;
-  x8  = zero_reg;
-  x9  = zero_reg;
+  x1 = zero_reg;
+  x2 = zero_reg;
+  x3 = zero_reg;
+  x4 = zero_reg;
+  x5 = zero_reg;
+  x6 = zero_reg;
+  x7 = zero_reg;
+  x8 = zero_reg;
+  x9 = zero_reg;
   x10 = zero_reg;
   x11 = zero_reg;
   x12 = zero_reg;

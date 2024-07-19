@@ -23,7 +23,6 @@ function clause execute C_LBU(uimm, rdc, rs1c) = {
 }
 
 /* ****************************************************************** */
-
 union clause ast = C_LHU : (bits(2), cregidx, cregidx)
 
 mapping clause encdec_compressed =
@@ -41,7 +40,6 @@ function clause execute C_LHU(uimm, rdc, rs1c) = {
 }
 
 /* ****************************************************************** */
-
 union clause ast = C_LH : (bits(2), cregidx, cregidx)
 
 mapping clause encdec_compressed =
@@ -59,7 +57,6 @@ function clause execute C_LH(uimm, rdc, rs1c) = {
 }
 
 /* ****************************************************************** */
-
 union clause ast = C_SB : (bits(2), cregidx, cregidx)
 
 mapping clause encdec_compressed =
@@ -77,7 +74,6 @@ function clause execute C_SB(uimm, rs1c, rs2c) = {
 }
 
 /* ****************************************************************** */
-
 union clause ast = C_SH : (bits(2), cregidx, cregidx)
 
 mapping clause encdec_compressed =
@@ -95,7 +91,6 @@ function clause execute C_SH(uimm, rs1c, rs2c) = {
 }
 
 /* ****************************************************************** */
-
 union clause ast = C_ZEXT_B : (cregidx)
 
 mapping clause encdec_compressed =
@@ -112,7 +107,6 @@ function clause execute C_ZEXT_B(rsdc) = {
 }
 
 /* ****************************************************************** */
-
 union clause ast = C_SEXT_B : (cregidx)
 
 mapping clause encdec_compressed =
@@ -128,7 +122,6 @@ function clause execute C_SEXT_B(rsdc) = {
 }
 
 /* ****************************************************************** */
-
 union clause ast = C_ZEXT_H : (cregidx)
 
 mapping clause encdec_compressed =
@@ -144,7 +137,6 @@ function clause execute C_ZEXT_H(rsdc) = {
 }
 
 /* ****************************************************************** */
-
 union clause ast = C_SEXT_H : (cregidx)
 
 mapping clause encdec_compressed =
@@ -156,11 +148,10 @@ mapping clause assembly = C_SEXT_H(rsdc) <->
 
 function clause execute C_SEXT_H(rsdc) = {
   let rsd = creg2reg_idx(rsdc);
-  execute(ZBB_EXTOP(rsd, rsd,  RISCV_SEXTH))
+  execute(ZBB_EXTOP(rsd, rsd, RISCV_SEXTH))
 }
 
 /* ****************************************************************** */
-
 union clause ast = C_ZEXT_W : (cregidx)
 
 mapping clause encdec_compressed =
@@ -172,11 +163,10 @@ mapping clause assembly = C_ZEXT_W(rsdc) <->
 
 function clause execute C_ZEXT_W(rsdc) = {
   let rsd = creg2reg_idx(rsdc);
-  execute (ZBA_RTYPEUW(0b00000, rsd, rsd, RISCV_ADDUW)) // Note 0b00000 is the regidx of the zero register
+  execute(ZBA_RTYPEUW(0b00000, rsd, rsd, RISCV_ADDUW)) // Note 0b00000 is the regidx of the zero register
 }
 
 /* ****************************************************************** */
-
 union clause ast = C_NOT : (cregidx)
 
 mapping clause encdec_compressed =
@@ -193,7 +183,6 @@ function clause execute C_NOT(rsdc) = {
 }
 
 /* ****************************************************************** */
-
 union clause ast = C_MUL : (cregidx, cregidx)
 
 mapping clause encdec_compressed =

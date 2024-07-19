@@ -10,7 +10,6 @@
 /* This file implements part of the vector extension.                              */
 /* Chapter 6: Configuration-Setting Instructions                                   */
 /* ******************************************************************************* */
-
 mapping sew_flag : string <-> bits(3) = {
   "e8"    <-> 0b000,
   "e16"   <-> 0b001,
@@ -42,7 +41,7 @@ mapping maybe_ma_flag : string <-> bits(1) = {
 }
 
 val handle_illegal_vtype : unit -> unit
-function handle_illegal_vtype() = {
+function handle_illegal_vtype () = {
   /* Note: Implementations can set vill or trap if the vtype setting is not supported.
    * TODO: configuration support for both solutions
    */
@@ -57,9 +56,15 @@ function calculate_new_vl(AVL, VLMAX) = {
   /* Note: ceil(AVL / 2) ≤ vl ≤ VLMAX when VLMAX < AVL < (2 * VLMAX)
    * TODO: configuration support for either using ceil(AVL / 2) or VLMAX
    */
-  if AVL <= VLMAX then to_bits(sizeof(xlen), AVL)
-  else if AVL < 2 * VLMAX then to_bits(sizeof(xlen), (AVL + 1) / 2)
-  else to_bits(sizeof(xlen), VLMAX)
+  if AVL <= VLMAX then {
+    to_bits(sizeof(xlen), AVL)
+  } else {
+    if AVL < 2 * VLMAX then {
+      to_bits(sizeof(xlen), (AVL + 1) / 2)
+    } else {
+      to_bits(sizeof(xlen), VLMAX)
+    }
+  }
 }
 
 /* *********************************** vsetvli *********************************** */
@@ -69,35 +74,46 @@ mapping clause encdec = VSETVLI(ma, ta, sew, lmul, rs1, rd) if haveVExt()
   <-> 0b0000 @ ma @ ta @ sew @ lmul @ rs1 @ 0b111 @ rd @ 0b1010111 if haveVExt()
 
 function clause execute VSETVLI(ma, ta, sew, lmul, rs1, rd) = {
-  let LMUL_pow_ori  = get_lmul_pow();
-  let SEW_pow_ori   = get_sew_pow();
+  let LMUL_pow_ori = get_lmul_pow();
+  let SEW_pow_ori = get_sew_pow();
   let ratio_pow_ori = SEW_pow_ori - LMUL_pow_ori;
 
   /* set vtype */
   vtype.bits = 0b0 @ zeros(sizeof(xlen) - 9) @ ma @ ta @ sew @ lmul;
 
   /* check new SEW and LMUL are legal and calculate VLMAX */
-  let VLEN_pow     = get_vlen_pow();
-  let ELEN_pow     = get_elen_pow();
+  let VLEN_pow = get_vlen_pow();
+  let ELEN_pow = get_elen_pow();
   let LMUL_pow_new = get_lmul_pow();
-  let SEW_pow_new  = get_sew_pow();
-  if SEW_pow_new > (LMUL_pow_new + ELEN_pow) then { handle_illegal_vtype(); return RETIRE_SUCCESS };
+  let SEW_pow_new = get_sew_pow();
+  if SEW_pow_new > (LMUL_pow_new + ELEN_pow) then {
+    handle_illegal_vtype();
+    return RETIRE_SUCCESS
+  };
   let VLMAX = int_power(2, VLEN_pow + LMUL_pow_new - SEW_pow_new);
 
   /* set vl according to VLMAX and AVL */
-  if (rs1 != 0b00000) then { /* normal stripmining */
+  if rs1 != 0b00000 then {
+    /* normal stripmining */
     let rs1_val = X(rs1);
     let AVL = unsigned(rs1_val);
     vl = calculate_new_vl(AVL, VLMAX);
-    X(rd) = vl;
-  } else if (rd != 0b00000) then { /* set vl to VLMAX */
-    let AVL = unsigned(ones(sizeof(xlen)));
-    vl = to_bits(sizeof(xlen), VLMAX);
-    X(rd) = vl;
-  } else { /* keep existing vl */
-    let AVL = unsigned(vl);
-    let ratio_pow_new = SEW_pow_new - LMUL_pow_new;
-    if (ratio_pow_new != ratio_pow_ori) then { handle_illegal_vtype(); return RETIRE_SUCCESS }
+    X(rd) = vl
+  } else {
+    if rd != 0b00000 then {
+      /* set vl to VLMAX */
+      let AVL = unsigned(ones(sizeof(xlen)));
+      vl = to_bits(sizeof(xlen), VLMAX);
+      X(rd) = vl
+    } else {
+      /* keep existing vl */
+      let AVL = unsigned(vl);
+      let ratio_pow_new = SEW_pow_new - LMUL_pow_new;
+      if ratio_pow_new != ratio_pow_ori then {
+        handle_illegal_vtype();
+        return RETIRE_SUCCESS
+      }
+    }
   };
 
   /* reset vstart to 0 */
@@ -120,35 +136,46 @@ mapping clause encdec = VSETVL(rs2, rs1, rd) if haveVExt()
   <-> 0b1000000 @ rs2 @ rs1 @ 0b111 @ rd @ 0b1010111 if haveVExt()
 
 function clause execute VSETVL(rs2, rs1, rd) = {
-  let LMUL_pow_ori  = get_lmul_pow();
-  let SEW_pow_ori   = get_sew_pow();
+  let LMUL_pow_ori = get_lmul_pow();
+  let SEW_pow_ori = get_sew_pow();
   let ratio_pow_ori = SEW_pow_ori - LMUL_pow_ori;
 
   /* set vtype */
   vtype.bits = X(rs2);
 
   /* check new SEW and LMUL are legal and calculate VLMAX */
-  let VLEN_pow     = get_vlen_pow();
-  let ELEN_pow     = get_elen_pow();
+  let VLEN_pow = get_vlen_pow();
+  let ELEN_pow = get_elen_pow();
   let LMUL_pow_new = get_lmul_pow();
-  let SEW_pow_new  = get_sew_pow();
-  if SEW_pow_new > (LMUL_pow_new + ELEN_pow) then { handle_illegal_vtype(); return RETIRE_SUCCESS };
+  let SEW_pow_new = get_sew_pow();
+  if SEW_pow_new > (LMUL_pow_new + ELEN_pow) then {
+    handle_illegal_vtype();
+    return RETIRE_SUCCESS
+  };
   let VLMAX = int_power(2, VLEN_pow + LMUL_pow_new - SEW_pow_new);
 
   /* set vl according to VLMAX and AVL */
-  if (rs1 != 0b00000) then { /* normal stripmining */
+  if rs1 != 0b00000 then {
+    /* normal stripmining */
     let rs1_val = X(rs1);
     let AVL = unsigned(rs1_val);
     vl = calculate_new_vl(AVL, VLMAX);
-    X(rd) = vl;
-  } else if (rd != 0b00000) then { /* set vl to VLMAX */
-    let AVL = unsigned(ones(sizeof(xlen)));
-    vl = to_bits(sizeof(xlen), VLMAX);
-    X(rd) = vl;
-  } else { /* keep existing vl */
-    let AVL = unsigned(vl);
-    let ratio_pow_new = SEW_pow_new - LMUL_pow_new;
-    if (ratio_pow_new != ratio_pow_ori) then { handle_illegal_vtype(); return RETIRE_SUCCESS }
+    X(rd) = vl
+  } else {
+    if rd != 0b00000 then {
+      /* set vl to VLMAX */
+      let AVL = unsigned(ones(sizeof(xlen)));
+      vl = to_bits(sizeof(xlen), VLMAX);
+      X(rd) = vl
+    } else {
+      /* keep existing vl */
+      let AVL = unsigned(vl);
+      let ratio_pow_new = SEW_pow_new - LMUL_pow_new;
+      if ratio_pow_new != ratio_pow_ori then {
+        handle_illegal_vtype();
+        return RETIRE_SUCCESS
+      }
+    }
   };
 
   /* reset vstart to 0 */
@@ -175,11 +202,14 @@ function clause execute VSETIVLI(ma, ta, sew, lmul, uimm, rd) = {
   vtype.bits = 0b0 @ zeros(sizeof(xlen) - 9) @ ma @ ta @ sew @ lmul;
 
   /* check new SEW and LMUL are legal and calculate VLMAX */
-  let VLEN_pow     = get_vlen_pow();
-  let ELEN_pow     = get_elen_pow();
+  let VLEN_pow = get_vlen_pow();
+  let ELEN_pow = get_elen_pow();
   let LMUL_pow_new = get_lmul_pow();
-  let SEW_pow_new  = get_sew_pow();
-  if SEW_pow_new > (LMUL_pow_new + ELEN_pow) then { handle_illegal_vtype(); return RETIRE_SUCCESS };
+  let SEW_pow_new = get_sew_pow();
+  if SEW_pow_new > (LMUL_pow_new + ELEN_pow) then {
+    handle_illegal_vtype();
+    return RETIRE_SUCCESS
+  };
   let VLMAX = int_power(2, VLEN_pow + LMUL_pow_new - SEW_pow_new);
 
   /* set vl according to VLMAX and AVL */

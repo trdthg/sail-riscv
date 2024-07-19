@@ -10,7 +10,6 @@
  *
  * This includes decoding, execution, and assembly parsing and printing.
  */
-
 scattered union ast
 
 /* returns whether an instruction was retired, used for computing minstret */
