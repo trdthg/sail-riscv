@@ -11,7 +11,6 @@
 /* Chapter 13: Vector Floating-Point Instructions                                  */
 /* Chapter 16: Vector Permutation Instructions (floating-point part)               */
 /* ******************************************************************************* */
-
 /* ******************************* OPFVV (VVTYPE) ******************************** */
 union clause ast = FVVTYPE : (fvvfunct6, bits(1), regidx, regidx, regidx)
 
@@ -30,46 +29,59 @@ mapping encdec_fvvfunct6 : fvvfunct6 <-> bits(6) = {
 mapping clause encdec = FVVTYPE(funct6, vm, vs2, vs1, vd) if haveVExt()
   <-> encdec_fvvfunct6(funct6) @ vm @ vs2 @ vs1 @ 0b001 @ vd @ 0b1010111 if haveVExt()
 
-function clause execute(FVVTYPE(funct6, vm, vs2, vs1, vd)) = {
-  let rm_3b    = fcsr[FRM];
-  let SEW      = get_sew();
-  let LMUL_pow = get_lmul_pow();
-  let num_elem = get_num_elem(LMUL_pow, SEW);
+function clause execute FVVTYPE(funct6, vm, vs2, vs1, vd) = {
+    let rm_3b = fcsr[FRM];
+    let SEW = get_sew();
+    let LMUL_pow = get_lmul_pow();
+    let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_fp_normal(vd, vm, SEW, rm_3b) then { handle_illegal(); return RETIRE_FAIL };
-  assert(SEW != 8);
+    if illegal_fp_normal(vd, vm, SEW, rm_3b) then {
+        handle_illegal();
+        return RETIRE_FAIL
+    };
+    assert(SEW != 8);
 
-  let 'n = num_elem;
-  let 'm = SEW;
+    let (n as 'n) = num_elem;
+    let (m as 'm) = SEW;
 
-  let vm_val  : vector('n, dec, bool)     = read_vmask(num_elem, vm, 0b00000);
-  let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
-  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-  let vd_val  : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
-  result      : vector('n, dec, bits('m)) = undefined;
-  mask        : vector('n, dec, bool)     = undefined;
+    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
+    let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
+    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+    let vd_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
+    result : vector('n, dec, bits('m)) = undefined;
+    mask : vector('n, dec, bool) = undefined;
 
-  (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
+    (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
-  foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] then {
-      result[i] = match funct6 {
-        FVV_VADD     => fp_add(rm_3b, vs2_val[i], vs1_val[i]),
-        FVV_VSUB     => fp_sub(rm_3b, vs2_val[i], vs1_val[i]),
-        FVV_VMIN     => fp_min(vs2_val[i], vs1_val[i]),
-        FVV_VMAX     => fp_max(vs2_val[i], vs1_val[i]),
-        FVV_VMUL     => fp_mul(rm_3b, vs2_val[i], vs1_val[i]),
-        FVV_VDIV     => fp_div(rm_3b, vs2_val[i], vs1_val[i]),
-        FVV_VSGNJ    => [vs1_val[i]['m - 1]] @ vs2_val[i][('m - 2)..0],
-        FVV_VSGNJN   => (0b1 ^ [vs1_val[i]['m - 1]]) @ vs2_val[i][('m - 2)..0],
-        FVV_VSGNJX   => ([vs2_val[i]['m - 1]] ^ [vs1_val[i]['m - 1]]) @ vs2_val[i][('m - 2)..0]
-      }
-    }
-  };
+    foreach (i from 0 to (num_elem - 1)) {
+        if mask[
+            i
+        ] then {
+            result[
+                i
+            ] =
+                match funct6 {
+                    FVV_VADD => fp_add(rm_3b, vs2_val[i], vs1_val[i]),
+                    FVV_VSUB => fp_sub(rm_3b, vs2_val[i], vs1_val[i]),
+                    FVV_VMIN => fp_min(vs2_val[i], vs1_val[i]),
+                    FVV_VMAX => fp_max(vs2_val[i], vs1_val[i]),
+                    FVV_VMUL => fp_mul(rm_3b, vs2_val[i], vs1_val[i]),
+                    FVV_VDIV => fp_div(rm_3b, vs2_val[i], vs1_val[i]),
+                    FVV_VSGNJ => [vs1_val[i][sizeof('m) - 1]] @ vs2_val[i][(sizeof('m) - 2)..0],
+                    FVV_VSGNJN => (0b1 ^ [vs1_val[i][sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
+                    FVV_VSGNJX => ([vs2_val[i][sizeof('m) - 1]] ^ [vs1_val[i][sizeof('m) - 1]]) @
+                        vs2_val[
+                            i
+                        ][
+                            (sizeof('m) - 2)..0
+                        ],
+                }
+        }
+    };
 
-  write_vreg(num_elem, SEW, LMUL_pow, vd, result);
-  vstart = zeros();
-  RETIRE_SUCCESS
+    write_vreg(num_elem, SEW, LMUL_pow, vd, result);
+    vstart = zeros();
+    RETIRE_SUCCESS
 }
 
 mapping fvvtype_mnemonic : fvvfunct6 <-> string = {
@@ -105,45 +117,53 @@ mapping encdec_fvvmafunct6 : fvvmafunct6 <-> bits(6) = {
 mapping clause encdec = FVVMATYPE(funct6, vm, vs2, vs1, vd) if haveVExt()
   <-> encdec_fvvmafunct6(funct6) @ vm @ vs2 @ vs1 @ 0b001 @ vd @ 0b1010111 if haveVExt()
 
-function clause execute(FVVMATYPE(funct6, vm, vs2, vs1, vd)) = {
-  let rm_3b    = fcsr[FRM];
-  let SEW      = get_sew();
-  let LMUL_pow = get_lmul_pow();
-  let num_elem = get_num_elem(LMUL_pow, SEW);
+function clause execute FVVMATYPE(funct6, vm, vs2, vs1, vd) = {
+    let rm_3b = fcsr[FRM];
+    let SEW = get_sew();
+    let LMUL_pow = get_lmul_pow();
+    let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_fp_normal(vd, vm, SEW, rm_3b) then { handle_illegal(); return RETIRE_FAIL };
-  assert(SEW != 8);
+    if illegal_fp_normal(vd, vm, SEW, rm_3b) then {
+        handle_illegal();
+        return RETIRE_FAIL
+    };
+    assert(SEW != 8);
 
-  let 'n = num_elem;
-  let 'm = SEW;
+    let (n as 'n) = num_elem;
+    let (m as 'm) = SEW;
 
-  let vm_val  : vector('n, dec, bool)     = read_vmask(num_elem, vm, 0b00000);
-  let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
-  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-  let vd_val  : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
-  result      : vector('n, dec, bits('m)) = undefined;
-  mask        : vector('n, dec, bool)     = undefined;
+    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
+    let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
+    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+    let vd_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
+    result : vector('n, dec, bits('m)) = undefined;
+    mask : vector('n, dec, bool) = undefined;
 
-  (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
+    (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
-  foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] then {
-      result[i] = match funct6 {
-        FVV_VMACC    => fp_muladd(rm_3b, vs1_val[i], vs2_val[i], vd_val[i]),
-        FVV_VNMACC   => fp_nmulsub(rm_3b, vs1_val[i], vs2_val[i], vd_val[i]),
-        FVV_VMSAC    => fp_mulsub(rm_3b, vs1_val[i], vs2_val[i], vd_val[i]),
-        FVV_VNMSAC   => fp_nmuladd(rm_3b, vs1_val[i], vs2_val[i], vd_val[i]),
-        FVV_VMADD    => fp_muladd(rm_3b, vs1_val[i], vd_val[i], vs2_val[i]),
-        FVV_VNMADD   => fp_nmulsub(rm_3b, vs1_val[i], vd_val[i], vs2_val[i]),
-        FVV_VMSUB    => fp_mulsub(rm_3b, vs1_val[i], vd_val[i], vs2_val[i]),
-        FVV_VNMSUB   => fp_nmuladd(rm_3b, vs1_val[i], vd_val[i], vs2_val[i])
-      }
-    }
-  };
+    foreach (i from 0 to (num_elem - 1)) {
+        if mask[
+            i
+        ] then {
+            result[
+                i
+            ] =
+                match funct6 {
+                    FVV_VMACC => fp_muladd(rm_3b, vs1_val[i], vs2_val[i], vd_val[i]),
+                    FVV_VNMACC => fp_nmulsub(rm_3b, vs1_val[i], vs2_val[i], vd_val[i]),
+                    FVV_VMSAC => fp_mulsub(rm_3b, vs1_val[i], vs2_val[i], vd_val[i]),
+                    FVV_VNMSAC => fp_nmuladd(rm_3b, vs1_val[i], vs2_val[i], vd_val[i]),
+                    FVV_VMADD => fp_muladd(rm_3b, vs1_val[i], vd_val[i], vs2_val[i]),
+                    FVV_VNMADD => fp_nmulsub(rm_3b, vs1_val[i], vd_val[i], vs2_val[i]),
+                    FVV_VMSUB => fp_mulsub(rm_3b, vs1_val[i], vd_val[i], vs2_val[i]),
+                    FVV_VNMSUB => fp_nmuladd(rm_3b, vs1_val[i], vd_val[i], vs2_val[i]),
+                }
+        }
+    };
 
-  write_vreg(num_elem, SEW, LMUL_pow, vd, result);
-  vstart = zeros();
-  RETIRE_SUCCESS
+    write_vreg(num_elem, SEW, LMUL_pow, vd, result);
+    vstart = zeros();
+    RETIRE_SUCCESS
 }
 
 mapping fvvmatype_mnemonic : fvvmafunct6 <-> string = {
@@ -172,46 +192,53 @@ mapping encdec_fwvvfunct6 : fwvvfunct6 <-> bits(6) = {
 mapping clause encdec = FWVVTYPE(funct6, vm, vs2, vs1, vd) if haveVExt()
   <-> encdec_fwvvfunct6(funct6) @ vm @ vs2 @ vs1 @ 0b001 @ vd @ 0b1010111 if haveVExt()
 
-function clause execute(FWVVTYPE(funct6, vm, vs2, vs1, vd)) = {
-  let rm_3b    = fcsr[FRM];
-  let SEW      = get_sew();
-  let LMUL_pow = get_lmul_pow();
-  let num_elem = get_num_elem(LMUL_pow, SEW);
-  let SEW_widen      = SEW * 2;
-  let LMUL_pow_widen = LMUL_pow + 1;
+function clause execute FWVVTYPE(funct6, vm, vs2, vs1, vd) = {
+    let rm_3b = fcsr[FRM];
+    let SEW = get_sew();
+    let LMUL_pow = get_lmul_pow();
+    let num_elem = get_num_elem(LMUL_pow, SEW);
+    let SEW_widen = SEW * 2;
+    let LMUL_pow_widen = LMUL_pow + 1;
 
-  if  illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
-      not(valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen)) |
-      not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen))
-  then { handle_illegal(); return RETIRE_FAIL };
-  assert(SEW >= 16 & SEW_widen <= 64);
+    if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) | not(
+        valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen),
+    ) | not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen)) then {
+        handle_illegal();
+        return RETIRE_FAIL
+    };
+    assert(SEW >= 16 & SEW_widen <= 64);
 
-  let 'n = num_elem;
-  let 'm = SEW;
-  let 'o = SEW_widen;
+    let (n as 'n) = num_elem;
+    let (m as 'm) = SEW;
+    let (o as 'o) = SEW_widen;
 
-  let vm_val  : vector('n, dec, bool)     = read_vmask(num_elem, vm, 0b00000);
-  let vd_val  : vector('n, dec, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd);
-  let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
-  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-  result      : vector('n, dec, bits('o)) = undefined;
-  mask        : vector('n, dec, bool)     = undefined;
+    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
+    let vd_val : vector('n, dec, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd);
+    let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
+    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+    result : vector('n, dec, bits('o)) = undefined;
+    mask : vector('n, dec, bool) = undefined;
 
-  (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
+    (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
 
-  foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] then {
-      result[i] = match funct6 {
-        FWVV_VADD    => fp_add(rm_3b, fp_widen(vs2_val[i]), fp_widen(vs1_val[i])),
-        FWVV_VSUB    => fp_sub(rm_3b, fp_widen(vs2_val[i]), fp_widen(vs1_val[i])),
-        FWVV_VMUL    => fp_mul(rm_3b, fp_widen(vs2_val[i]), fp_widen(vs1_val[i]))
-      }
-    }
-  };
+    foreach (i from 0 to (num_elem - 1)) {
+        if mask[
+            i
+        ] then {
+            result[
+                i
+            ] =
+                match funct6 {
+                    FWVV_VADD => fp_add(rm_3b, fp_widen(vs2_val[i]), fp_widen(vs1_val[i])),
+                    FWVV_VSUB => fp_sub(rm_3b, fp_widen(vs2_val[i]), fp_widen(vs1_val[i])),
+                    FWVV_VMUL => fp_mul(rm_3b, fp_widen(vs2_val[i]), fp_widen(vs1_val[i])),
+                }
+        }
+    };
 
-  write_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd, result);
-  vstart = zeros();
-  RETIRE_SUCCESS
+    write_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd, result);
+    vstart = zeros();
+    RETIRE_SUCCESS
 }
 
 mapping fwvvtype_mnemonic : fwvvfunct6 <-> string = {
@@ -237,47 +264,54 @@ mapping encdec_fwvvmafunct6 : fwvvmafunct6 <-> bits(6) = {
 mapping clause encdec = FWVVMATYPE(funct6, vm, vs1, vs2, vd) if haveVExt()
   <-> encdec_fwvvmafunct6(funct6) @ vm @ vs1 @ vs2 @ 0b001 @ vd @ 0b1010111 if haveVExt()
 
-function clause execute(FWVVMATYPE(funct6, vm, vs1, vs2, vd)) = {
-  let rm_3b    = fcsr[FRM];
-  let SEW      = get_sew();
-  let LMUL_pow = get_lmul_pow();
-  let num_elem = get_num_elem(LMUL_pow, SEW);
-  let SEW_widen      = SEW * 2;
-  let LMUL_pow_widen = LMUL_pow + 1;
+function clause execute FWVVMATYPE(funct6, vm, vs1, vs2, vd) = {
+    let rm_3b = fcsr[FRM];
+    let SEW = get_sew();
+    let LMUL_pow = get_lmul_pow();
+    let num_elem = get_num_elem(LMUL_pow, SEW);
+    let SEW_widen = SEW * 2;
+    let LMUL_pow_widen = LMUL_pow + 1;
 
-  if  illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
-      not(valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen)) |
-      not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen))
-  then { handle_illegal(); return RETIRE_FAIL };
-  assert(SEW >= 16 & SEW_widen <= 64);
+    if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) | not(
+        valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen),
+    ) | not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen)) then {
+        handle_illegal();
+        return RETIRE_FAIL
+    };
+    assert(SEW >= 16 & SEW_widen <= 64);
 
-  let 'n = num_elem;
-  let 'm = SEW;
-  let 'o = SEW_widen;
+    let (n as 'n) = num_elem;
+    let (m as 'm) = SEW;
+    let (o as 'o) = SEW_widen;
 
-  let vm_val  : vector('n, dec, bool)     = read_vmask(num_elem, vm, 0b00000);
-  let vd_val  : vector('n, dec, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd);
-  let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
-  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-  result      : vector('n, dec, bits('o)) = undefined;
-  mask        : vector('n, dec, bool)     = undefined;
+    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
+    let vd_val : vector('n, dec, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd);
+    let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
+    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+    result : vector('n, dec, bits('o)) = undefined;
+    mask : vector('n, dec, bool) = undefined;
 
-  (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
+    (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
 
-  foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] then {
-      result[i] = match funct6 {
-        FWVV_VMACC   => fp_muladd(rm_3b, fp_widen(vs1_val[i]), fp_widen(vs2_val[i]), vd_val[i]),
-        FWVV_VNMACC  => fp_nmulsub(rm_3b, fp_widen(vs1_val[i]), fp_widen(vs2_val[i]), vd_val[i]),
-        FWVV_VMSAC   => fp_mulsub(rm_3b, fp_widen(vs1_val[i]), fp_widen(vs2_val[i]), vd_val[i]),
-        FWVV_VNMSAC  => fp_nmuladd(rm_3b, fp_widen(vs1_val[i]), fp_widen(vs2_val[i]), vd_val[i])
-      }
-    }
-  };
+    foreach (i from 0 to (num_elem - 1)) {
+        if mask[
+            i
+        ] then {
+            result[
+                i
+            ] =
+                match funct6 {
+                    FWVV_VMACC => fp_muladd(rm_3b, fp_widen(vs1_val[i]), fp_widen(vs2_val[i]), vd_val[i]),
+                    FWVV_VNMACC => fp_nmulsub(rm_3b, fp_widen(vs1_val[i]), fp_widen(vs2_val[i]), vd_val[i]),
+                    FWVV_VMSAC => fp_mulsub(rm_3b, fp_widen(vs1_val[i]), fp_widen(vs2_val[i]), vd_val[i]),
+                    FWVV_VNMSAC => fp_nmuladd(rm_3b, fp_widen(vs1_val[i]), fp_widen(vs2_val[i]), vd_val[i]),
+                }
+        }
+    };
 
-  write_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd, result);
-  vstart = zeros();
-  RETIRE_SUCCESS
+    write_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd, result);
+    vstart = zeros();
+    RETIRE_SUCCESS
 }
 
 mapping fwvvmatype_mnemonic : fwvvmafunct6 <-> string = {
@@ -301,44 +335,51 @@ mapping encdec_fwvfunct6 : fwvfunct6 <-> bits(6) = {
 mapping clause encdec = FWVTYPE(funct6, vm, vs2, vs1, vd) if haveVExt()
   <-> encdec_fwvfunct6(funct6) @ vm @ vs2 @ vs1 @ 0b001 @ vd @ 0b1010111 if haveVExt()
 
-function clause execute(FWVTYPE(funct6, vm, vs2, vs1, vd)) = {
-  let rm_3b    = fcsr[FRM];
-  let SEW      = get_sew();
-  let LMUL_pow = get_lmul_pow();
-  let num_elem = get_num_elem(LMUL_pow, SEW);
-  let SEW_widen      = SEW * 2;
-  let LMUL_pow_widen = LMUL_pow + 1;
+function clause execute FWVTYPE(funct6, vm, vs2, vs1, vd) = {
+    let rm_3b = fcsr[FRM];
+    let SEW = get_sew();
+    let LMUL_pow = get_lmul_pow();
+    let num_elem = get_num_elem(LMUL_pow, SEW);
+    let SEW_widen = SEW * 2;
+    let LMUL_pow_widen = LMUL_pow + 1;
 
-  if  illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
-      not(valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen))
-  then { handle_illegal(); return RETIRE_FAIL };
-  assert(SEW >= 16 & SEW_widen <= 64);
+    if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
+        not(valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen)) then {
+        handle_illegal();
+        return RETIRE_FAIL
+    };
+    assert(SEW >= 16 & SEW_widen <= 64);
 
-  let 'n = num_elem;
-  let 'm = SEW;
-  let 'o = SEW_widen;
+    let (n as 'n) = num_elem;
+    let (m as 'm) = SEW;
+    let (o as 'o) = SEW_widen;
 
-  let vm_val  : vector('n, dec, bool)     = read_vmask(num_elem, vm, 0b00000);
-  let vd_val  : vector('n, dec, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd);
-  let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
-  let vs2_val : vector('n, dec, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vs2);
-  result      : vector('n, dec, bits('o)) = undefined;
-  mask        : vector('n, dec, bool)     = undefined;
+    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
+    let vd_val : vector('n, dec, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd);
+    let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
+    let vs2_val : vector('n, dec, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vs2);
+    result : vector('n, dec, bits('o)) = undefined;
+    mask : vector('n, dec, bool) = undefined;
 
-  (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
+    (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
 
-  foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] then {
-      result[i] = match funct6 {
-        FWV_VADD     => fp_add(rm_3b, vs2_val[i], fp_widen(vs1_val[i])),
-        FWV_VSUB     => fp_sub(rm_3b, vs2_val[i], fp_widen(vs1_val[i]))
-      }
-    }
-  };
+    foreach (i from 0 to (num_elem - 1)) {
+        if mask[
+            i
+        ] then {
+            result[
+                i
+            ] =
+                match funct6 {
+                    FWV_VADD => fp_add(rm_3b, vs2_val[i], fp_widen(vs1_val[i])),
+                    FWV_VSUB => fp_sub(rm_3b, vs2_val[i], fp_widen(vs1_val[i])),
+                }
+        }
+    };
 
-  write_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd, result);
-  vstart = zeros();
-  RETIRE_SUCCESS
+    write_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd, result);
+    vstart = zeros();
+    RETIRE_SUCCESS
 }
 
 mapping fwvtype_mnemonic : fwvfunct6 <-> string = {
@@ -364,90 +405,98 @@ mapping encdec_vfunary0_vs1 : vfunary0 <-> bits(5) = {
 mapping clause encdec = VFUNARY0(vm, vs2, vfunary0, vd) if haveVExt()
   <-> 0b010010 @ vm @ vs2 @ encdec_vfunary0_vs1(vfunary0) @ 0b001 @ vd @ 0b1010111 if haveVExt()
 
-function clause execute(VFUNARY0(vm, vs2, vfunary0, vd)) = {
-  let rm_3b    = fcsr[FRM];
-  let SEW      = get_sew();
-  let LMUL_pow = get_lmul_pow();
-  let num_elem = get_num_elem(LMUL_pow, SEW);
+function clause execute VFUNARY0(vm, vs2, vfunary0, vd) = {
+    let rm_3b = fcsr[FRM];
+    let SEW = get_sew();
+    let LMUL_pow = get_lmul_pow();
+    let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_fp_normal(vd, vm, SEW, rm_3b) then { handle_illegal(); return RETIRE_FAIL };
-  assert(SEW != 8);
+    if illegal_fp_normal(vd, vm, SEW, rm_3b) then {
+        handle_illegal();
+        return RETIRE_FAIL
+    };
+    assert(SEW != 8);
 
-  let 'n = num_elem;
-  let 'm = SEW;
+    let (n as 'n) = num_elem;
+    let (m as 'm) = SEW;
 
-  let vm_val  : vector('n, dec, bool)     = read_vmask(num_elem, vm, 0b00000);
-  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-  let vd_val  : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
-  result      : vector('n, dec, bits('m)) = undefined;
-  mask        : vector('n, dec, bool)     = undefined;
+    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
+    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+    let vd_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
+    result : vector('n, dec, bits('m)) = undefined;
+    mask : vector('n, dec, bool) = undefined;
 
-  (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
+    (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
-  foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] then {
-      result[i] = match vfunary0 {
-        FV_CVT_XU_F      => {
-                              let (fflags, elem) : (bits_fflags, bits('m)) = match 'm {
-                                16 => riscv_f16ToUi16(rm_3b, vs2_val[i]),
-                                32 => riscv_f32ToUi32(rm_3b, vs2_val[i]),
-                                64 => riscv_f64ToUi64(rm_3b, vs2_val[i])
-                              };
-                              accrue_fflags(fflags);
-                              elem
-                            },
-        FV_CVT_X_F       => {
-                              let (fflags, elem) : (bits_fflags, bits('m)) = match 'm {
-                                16 => riscv_f16ToI16(rm_3b, vs2_val[i]),
-                                32 => riscv_f32ToI32(rm_3b, vs2_val[i]),
-                                64 => riscv_f64ToI64(rm_3b, vs2_val[i])
-                              };
-                              accrue_fflags(fflags);
-                              elem
-                            },
-        FV_CVT_F_XU      => {
-                              let (fflags, elem) : (bits_fflags, bits('m)) = match 'm {
-                                16 => riscv_ui32ToF16(rm_3b, zero_extend(vs2_val[i])),
-                                32 => riscv_ui32ToF32(rm_3b, vs2_val[i]),
-                                64 => riscv_ui64ToF64(rm_3b, vs2_val[i])
-                              };
-                              accrue_fflags(fflags);
-                              elem
-                            },
-        FV_CVT_F_X       => {
-                              let (fflags, elem) : (bits_fflags, bits('m)) = match 'm {
-                                16 => riscv_i32ToF16(rm_3b, sign_extend(vs2_val[i])),
-                                32 => riscv_i32ToF32(rm_3b, vs2_val[i]),
-                                64 => riscv_i64ToF64(rm_3b, vs2_val[i])
-                              };
-                              accrue_fflags(fflags);
-                              elem
-                            },
-        FV_CVT_RTZ_XU_F  => {
-                              let (fflags, elem) : (bits_fflags, bits('m)) = match 'm {
-                                16 => riscv_f16ToUi16(0b001, vs2_val[i]),
-                                32 => riscv_f32ToUi32(0b001, vs2_val[i]),
-                                64 => riscv_f64ToUi64(0b001, vs2_val[i])
-                              };
-                              accrue_fflags(fflags);
-                              elem
-                            },
-        FV_CVT_RTZ_X_F   => {
-                              let (fflags, elem) : (bits_fflags, bits('m)) = match 'm {
-                                16 => riscv_f16ToI16(0b001, vs2_val[i]),
-                                32 => riscv_f32ToI32(0b001, vs2_val[i]),
-                                64 => riscv_f64ToI64(0b001, vs2_val[i])
-                              };
-                              accrue_fflags(fflags);
-                              elem
-                            }
-      }
-    }
-  };
+    foreach (i from 0 to (num_elem - 1)) {
+        if mask[
+            i
+        ] then {
+            result[
+                i
+            ] =
+                match vfunary0 {
+                    FV_CVT_XU_F => {
+                        let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+                            16 => riscv_f16ToUi16(rm_3b, vs2_val[i]),
+                            32 => riscv_f32ToUi32(rm_3b, vs2_val[i]),
+                            64 => riscv_f64ToUi64(rm_3b, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                    FV_CVT_X_F => {
+                        let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+                            16 => riscv_f16ToI16(rm_3b, vs2_val[i]),
+                            32 => riscv_f32ToI32(rm_3b, vs2_val[i]),
+                            64 => riscv_f64ToI64(rm_3b, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                    FV_CVT_F_XU => {
+                        let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+                            16 => riscv_ui32ToF16(rm_3b, zero_extend(vs2_val[i])),
+                            32 => riscv_ui32ToF32(rm_3b, vs2_val[i]),
+                            64 => riscv_ui64ToF64(rm_3b, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                    FV_CVT_F_X => {
+                        let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+                            16 => riscv_i32ToF16(rm_3b, sign_extend(vs2_val[i])),
+                            32 => riscv_i32ToF32(rm_3b, vs2_val[i]),
+                            64 => riscv_i64ToF64(rm_3b, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                    FV_CVT_RTZ_XU_F => {
+                        let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+                            16 => riscv_f16ToUi16(0b001, vs2_val[i]),
+                            32 => riscv_f32ToUi32(0b001, vs2_val[i]),
+                            64 => riscv_f64ToUi64(0b001, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                    FV_CVT_RTZ_X_F => {
+                        let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+                            16 => riscv_f16ToI16(0b001, vs2_val[i]),
+                            32 => riscv_f32ToI32(0b001, vs2_val[i]),
+                            64 => riscv_f64ToI64(0b001, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                }
+        }
+    };
 
-  write_vreg(num_elem, SEW, LMUL_pow, vd, result);
-  vstart = zeros();
-  RETIRE_SUCCESS
+    write_vreg(num_elem, SEW, LMUL_pow, vd, result);
+    vstart = zeros();
+    RETIRE_SUCCESS
 }
 
 mapping vfunary0_mnemonic : vfunary0 <-> string = {
@@ -478,104 +527,126 @@ mapping encdec_vfwunary0_vs1 : vfwunary0 <-> bits(5) = {
 mapping clause encdec = VFWUNARY0(vm, vs2, vfwunary0, vd) if haveVExt()
   <-> 0b010010 @ vm @ vs2 @ encdec_vfwunary0_vs1(vfwunary0) @ 0b001 @ vd @ 0b1010111 if haveVExt()
 
-function clause execute(VFWUNARY0(vm, vs2, vfwunary0, vd)) = {
-  let rm_3b    = fcsr[FRM];
-  let SEW      = get_sew();
-  let LMUL_pow = get_lmul_pow();
-  let num_elem = get_num_elem(LMUL_pow, SEW);
-  let SEW_widen      = SEW * 2;
-  let LMUL_pow_widen = LMUL_pow + 1;
+function clause execute VFWUNARY0(vm, vs2, vfwunary0, vd) = {
+    let rm_3b = fcsr[FRM];
+    let SEW = get_sew();
+    let LMUL_pow = get_lmul_pow();
+    let num_elem = get_num_elem(LMUL_pow, SEW);
+    let SEW_widen = SEW * 2;
+    let LMUL_pow_widen = LMUL_pow + 1;
 
-  if  illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
-      not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen))
-  then { handle_illegal(); return RETIRE_FAIL };
-  assert(SEW >= 8 & SEW_widen <= 64);
+    if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
+        not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen)) then {
+        handle_illegal();
+        return RETIRE_FAIL
+    };
+    assert(SEW >= 8 & SEW_widen <= 64);
 
-  let 'n = num_elem;
-  let 'm = SEW;
-  let 'o = SEW_widen;
+    let (n as 'n) = num_elem;
+    let (m as 'm) = SEW;
+    let (o as 'o) = SEW_widen;
 
-  let vm_val  : vector('n, dec, bool)     = read_vmask(num_elem, vm, 0b00000);
-  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-  let vd_val  : vector('n, dec, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd);
-  result      : vector('n, dec, bits('o)) = undefined;
-  mask        : vector('n, dec, bool)     = undefined;
+    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
+    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+    let vd_val : vector('n, dec, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd);
+    result : vector('n, dec, bits('o)) = undefined;
+    mask : vector('n, dec, bool) = undefined;
 
-  (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
+    (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
 
-  foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] then {
-      result[i] = match vfwunary0 {
-        FWV_CVT_XU_F     => {
-                              let (fflags, elem) : (bits_fflags, bits('o)) = match 'm {
-                                8  => { handle_illegal(); return RETIRE_FAIL },
-                                16 => riscv_f16ToUi32(rm_3b, vs2_val[i]),
-                                32 => riscv_f32ToUi64(rm_3b, vs2_val[i])
-                              };
-                              accrue_fflags(fflags);
-                              elem
+    foreach (i from 0 to (num_elem - 1)) {
+        if mask[
+            i
+        ] then {
+            result[
+                i
+            ] =
+                match vfwunary0 {
+                    FWV_CVT_XU_F => {
+                        let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
+                            8 => {
+                                handle_illegal();
+                                return RETIRE_FAIL
                             },
-        FWV_CVT_X_F      => {
-                              let (fflags, elem) : (bits_fflags, bits('o)) = match 'm {
-                                8  => { handle_illegal(); return RETIRE_FAIL },
-                                16 => riscv_f16ToI32(rm_3b, vs2_val[i]),
-                                32 => riscv_f32ToI64(rm_3b, vs2_val[i])
-                              };
-                              accrue_fflags(fflags);
-                              elem
+                            16 => riscv_f16ToUi32(rm_3b, vs2_val[i]),
+                            32 => riscv_f32ToUi64(rm_3b, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                    FWV_CVT_X_F => {
+                        let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
+                            8 => {
+                                handle_illegal();
+                                return RETIRE_FAIL
                             },
-        FWV_CVT_F_XU     => {
-                              let (fflags, elem) : (bits_fflags, bits('o)) = match 'm {
-                                8  => riscv_ui32ToF16(rm_3b, zero_extend(vs2_val[i])),
-                                16 => riscv_ui32ToF32(rm_3b, zero_extend(vs2_val[i])),
-                                32 => riscv_ui32ToF64(rm_3b, vs2_val[i])
-                              };
-                              accrue_fflags(fflags);
-                              elem
+                            16 => riscv_f16ToI32(rm_3b, vs2_val[i]),
+                            32 => riscv_f32ToI64(rm_3b, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                    FWV_CVT_F_XU => {
+                        let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
+                            8 => riscv_ui32ToF16(rm_3b, zero_extend(vs2_val[i])),
+                            16 => riscv_ui32ToF32(rm_3b, zero_extend(vs2_val[i])),
+                            32 => riscv_ui32ToF64(rm_3b, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                    FWV_CVT_F_X => {
+                        let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
+                            8 => riscv_i32ToF16(rm_3b, sign_extend(vs2_val[i])),
+                            16 => riscv_i32ToF32(rm_3b, sign_extend(vs2_val[i])),
+                            32 => riscv_i32ToF64(rm_3b, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                    FWV_CVT_F_F => {
+                        let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
+                            8 => {
+                                handle_illegal();
+                                return RETIRE_FAIL
                             },
-        FWV_CVT_F_X      => {
-                              let (fflags, elem) : (bits_fflags, bits('o)) = match 'm {
-                                8  => riscv_i32ToF16(rm_3b, sign_extend(vs2_val[i])),
-                                16 => riscv_i32ToF32(rm_3b, sign_extend(vs2_val[i])),
-                                32 => riscv_i32ToF64(rm_3b, vs2_val[i])
-                              };
-                              accrue_fflags(fflags);
-                              elem
+                            16 => riscv_f16ToF32(rm_3b, vs2_val[i]),
+                            32 => riscv_f32ToF64(rm_3b, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                    FWV_CVT_RTZ_XU_F => {
+                        let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
+                            8 => {
+                                handle_illegal();
+                                return RETIRE_FAIL
                             },
-        FWV_CVT_F_F      => {
-                              let (fflags, elem) : (bits_fflags, bits('o)) = match 'm {
-                                8  => { handle_illegal(); return RETIRE_FAIL },
-                                16 => riscv_f16ToF32(rm_3b, vs2_val[i]),
-                                32 => riscv_f32ToF64(rm_3b, vs2_val[i])
-                              };
-                              accrue_fflags(fflags);
-                              elem
+                            16 => riscv_f16ToUi32(0b001, vs2_val[i]),
+                            32 => riscv_f32ToUi64(0b001, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                    FWV_CVT_RTZ_X_F => {
+                        let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
+                            8 => {
+                                handle_illegal();
+                                return RETIRE_FAIL
                             },
-        FWV_CVT_RTZ_XU_F => {
-                              let (fflags, elem) : (bits_fflags, bits('o)) = match 'm {
-                                8  => { handle_illegal(); return RETIRE_FAIL },
-                                16 => riscv_f16ToUi32(0b001, vs2_val[i]),
-                                32 => riscv_f32ToUi64(0b001, vs2_val[i])
-                              };
-                              accrue_fflags(fflags);
-                              elem
-                            },
-        FWV_CVT_RTZ_X_F  => {
-                              let (fflags, elem) : (bits_fflags, bits('o)) = match 'm {
-                                8  => { handle_illegal(); return RETIRE_FAIL },
-                                16 => riscv_f16ToI32(0b001, vs2_val[i]),
-                                32 => riscv_f32ToI64(0b001, vs2_val[i])
-                              };
-                              accrue_fflags(fflags);
-                              elem
-                            }
-      }
-    }
-  };
+                            16 => riscv_f16ToI32(0b001, vs2_val[i]),
+                            32 => riscv_f32ToI64(0b001, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                }
+        }
+    };
 
-  write_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd, result);
-  vstart = zeros();
-  RETIRE_SUCCESS
+    write_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd, result);
+    vstart = zeros();
+    RETIRE_SUCCESS
 }
 
 mapping vfwunary0_mnemonic : vfwunary0 <-> string = {
@@ -608,113 +679,132 @@ mapping encdec_vfnunary0_vs1 : vfnunary0 <-> bits(5) = {
 mapping clause encdec = VFNUNARY0(vm, vs2, vfnunary0, vd) if haveVExt()
   <-> 0b010010 @ vm @ vs2 @ encdec_vfnunary0_vs1(vfnunary0) @ 0b001 @ vd @ 0b1010111 if haveVExt()
 
-function clause execute(VFNUNARY0(vm, vs2, vfnunary0, vd)) = {
-  let rm_3b    = fcsr[FRM];
-  let SEW      = get_sew();
-  let LMUL_pow = get_lmul_pow();
-  let num_elem = get_num_elem(LMUL_pow, SEW);
-  let SEW_widen      = SEW * 2;
-  let LMUL_pow_widen = LMUL_pow + 1;
+function clause execute VFNUNARY0(vm, vs2, vfnunary0, vd) = {
+    let rm_3b = fcsr[FRM];
+    let SEW = get_sew();
+    let LMUL_pow = get_lmul_pow();
+    let num_elem = get_num_elem(LMUL_pow, SEW);
+    let SEW_widen = SEW * 2;
+    let LMUL_pow_widen = LMUL_pow + 1;
 
-  if  illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
-      not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
-  then { handle_illegal(); return RETIRE_FAIL };
-  assert(SEW != 64);
+    if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
+        not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow)) then {
+        handle_illegal();
+        return RETIRE_FAIL
+    };
+    assert(SEW != 64);
 
-  let 'n = num_elem;
-  let 'm = SEW;
-  let 'o = SEW_widen;
+    let (n as 'n) = num_elem;
+    let (m as 'm) = SEW;
+    let (o as 'o) = SEW_widen;
 
-  let vm_val  : vector('n, dec, bool)     = read_vmask(num_elem, vm, 0b00000);
-  let vs2_val : vector('n, dec, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vs2);
-  let vd_val  : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
-  result      : vector('n, dec, bits('m)) = undefined;
-  mask        : vector('n, dec, bool)     = undefined;
+    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
+    let vs2_val : vector('n, dec, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vs2);
+    let vd_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
+    result : vector('n, dec, bits('m)) = undefined;
+    mask : vector('n, dec, bool) = undefined;
 
-  (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
+    (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
-  foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] then {
-      result[i] = match vfnunary0 {
-        FNV_CVT_XU_F     => {
-                              let (fflags, elem) : (bits_fflags, bits('m)) = match 'm {
-                                8  => riscv_f16ToUi8(rm_3b, vs2_val[i]),
-                                16 => riscv_f32ToUi16(rm_3b, vs2_val[i]),
-                                32 => riscv_f64ToUi32(rm_3b, vs2_val[i])
-                              };
-                              accrue_fflags(fflags);
-                              elem
+    foreach (i from 0 to (num_elem - 1)) {
+        if mask[
+            i
+        ] then {
+            result[
+                i
+            ] =
+                match vfnunary0 {
+                    FNV_CVT_XU_F => {
+                        let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+                            8 => riscv_f16ToUi8(rm_3b, vs2_val[i]),
+                            16 => riscv_f32ToUi16(rm_3b, vs2_val[i]),
+                            32 => riscv_f64ToUi32(rm_3b, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                    FNV_CVT_X_F => {
+                        let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+                            8 => riscv_f16ToI8(rm_3b, vs2_val[i]),
+                            16 => riscv_f32ToI16(rm_3b, vs2_val[i]),
+                            32 => riscv_f64ToI32(rm_3b, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                    FNV_CVT_F_XU => {
+                        let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+                            8 => {
+                                handle_illegal();
+                                return RETIRE_FAIL
                             },
-        FNV_CVT_X_F      => {
-                              let (fflags, elem) : (bits_fflags, bits('m)) = match 'm {
-                                8  => riscv_f16ToI8(rm_3b, vs2_val[i]),
-                                16 => riscv_f32ToI16(rm_3b, vs2_val[i]),
-                                32 => riscv_f64ToI32(rm_3b, vs2_val[i])
-                              };
-                              accrue_fflags(fflags);
-                              elem
+                            16 => riscv_ui32ToF16(rm_3b, vs2_val[i]),
+                            32 => riscv_ui64ToF32(rm_3b, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                    FNV_CVT_F_X => {
+                        let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+                            8 => {
+                                handle_illegal();
+                                return RETIRE_FAIL
                             },
-        FNV_CVT_F_XU     => {
-                              let (fflags, elem) : (bits_fflags, bits('m)) = match 'm {
-                                8  => { handle_illegal(); return RETIRE_FAIL },
-                                16 => riscv_ui32ToF16(rm_3b, vs2_val[i]),
-                                32 => riscv_ui64ToF32(rm_3b, vs2_val[i])
-                              };
-                              accrue_fflags(fflags);
-                              elem
+                            16 => riscv_i32ToF16(rm_3b, vs2_val[i]),
+                            32 => riscv_i64ToF32(rm_3b, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                    FNV_CVT_F_F => {
+                        let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+                            8 => {
+                                handle_illegal();
+                                return RETIRE_FAIL
                             },
-        FNV_CVT_F_X      => {
-                              let (fflags, elem) : (bits_fflags, bits('m)) = match 'm {
-                                8  => { handle_illegal(); return RETIRE_FAIL },
-                                16 => riscv_i32ToF16(rm_3b, vs2_val[i]),
-                                32 => riscv_i64ToF32(rm_3b, vs2_val[i])
-                              };
-                              accrue_fflags(fflags);
-                              elem
+                            16 => riscv_f32ToF16(rm_3b, vs2_val[i]),
+                            32 => riscv_f64ToF32(rm_3b, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                    FNV_CVT_ROD_F_F => {
+                        let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+                            8 => {
+                                handle_illegal();
+                                return RETIRE_FAIL
                             },
-        FNV_CVT_F_F      => {
-                              let (fflags, elem) : (bits_fflags, bits('m)) = match 'm {
-                                8  => { handle_illegal(); return RETIRE_FAIL },
-                                16 => riscv_f32ToF16(rm_3b, vs2_val[i]),
-                                32 => riscv_f64ToF32(rm_3b, vs2_val[i])
-                              };
-                              accrue_fflags(fflags);
-                              elem
-                            },
-        FNV_CVT_ROD_F_F  => {
-                              let (fflags, elem) : (bits_fflags, bits('m)) = match 'm {
-                                8  => { handle_illegal(); return RETIRE_FAIL },
-                                16 => riscv_f32ToF16(0b110, vs2_val[i]),
-                                32 => riscv_f64ToF32(0b110, vs2_val[i])
-                              };
-                              accrue_fflags(fflags);
-                              elem
-                            },
-        FNV_CVT_RTZ_XU_F => {
-                              let (fflags, elem) : (bits_fflags, bits('m)) = match 'm {
-                                8  => riscv_f16ToUi8(0b001, vs2_val[i]),
-                                16 => riscv_f32ToUi16(0b001, vs2_val[i]),
-                                32 => riscv_f64ToUi32(0b001, vs2_val[i])
-                              };
-                              accrue_fflags(fflags);
-                              elem
-                            },
-        FNV_CVT_RTZ_X_F  => {
-                              let (fflags, elem) : (bits_fflags, bits('m)) = match 'm {
-                                8  => riscv_f16ToI8(0b001, vs2_val[i]),
-                                16 => riscv_f32ToI16(0b001, vs2_val[i]),
-                                32 => riscv_f64ToI32(0b001, vs2_val[i])
-                              };
-                              accrue_fflags(fflags);
-                              elem
-                            }
-      }
-    }
-  };
+                            16 => riscv_f32ToF16(0b110, vs2_val[i]),
+                            32 => riscv_f64ToF32(0b110, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                    FNV_CVT_RTZ_XU_F => {
+                        let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+                            8 => riscv_f16ToUi8(0b001, vs2_val[i]),
+                            16 => riscv_f32ToUi16(0b001, vs2_val[i]),
+                            32 => riscv_f64ToUi32(0b001, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                    FNV_CVT_RTZ_X_F => {
+                        let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+                            8 => riscv_f16ToI8(0b001, vs2_val[i]),
+                            16 => riscv_f32ToI16(0b001, vs2_val[i]),
+                            32 => riscv_f64ToI32(0b001, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                }
+        }
+    };
 
-  write_vreg(num_elem, SEW, LMUL_pow, vd, result);
-  vstart = zeros();
-  RETIRE_SUCCESS
+    write_vreg(num_elem, SEW, LMUL_pow, vd, result);
+    vstart = zeros();
+    RETIRE_SUCCESS
 }
 
 mapping vfnunary0_mnemonic : vfnunary0 <-> string = {
@@ -744,64 +834,72 @@ mapping encdec_vfunary1_vs1 : vfunary1 <-> bits(5) = {
 mapping clause encdec = VFUNARY1(vm, vs2, vfunary1, vd) if haveVExt()
   <-> 0b010011 @ vm @ vs2 @ encdec_vfunary1_vs1(vfunary1) @ 0b001 @ vd @ 0b1010111 if haveVExt()
 
-function clause execute(VFUNARY1(vm, vs2, vfunary1, vd)) = {
-  let rm_3b    = fcsr[FRM];
-  let SEW      = get_sew();
-  let LMUL_pow = get_lmul_pow();
-  let num_elem = get_num_elem(LMUL_pow, SEW);
+function clause execute VFUNARY1(vm, vs2, vfunary1, vd) = {
+    let rm_3b = fcsr[FRM];
+    let SEW = get_sew();
+    let LMUL_pow = get_lmul_pow();
+    let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_fp_normal(vd, vm, SEW, rm_3b) then { handle_illegal(); return RETIRE_FAIL };
-  assert(SEW != 8);
+    if illegal_fp_normal(vd, vm, SEW, rm_3b) then {
+        handle_illegal();
+        return RETIRE_FAIL
+    };
+    assert(SEW != 8);
 
-  let 'n = num_elem;
-  let 'm = SEW;
+    let (n as 'n) = num_elem;
+    let (m as 'm) = SEW;
 
-  let vm_val  : vector('n, dec, bool)     = read_vmask(num_elem, vm, 0b00000);
-  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-  let vd_val  : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
-  result      : vector('n, dec, bits('m)) = undefined;
-  mask        : vector('n, dec, bool)     = undefined;
+    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
+    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+    let vd_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
+    result : vector('n, dec, bits('m)) = undefined;
+    mask : vector('n, dec, bool) = undefined;
 
-  (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
+    (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
-  foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] then {
-      result[i] = match vfunary1 {
-        FVV_VSQRT      => {
-                            let (fflags, elem) : (bits_fflags, bits('m)) = match 'm {
-                              16  => riscv_f16Sqrt(rm_3b, vs2_val[i]),
-                              32  => riscv_f32Sqrt(rm_3b, vs2_val[i]),
-                              64  => riscv_f64Sqrt(rm_3b, vs2_val[i])
-                            };
-                            accrue_fflags(fflags);
-                            elem
-                          },
-        FVV_VRSQRT7    => {
-                            let (fflags, elem) : (bits_fflags, bits('m)) = match 'm {
-                              16  => riscv_f16Rsqrte7(rm_3b, vs2_val[i]),
-                              32  => riscv_f32Rsqrte7(rm_3b, vs2_val[i]),
-                              64  => riscv_f64Rsqrte7(rm_3b, vs2_val[i])
-                            };
-                            accrue_fflags(fflags);
-                            elem
-                          },
-        FVV_VREC7      => {
-                            let (fflags, elem) : (bits_fflags, bits('m)) = match 'm {
-                              16  => riscv_f16Recip7(rm_3b, vs2_val[i]),
-                              32  => riscv_f32Recip7(rm_3b, vs2_val[i]),
-                              64  => riscv_f64Recip7(rm_3b, vs2_val[i])
-                            };
-                            accrue_fflags(fflags);
-                            elem
-                          },
-        FVV_VCLASS     => fp_class(vs2_val[i])
-      }
-    }
-  };
+    foreach (i from 0 to (num_elem - 1)) {
+        if mask[
+            i
+        ] then {
+            result[
+                i
+            ] =
+                match vfunary1 {
+                    FVV_VSQRT => {
+                        let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+                            16 => riscv_f16Sqrt(rm_3b, vs2_val[i]),
+                            32 => riscv_f32Sqrt(rm_3b, vs2_val[i]),
+                            64 => riscv_f64Sqrt(rm_3b, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                    FVV_VRSQRT7 => {
+                        let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+                            16 => riscv_f16Rsqrte7(rm_3b, vs2_val[i]),
+                            32 => riscv_f32Rsqrte7(rm_3b, vs2_val[i]),
+                            64 => riscv_f64Rsqrte7(rm_3b, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                    FVV_VREC7 => {
+                        let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+                            16 => riscv_f16Recip7(rm_3b, vs2_val[i]),
+                            32 => riscv_f32Recip7(rm_3b, vs2_val[i]),
+                            64 => riscv_f64Recip7(rm_3b, vs2_val[i]),
+                        };
+                        accrue_fflags(fflags);
+                        elem
+                    },
+                    FVV_VCLASS => fp_class(vs2_val[i]),
+                }
+        }
+    };
 
-  write_vreg(num_elem, SEW, LMUL_pow, vd, result);
-  vstart = zeros();
-  RETIRE_SUCCESS
+    write_vreg(num_elem, SEW, LMUL_pow, vd, result);
+    vstart = zeros();
+    RETIRE_SUCCESS
 }
 
 mapping vfunary1_mnemonic : vfunary1 <-> string = {
@@ -820,27 +918,29 @@ union clause ast = VFMVFS : (regidx, regidx)
 mapping clause encdec = VFMVFS(vs2, rd) if haveVExt()
   <-> 0b010000 @ 0b1 @ vs2 @ 0b00000 @ 0b001 @ rd @ 0b1010111 if haveVExt()
 
-function clause execute(VFMVFS(vs2, rd)) = {
-  let rm_3b    = fcsr[FRM];
-  let SEW      = get_sew();
-  let num_elem = get_num_elem(0, SEW);
+function clause execute VFMVFS(vs2, rd) = {
+    let rm_3b = fcsr[FRM];
+    let SEW = get_sew();
+    let num_elem = get_num_elem(0, SEW);
 
-  if illegal_fp_vd_unmasked(SEW, rm_3b) | SEW > sizeof(flen)
-  then { handle_illegal(); return RETIRE_FAIL };
-  assert(num_elem > 0 & SEW != 8);
+    if illegal_fp_vd_unmasked(SEW, rm_3b) | SEW > sizeof(flen) then {
+        handle_illegal();
+        return RETIRE_FAIL
+    };
+    assert(num_elem > 0 & SEW != 8);
 
-  let 'n = num_elem;
-  let 'm = SEW;
+    let (n as 'n) = num_elem;
+    let (m as 'm) = SEW;
 
-  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, 0, vs2);
-  match 'm {
-    16 => F_H(rd) = vs2_val[0],
-    32 => F_S(rd) = vs2_val[0],
-    64 => F_D(rd) = vs2_val[0]
-  };
-  vstart = zeros();
+    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, 0, vs2);
+    match sizeof('m) {
+        16 => F_H(rd) = vs2_val[0],
+        32 => F_S(rd) = vs2_val[0],
+        64 => F_D(rd) = vs2_val[0],
+    };
+    vstart = zeros();
 
-  RETIRE_SUCCESS
+    RETIRE_SUCCESS
 }
 
 mapping clause assembly = VFMVFS(vs2, rd)
@@ -868,57 +968,81 @@ mapping encdec_fvffunct6 : fvffunct6 <-> bits(6) = {
 mapping clause encdec = FVFTYPE(funct6, vm, vs2, rs1, vd) if haveVExt()
   <-> encdec_fvffunct6(funct6) @ vm @ vs2 @ rs1 @ 0b101 @ vd @ 0b1010111 if haveVExt()
 
-function clause execute(FVFTYPE(funct6, vm, vs2, rs1, vd)) = {
-  let rm_3b    = fcsr[FRM];
-  let SEW      = get_sew();
-  let LMUL_pow = get_lmul_pow();
-  let num_elem = get_num_elem(LMUL_pow, SEW);
+function clause execute FVFTYPE(funct6, vm, vs2, rs1, vd) = {
+    let rm_3b = fcsr[FRM];
+    let SEW = get_sew();
+    let LMUL_pow = get_lmul_pow();
+    let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_fp_normal(vd, vm, SEW, rm_3b) then { handle_illegal(); return RETIRE_FAIL };
-  assert(SEW != 8);
+    if illegal_fp_normal(vd, vm, SEW, rm_3b) then {
+        handle_illegal();
+        return RETIRE_FAIL
+    };
+    assert(SEW != 8);
 
-  let 'n = num_elem;
-  let 'm = SEW;
+    let (n as 'n) = num_elem;
+    let (m as 'm) = SEW;
 
-  let vm_val  : vector('n, dec, bool)     = read_vmask(num_elem, vm, 0b00000);
-  let rs1_val : bits('m)                  = get_scalar_fp(rs1, 'm);
-  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-  let vd_val  : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
-  result      : vector('n, dec, bits('m)) = undefined;
-  mask        : vector('n, dec, bool)     = undefined;
+    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
+    let rs1_val : bits('m) = get_scalar_fp(rs1, sizeof('m));
+    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+    let vd_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
+    result : vector('n, dec, bits('m)) = undefined;
+    mask : vector('n, dec, bool) = undefined;
 
-  (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
+    (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
-  foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] then {
-      result[i] = match funct6 {
-        VF_VADD          => fp_add(rm_3b, vs2_val[i], rs1_val),
-        VF_VSUB          => fp_sub(rm_3b, vs2_val[i], rs1_val),
-        VF_VRSUB         => fp_sub(rm_3b, rs1_val, vs2_val[i]),
-        VF_VMIN          => fp_min(vs2_val[i], rs1_val),
-        VF_VMAX          => fp_max(vs2_val[i], rs1_val),
-        VF_VMUL          => fp_mul(rm_3b, vs2_val[i], rs1_val),
-        VF_VDIV          => fp_div(rm_3b, vs2_val[i], rs1_val),
-        VF_VRDIV         => fp_div(rm_3b, rs1_val, vs2_val[i]),
-        VF_VSGNJ         => [rs1_val['m - 1]] @ vs2_val[i][('m - 2)..0],
-        VF_VSGNJN        => (0b1 ^ [rs1_val['m - 1]]) @ vs2_val[i][('m - 2)..0],
-        VF_VSGNJX        => ([vs2_val[i]['m - 1]] ^ [rs1_val['m - 1]]) @ vs2_val[i][('m - 2)..0],
-        VF_VSLIDE1UP     => {
-                              if vs2 == vd then { handle_illegal(); return RETIRE_FAIL };
-                              if i == 0 then rs1_val else vs2_val[i - 1]
-                            },
-        VF_VSLIDE1DOWN   => {
-                              let last_elem = get_end_element();
-                              assert(last_elem < num_elem);
-                              if i < last_elem then vs2_val[i + 1] else rs1_val
-                            }
-      }
-    }
-  };
+    foreach (i from 0 to (num_elem - 1)) {
+        if mask[
+            i
+        ] then {
+            result[
+                i
+            ] =
+                match funct6 {
+                    VF_VADD => fp_add(rm_3b, vs2_val[i], rs1_val),
+                    VF_VSUB => fp_sub(rm_3b, vs2_val[i], rs1_val),
+                    VF_VRSUB => fp_sub(rm_3b, rs1_val, vs2_val[i]),
+                    VF_VMIN => fp_min(vs2_val[i], rs1_val),
+                    VF_VMAX => fp_max(vs2_val[i], rs1_val),
+                    VF_VMUL => fp_mul(rm_3b, vs2_val[i], rs1_val),
+                    VF_VDIV => fp_div(rm_3b, vs2_val[i], rs1_val),
+                    VF_VRDIV => fp_div(rm_3b, rs1_val, vs2_val[i]),
+                    VF_VSGNJ => [rs1_val[sizeof('m) - 1]] @ vs2_val[i][(sizeof('m) - 2)..0],
+                    VF_VSGNJN => (0b1 ^ [rs1_val[sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
+                    VF_VSGNJX => ([vs2_val[i][sizeof('m) - 1]] ^ [rs1_val[sizeof('m) - 1]]) @
+                        vs2_val[
+                            i
+                        ][
+                            (sizeof('m) - 2)..0
+                        ],
+                    VF_VSLIDE1UP => {
+                        if vs2 == vd then {
+                            handle_illegal();
+                            return RETIRE_FAIL
+                        };
+                        if i == 0 then {
+                            rs1_val
+                        } else {
+                            vs2_val[i - 1]
+                        }
+                    },
+                    VF_VSLIDE1DOWN => {
+                        let last_elem = get_end_element();
+                        assert(last_elem < num_elem);
+                        if i < last_elem then {
+                            vs2_val[i + 1]
+                        } else {
+                            rs1_val
+                        }
+                    },
+                }
+        }
+    };
 
-  write_vreg(num_elem, SEW, LMUL_pow, vd, result);
-  vstart = zeros();
-  RETIRE_SUCCESS
+    write_vreg(num_elem, SEW, LMUL_pow, vd, result);
+    vstart = zeros();
+    RETIRE_SUCCESS
 }
 
 mapping fvftype_mnemonic : fvffunct6 <-> string = {
@@ -958,45 +1082,53 @@ mapping encdec_fvfmafunct6 : fvfmafunct6 <-> bits(6) = {
 mapping clause encdec = FVFMATYPE(funct6, vm, vs2, rs1, vd) if haveVExt()
   <-> encdec_fvfmafunct6(funct6) @ vm @ vs2 @ rs1 @ 0b101 @ vd @ 0b1010111 if haveVExt()
 
-function clause execute(FVFMATYPE(funct6, vm, vs2, rs1, vd)) = {
-  let rm_3b    = fcsr[FRM];
-  let SEW      = get_sew();
-  let LMUL_pow = get_lmul_pow();
-  let num_elem = get_num_elem(LMUL_pow, SEW);
+function clause execute FVFMATYPE(funct6, vm, vs2, rs1, vd) = {
+    let rm_3b = fcsr[FRM];
+    let SEW = get_sew();
+    let LMUL_pow = get_lmul_pow();
+    let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_fp_normal(vd, vm, SEW, rm_3b) then { handle_illegal(); return RETIRE_FAIL };
-  assert(SEW != 8);
+    if illegal_fp_normal(vd, vm, SEW, rm_3b) then {
+        handle_illegal();
+        return RETIRE_FAIL
+    };
+    assert(SEW != 8);
 
-  let 'n = num_elem;
-  let 'm = SEW;
+    let (n as 'n) = num_elem;
+    let (m as 'm) = SEW;
 
-  let vm_val  : vector('n, dec, bool)     = read_vmask(num_elem, vm, 0b00000);
-  let rs1_val : bits('m)                  = get_scalar_fp(rs1, 'm);
-  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-  let vd_val  : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
-  result      : vector('n, dec, bits('m)) = undefined;
-  mask        : vector('n, dec, bool)     = undefined;
+    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
+    let rs1_val : bits('m) = get_scalar_fp(rs1, sizeof('m));
+    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+    let vd_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
+    result : vector('n, dec, bits('m)) = undefined;
+    mask : vector('n, dec, bool) = undefined;
 
-  (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
+    (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
-  foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] then {
-      result[i] = match funct6 {
-        VF_VMACC    => fp_muladd(rm_3b, rs1_val, vs2_val[i], vd_val[i]),
-        VF_VNMACC   => fp_nmulsub(rm_3b, rs1_val, vs2_val[i], vd_val[i]),
-        VF_VMSAC    => fp_mulsub(rm_3b, rs1_val, vs2_val[i], vd_val[i]),
-        VF_VNMSAC   => fp_nmuladd(rm_3b, rs1_val, vs2_val[i], vd_val[i]),
-        VF_VMADD    => fp_muladd(rm_3b, rs1_val, vd_val[i], vs2_val[i]),
-        VF_VNMADD   => fp_nmulsub(rm_3b, rs1_val, vd_val[i], vs2_val[i]),
-        VF_VMSUB    => fp_mulsub(rm_3b, rs1_val, vd_val[i], vs2_val[i]),
-        VF_VNMSUB   => fp_nmuladd(rm_3b, rs1_val, vd_val[i], vs2_val[i])
-      }
-    }
-  };
+    foreach (i from 0 to (num_elem - 1)) {
+        if mask[
+            i
+        ] then {
+            result[
+                i
+            ] =
+                match funct6 {
+                    VF_VMACC => fp_muladd(rm_3b, rs1_val, vs2_val[i], vd_val[i]),
+                    VF_VNMACC => fp_nmulsub(rm_3b, rs1_val, vs2_val[i], vd_val[i]),
+                    VF_VMSAC => fp_mulsub(rm_3b, rs1_val, vs2_val[i], vd_val[i]),
+                    VF_VNMSAC => fp_nmuladd(rm_3b, rs1_val, vs2_val[i], vd_val[i]),
+                    VF_VMADD => fp_muladd(rm_3b, rs1_val, vd_val[i], vs2_val[i]),
+                    VF_VNMADD => fp_nmulsub(rm_3b, rs1_val, vd_val[i], vs2_val[i]),
+                    VF_VMSUB => fp_mulsub(rm_3b, rs1_val, vd_val[i], vs2_val[i]),
+                    VF_VNMSUB => fp_nmuladd(rm_3b, rs1_val, vd_val[i], vs2_val[i]),
+                }
+        }
+    };
 
-  write_vreg(num_elem, SEW, LMUL_pow, vd, result);
-  vstart = zeros();
-  RETIRE_SUCCESS
+    write_vreg(num_elem, SEW, LMUL_pow, vd, result);
+    vstart = zeros();
+    RETIRE_SUCCESS
 }
 
 mapping fvfmatype_mnemonic : fvfmafunct6 <-> string = {
@@ -1025,45 +1157,52 @@ mapping encdec_fwvffunct6 : fwvffunct6 <-> bits(6) = {
 mapping clause encdec = FWVFTYPE(funct6, vm, vs2, rs1, vd) if haveVExt()
   <-> encdec_fwvffunct6(funct6) @ vm @ vs2 @ rs1 @ 0b101 @ vd @ 0b1010111 if haveVExt()
 
-function clause execute(FWVFTYPE(funct6, vm, vs2, rs1, vd)) = {
-  let rm_3b    = fcsr[FRM];
-  let SEW      = get_sew();
-  let LMUL_pow = get_lmul_pow();
-  let num_elem = get_num_elem(LMUL_pow, SEW);
-  let SEW_widen      = SEW * 2;
-  let LMUL_pow_widen = LMUL_pow + 1;
+function clause execute FWVFTYPE(funct6, vm, vs2, rs1, vd) = {
+    let rm_3b = fcsr[FRM];
+    let SEW = get_sew();
+    let LMUL_pow = get_lmul_pow();
+    let num_elem = get_num_elem(LMUL_pow, SEW);
+    let SEW_widen = SEW * 2;
+    let LMUL_pow_widen = LMUL_pow + 1;
 
-  if  illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
-      not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen))
-  then { handle_illegal(); return RETIRE_FAIL };
-  assert(SEW >= 16 & SEW_widen <= 64);
+    if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
+        not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen)) then {
+        handle_illegal();
+        return RETIRE_FAIL
+    };
+    assert(SEW >= 16 & SEW_widen <= 64);
 
-  let 'n = num_elem;
-  let 'm = SEW;
-  let 'o = SEW_widen;
+    let (n as 'n) = num_elem;
+    let (m as 'm) = SEW;
+    let (o as 'o) = SEW_widen;
 
-  let vm_val  : vector('n, dec, bool)     = read_vmask(num_elem, vm, 0b00000);
-  let vd_val  : vector('n, dec, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd);
-  let rs1_val : bits('m)                  = get_scalar_fp(rs1, 'm);
-  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-  result      : vector('n, dec, bits('o)) = undefined;
-  mask        : vector('n, dec, bool)     = undefined;
+    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
+    let vd_val : vector('n, dec, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd);
+    let rs1_val : bits('m) = get_scalar_fp(rs1, sizeof('m));
+    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+    result : vector('n, dec, bits('o)) = undefined;
+    mask : vector('n, dec, bool) = undefined;
 
-  (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
+    (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
 
-  foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] then {
-      result[i] = match funct6 {
-        FWVF_VADD    => fp_add(rm_3b, fp_widen(vs2_val[i]), fp_widen(rs1_val)),
-        FWVF_VSUB    => fp_sub(rm_3b, fp_widen(vs2_val[i]), fp_widen(rs1_val)),
-        FWVF_VMUL    => fp_mul(rm_3b, fp_widen(vs2_val[i]), fp_widen(rs1_val))
-      }
-    }
-  };
+    foreach (i from 0 to (num_elem - 1)) {
+        if mask[
+            i
+        ] then {
+            result[
+                i
+            ] =
+                match funct6 {
+                    FWVF_VADD => fp_add(rm_3b, fp_widen(vs2_val[i]), fp_widen(rs1_val)),
+                    FWVF_VSUB => fp_sub(rm_3b, fp_widen(vs2_val[i]), fp_widen(rs1_val)),
+                    FWVF_VMUL => fp_mul(rm_3b, fp_widen(vs2_val[i]), fp_widen(rs1_val)),
+                }
+        }
+    };
 
-  write_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd, result);
-  vstart = zeros();
-  RETIRE_SUCCESS
+    write_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd, result);
+    vstart = zeros();
+    RETIRE_SUCCESS
 }
 
 mapping fwvftype_mnemonic : fwvffunct6 <-> string = {
@@ -1089,46 +1228,53 @@ mapping encdec_fwvfmafunct6 : fwvfmafunct6 <-> bits(6) = {
 mapping clause encdec = FWVFMATYPE(funct6, vm, rs1, vs2, vd) if haveVExt()
   <-> encdec_fwvfmafunct6(funct6) @ vm @ vs2 @ rs1 @ 0b101 @ vd @ 0b1010111 if haveVExt()
 
-function clause execute(FWVFMATYPE(funct6, vm, rs1, vs2, vd)) = {
-  let rm_3b    = fcsr[FRM];
-  let SEW      = get_sew();
-  let LMUL_pow = get_lmul_pow();
-  let num_elem = get_num_elem(LMUL_pow, SEW);
-  let SEW_widen      = SEW * 2;
-  let LMUL_pow_widen = LMUL_pow + 1;
+function clause execute FWVFMATYPE(funct6, vm, rs1, vs2, vd) = {
+    let rm_3b = fcsr[FRM];
+    let SEW = get_sew();
+    let LMUL_pow = get_lmul_pow();
+    let num_elem = get_num_elem(LMUL_pow, SEW);
+    let SEW_widen = SEW * 2;
+    let LMUL_pow_widen = LMUL_pow + 1;
 
-  if  illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
-      not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen))
-  then { handle_illegal(); return RETIRE_FAIL };
-  assert(SEW >= 16 & SEW_widen <= 64);
+    if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
+        not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen)) then {
+        handle_illegal();
+        return RETIRE_FAIL
+    };
+    assert(SEW >= 16 & SEW_widen <= 64);
 
-  let 'n = num_elem;
-  let 'm = SEW;
-  let 'o = SEW_widen;
+    let (n as 'n) = num_elem;
+    let (m as 'm) = SEW;
+    let (o as 'o) = SEW_widen;
 
-  let vm_val  : vector('n, dec, bool)     = read_vmask(num_elem, vm, 0b00000);
-  let vd_val  : vector('n, dec, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd);
-  let rs1_val : bits('m)                  = get_scalar_fp(rs1, 'm);
-  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-  result      : vector('n, dec, bits('o)) = undefined;
-  mask        : vector('n, dec, bool)     = undefined;
+    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
+    let vd_val : vector('n, dec, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd);
+    let rs1_val : bits('m) = get_scalar_fp(rs1, sizeof('m));
+    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+    result : vector('n, dec, bits('o)) = undefined;
+    mask : vector('n, dec, bool) = undefined;
 
-  (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
+    (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
 
-  foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] then {
-      result[i] = match funct6 {
-        FWVF_VMACC   => fp_muladd(rm_3b, fp_widen(rs1_val), fp_widen(vs2_val[i]), vd_val[i]),
-        FWVF_VNMACC  => fp_nmulsub(rm_3b, fp_widen(rs1_val), fp_widen(vs2_val[i]), vd_val[i]),
-        FWVF_VMSAC   => fp_mulsub(rm_3b, fp_widen(rs1_val), fp_widen(vs2_val[i]), vd_val[i]),
-        FWVF_VNMSAC  => fp_nmuladd(rm_3b, fp_widen(rs1_val), fp_widen(vs2_val[i]), vd_val[i])
-      }
-    }
-  };
+    foreach (i from 0 to (num_elem - 1)) {
+        if mask[
+            i
+        ] then {
+            result[
+                i
+            ] =
+                match funct6 {
+                    FWVF_VMACC => fp_muladd(rm_3b, fp_widen(rs1_val), fp_widen(vs2_val[i]), vd_val[i]),
+                    FWVF_VNMACC => fp_nmulsub(rm_3b, fp_widen(rs1_val), fp_widen(vs2_val[i]), vd_val[i]),
+                    FWVF_VMSAC => fp_mulsub(rm_3b, fp_widen(rs1_val), fp_widen(vs2_val[i]), vd_val[i]),
+                    FWVF_VNMSAC => fp_nmuladd(rm_3b, fp_widen(rs1_val), fp_widen(vs2_val[i]), vd_val[i]),
+                }
+        }
+    };
 
-  write_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd, result);
-  vstart = zeros();
-  RETIRE_SUCCESS
+    write_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd, result);
+    vstart = zeros();
+    RETIRE_SUCCESS
 }
 
 mapping fwvfmatype_mnemonic : fwvfmafunct6 <-> string = {
@@ -1152,43 +1298,50 @@ mapping encdec_fwffunct6 : fwffunct6 <-> bits(6) = {
 mapping clause encdec = FWFTYPE(funct6, vm, vs2, rs1, vd) if haveVExt()
   <-> encdec_fwffunct6(funct6) @ vm @ vs2 @ rs1 @ 0b101 @ vd @ 0b1010111 if haveVExt()
 
-function clause execute(FWFTYPE(funct6, vm, vs2, rs1, vd)) = {
-  let rm_3b    = fcsr[FRM];
-  let SEW      = get_sew();
-  let LMUL_pow = get_lmul_pow();
-  let num_elem = get_num_elem(LMUL_pow, SEW);
-  let SEW_widen      = SEW * 2;
-  let LMUL_pow_widen = LMUL_pow + 1;
+function clause execute FWFTYPE(funct6, vm, vs2, rs1, vd) = {
+    let rm_3b = fcsr[FRM];
+    let SEW = get_sew();
+    let LMUL_pow = get_lmul_pow();
+    let num_elem = get_num_elem(LMUL_pow, SEW);
+    let SEW_widen = SEW * 2;
+    let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen)
-  then { handle_illegal(); return RETIRE_FAIL };
-  assert(SEW >= 16 & SEW_widen <= 64);
+    if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) then {
+        handle_illegal();
+        return RETIRE_FAIL
+    };
+    assert(SEW >= 16 & SEW_widen <= 64);
 
-  let 'n = num_elem;
-  let 'm = SEW;
-  let 'o = SEW_widen;
+    let (n as 'n) = num_elem;
+    let (m as 'm) = SEW;
+    let (o as 'o) = SEW_widen;
 
-  let vm_val  : vector('n, dec, bool)     = read_vmask(num_elem, vm, 0b00000);
-  let vd_val  : vector('n, dec, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd);
-  let rs1_val : bits('m)                  = get_scalar_fp(rs1, 'm);
-  let vs2_val : vector('n, dec, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vs2);
-  result      : vector('n, dec, bits('o)) = undefined;
-  mask        : vector('n, dec, bool)     = undefined;
+    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
+    let vd_val : vector('n, dec, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd);
+    let rs1_val : bits('m) = get_scalar_fp(rs1, sizeof('m));
+    let vs2_val : vector('n, dec, bits('o)) = read_vreg(num_elem, SEW_widen, LMUL_pow_widen, vs2);
+    result : vector('n, dec, bits('o)) = undefined;
+    mask : vector('n, dec, bool) = undefined;
 
-  (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
+    (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
 
-  foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] then {
-      result[i] = match funct6 {
-        FWF_VADD     => fp_add(rm_3b, vs2_val[i], fp_widen(rs1_val)),
-        FWF_VSUB     => fp_sub(rm_3b, vs2_val[i], fp_widen(rs1_val))
-      }
-    }
-  };
+    foreach (i from 0 to (num_elem - 1)) {
+        if mask[
+            i
+        ] then {
+            result[
+                i
+            ] =
+                match funct6 {
+                    FWF_VADD => fp_add(rm_3b, vs2_val[i], fp_widen(rs1_val)),
+                    FWF_VSUB => fp_sub(rm_3b, vs2_val[i], fp_widen(rs1_val)),
+                }
+        }
+    };
 
-  write_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd, result);
-  vstart = zeros();
-  RETIRE_SUCCESS
+    write_vreg(num_elem, SEW_widen, LMUL_pow_widen, vd, result);
+    vstart = zeros();
+    RETIRE_SUCCESS
 }
 
 mapping fwftype_mnemonic : fwffunct6 <-> string = {
@@ -1206,45 +1359,61 @@ union clause ast = VFMERGE : (regidx, regidx, regidx)
 mapping clause encdec = VFMERGE(vs2, rs1, vd) if haveVExt()
   <-> 0b010111 @ 0b0 @ vs2 @ rs1 @ 0b101 @ vd @ 0b1010111 if haveVExt()
 
-function clause execute(VFMERGE(vs2, rs1, vd)) = {
-  let rm_3b         = fcsr[FRM];
-  let start_element = get_start_element();
-  let end_element   = get_end_element();
-  let SEW           = get_sew();
-  let LMUL_pow      = get_lmul_pow();
-  let num_elem      = get_num_elem(LMUL_pow, SEW); /* max(VLMAX,VLEN/SEW)) */
-  let real_num_elem = if LMUL_pow >= 0 then num_elem else num_elem / (0 - LMUL_pow); /* VLMAX */
-
-  if illegal_fp_vd_masked(vd, SEW, rm_3b) then { handle_illegal(); return RETIRE_FAIL };
-  assert(SEW != 8);
-
-  let 'n = num_elem;
-  let 'm = SEW;
-
-  let vm_val  : vector('n, dec, bool)     = read_vmask(num_elem, 0b0, 0b00000);
-  let rs1_val : bits('m)                  = get_scalar_fp(rs1, 'm);
-  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-  let vd_val  : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
-  result      : vector('n, dec, bits('m)) = undefined;
-
-  let tail_ag : agtype = get_vtype_vta();
-  foreach (i from 0 to (num_elem - 1)) {
-    if i < start_element then {
-      result[i] = vd_val[i]
-    } else if i > end_element | i >= real_num_elem then {
-      result[i] = match tail_ag {
-        UNDISTURBED => vd_val[i],
-        AGNOSTIC    => vd_val[i] /* TODO: configuration support */
-      }
+function clause execute VFMERGE(vs2, rs1, vd) = {
+    let rm_3b = fcsr[FRM];
+    let start_element = get_start_element();
+    let end_element = get_end_element();
+    let SEW = get_sew();
+    let LMUL_pow = get_lmul_pow();
+    let num_elem = get_num_elem(LMUL_pow, SEW); /* max(VLMAX,VLEN/SEW)) */
+    let real_num_elem = if LMUL_pow >= 0 then {
+        num_elem /* VLMAX */
     } else {
-      /* the merge operates on all body elements */
-      result[i] = if vm_val[i] then rs1_val else vs2_val[i]
-    }
-  };
+        num_elem / (0 - LMUL_pow)
+    };
 
-  write_vreg(num_elem, SEW, LMUL_pow, vd, result);
-  vstart = zeros();
-  RETIRE_SUCCESS
+    if illegal_fp_vd_masked(vd, SEW, rm_3b) then {
+        handle_illegal();
+        return RETIRE_FAIL
+    };
+    assert(SEW != 8);
+
+    let (n as 'n) = num_elem;
+    let (m as 'm) = SEW;
+
+    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, 0b00000);
+    let rs1_val : bits('m) = get_scalar_fp(rs1, sizeof('m));
+    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+    let vd_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
+    result : vector('n, dec, bits('m)) = undefined;
+
+    let tail_ag : agtype = get_vtype_vta();
+    foreach (i from 0 to (num_elem - 1)) {
+        if i < start_element then {
+            result[i] = vd_val[i]
+        } else {
+            if i > end_element | i >= real_num_elem then {
+                result[
+                    i
+                ] =
+                    match tail_ag {
+                        UNDISTURBED => vd_val[
+                            i
+                        ],
+                        AGNOSTIC => vd_val[
+                            i
+                        ], /* TODO: configuration support */
+                    }
+            } else {
+                /* the merge operates on all body elements */
+                result[i] = if vm_val[i] then rs1_val else vs2_val[i]
+            }
+        }
+    };
+
+    write_vreg(num_elem, SEW, LMUL_pow, vd, result);
+    vstart = zeros();
+    RETIRE_SUCCESS
 }
 
 mapping clause assembly = VFMERGE(vs2, rs1, vd)
@@ -1257,33 +1426,40 @@ union clause ast = VFMV : (regidx, regidx)
 mapping clause encdec = VFMV(rs1, vd) if haveVExt()
   <-> 0b010111 @ 0b1 @ 0b00000 @ rs1 @ 0b101 @ vd @ 0b1010111 if haveVExt()
 
-function clause execute(VFMV(rs1, vd)) = {
-  let rm_3b    = fcsr[FRM];
-  let SEW      = get_sew();
-  let LMUL_pow = get_lmul_pow();
-  let num_elem = get_num_elem(LMUL_pow, SEW);
+function clause execute VFMV(rs1, vd) = {
+    let rm_3b = fcsr[FRM];
+    let SEW = get_sew();
+    let LMUL_pow = get_lmul_pow();
+    let num_elem = get_num_elem(LMUL_pow, SEW);
 
-  if illegal_fp_vd_unmasked(SEW, rm_3b) then { handle_illegal(); return RETIRE_FAIL };
-  assert(SEW != 8);
+    if illegal_fp_vd_unmasked(SEW, rm_3b) then {
+        handle_illegal();
+        return RETIRE_FAIL
+    };
+    assert(SEW != 8);
 
-  let 'n = num_elem;
-  let 'm = SEW;
+    let (n as 'n) = num_elem;
+    let (m as 'm) = SEW;
 
-  let rs1_val : bits('m)                  = get_scalar_fp(rs1, 'm);
-  let vm_val  : vector('n, dec, bool)     = read_vmask(num_elem, 0b1, 0b00000);
-  let vd_val  : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
-  result      : vector('n, dec, bits('m)) = undefined;
-  mask        : vector('n, dec, bool)     = undefined;
+    let rs1_val : bits('m) = get_scalar_fp(rs1, sizeof('m));
+    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, 0b1, 0b00000);
+    let vd_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
+    result : vector('n, dec, bits('m)) = undefined;
+    mask : vector('n, dec, bool) = undefined;
 
-  (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
+    (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
-  foreach (i from 0 to (num_elem - 1)) {
-    if mask[i] then result[i] = rs1_val
-  };
+    foreach (i from 0 to (num_elem - 1)) {
+        if mask[
+            i
+        ] then {
+            result[i] = rs1_val
+        }
+    };
 
-  write_vreg(num_elem, SEW, LMUL_pow, vd, result);
-  vstart = zeros();
-  RETIRE_SUCCESS
+    write_vreg(num_elem, SEW, LMUL_pow, vd, result);
+    vstart = zeros();
+    RETIRE_SUCCESS
 }
 
 mapping clause assembly = VFMV(rs1, vd)
@@ -1295,40 +1471,54 @@ union clause ast = VFMVSF : (regidx, regidx)
 mapping clause encdec = VFMVSF(rs1, vd) if haveVExt()
   <-> 0b010000 @ 0b1 @ 0b00000 @ rs1 @ 0b101 @ vd @ 0b1010111 if haveVExt()
 
-function clause execute(VFMVSF(rs1, vd)) = {
-  let rm_3b    = fcsr[FRM];
-  let SEW      = get_sew();
-  let num_elem = get_num_elem(0, SEW);
+function clause execute VFMVSF(rs1, vd) = {
+    let rm_3b = fcsr[FRM];
+    let SEW = get_sew();
+    let num_elem = get_num_elem(0, SEW);
 
-  if illegal_fp_vd_unmasked(SEW, rm_3b) then { handle_illegal(); return RETIRE_FAIL };
-  assert(num_elem > 0 & SEW != 8);
+    if illegal_fp_vd_unmasked(SEW, rm_3b) then {
+        handle_illegal();
+        return RETIRE_FAIL
+    };
+    assert(num_elem > 0 & SEW != 8);
 
-  let 'n = num_elem;
-  let 'm = SEW;
+    let (n as 'n) = num_elem;
+    let (m as 'm) = SEW;
 
-  let vm_val  : vector('n, dec, bool)     = read_vmask(num_elem, 0b1, 0b00000);
-  let rs1_val : bits('m)                  = get_scalar_fp(rs1, 'm);
-  let vd_val  : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, 0, vd);
-  result      : vector('n, dec, bits('m)) = undefined;
-  mask        : vector('n, dec, bool)     = undefined;
+    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, 0b1, 0b00000);
+    let rs1_val : bits('m) = get_scalar_fp(rs1, sizeof('m));
+    let vd_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, 0, vd);
+    result : vector('n, dec, bits('m)) = undefined;
+    mask : vector('n, dec, bool) = undefined;
 
-  (result, mask) = init_masked_result(num_elem, SEW, 0, vd_val, vm_val);
+    (result, mask) = init_masked_result(num_elem, SEW, 0, vd_val, vm_val);
 
-  /* one body element */
-  if mask[0] then result[0] = rs1_val;
+    /* one body element */
+    if mask[
+        0
+    ] then {
+        result[0] = rs1_val
+    };
 
-  /* others treated as tail elements */
-  let tail_ag : agtype = get_vtype_vta();
-  foreach (i from 1 to (num_elem - 1)) {
-    result[i] = match tail_ag {
-      UNDISTURBED => vd_val[i],
-      AGNOSTIC    => vd_val[i] /* TODO: configuration support */
-    }
-  };
+    /* others treated as tail elements */
+    let tail_ag : agtype = get_vtype_vta();
+    foreach (i from 1 to (num_elem - 1)) {
+        result[
+            i
+        ] =
+            match tail_ag {
+                UNDISTURBED => vd_val[
+                    i
+                ],
+                AGNOSTIC => vd_val[
+                    i
+                ], /* TODO: configuration support */
+            }
+    };
 
-  write_vreg(num_elem, SEW, 0, vd, result);
-  vstart = zeros();
-  RETIRE_SUCCESS
+    write_vreg(num_elem, SEW, 0, vd, result);
+    vstart = zeros();
+    RETIRE_SUCCESS
 }
 
 mapping clause assembly = VFMVSF(rs1, vd)

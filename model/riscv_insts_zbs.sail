@@ -31,19 +31,21 @@ mapping zbs_iop_mnemonic : biop_zbs <-> string = {
 mapping clause assembly = ZBS_IOP(shamt, rs1, rd, op)
   <-> zbs_iop_mnemonic(op) ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ hex_bits_6(shamt)
 
-function clause execute (ZBS_IOP(shamt, rs1, rd, op)) = {
-  let rs1_val = X(rs1);
-  let mask : xlenbits = if sizeof(xlen) == 32
-                        then zero_extend(0b1) << shamt[4..0]
-                        else zero_extend(0b1) << shamt;
-  let result : xlenbits = match op {
-    RISCV_BCLRI => rs1_val & ~(mask),
-    RISCV_BEXTI => zero_extend(bool_to_bits((rs1_val & mask) != zeros())),
-    RISCV_BINVI => rs1_val ^ mask,
-    RISCV_BSETI => rs1_val | mask
-  };
-  X(rd) = result;
-  RETIRE_SUCCESS
+function clause execute ZBS_IOP(shamt, rs1, rd, op) = {
+    let rs1_val = X(rs1);
+    let mask : xlenbits = if sizeof(xlen) == 32 then {
+        zero_extend(0b1) << (shamt[4..0])
+    } else {
+        zero_extend(0b1) << shamt
+    };
+    let result : xlenbits = match op {
+        RISCV_BCLRI => rs1_val & ~(mask),
+        RISCV_BEXTI => zero_extend(bool_to_bits((rs1_val & mask) != zeros())),
+        RISCV_BINVI => rs1_val ^ mask,
+        RISCV_BSETI => rs1_val | mask,
+    };
+    X(rd) = result;
+    RETIRE_SUCCESS
 }
 
 /* ****************************************************************** */
@@ -71,18 +73,20 @@ mapping zbs_rtype_mnemonic : brop_zbs <-> string = {
 mapping clause assembly = ZBS_RTYPE(rs2, rs1, rd, op)
   <-> zbs_rtype_mnemonic(op) ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
-function clause execute (ZBS_RTYPE(rs2, rs1, rd, op)) = {
-  let rs1_val = X(rs1);
-  let rs2_val = X(rs2);
-  let mask : xlenbits = if sizeof(xlen) == 32
-                        then zero_extend(0b1) << rs2_val[4..0]
-                        else zero_extend(0b1) << rs2_val[5..0];
-  let result : xlenbits = match op {
-    RISCV_BCLR => rs1_val & ~(mask),
-    RISCV_BEXT => zero_extend(bool_to_bits((rs1_val & mask) != zeros())),
-    RISCV_BINV => rs1_val ^ mask,
-    RISCV_BSET => rs1_val | mask
-  };
-  X(rd) = result;
-  RETIRE_SUCCESS
+function clause execute ZBS_RTYPE(rs2, rs1, rd, op) = {
+    let rs1_val = X(rs1);
+    let rs2_val = X(rs2);
+    let mask : xlenbits = if sizeof(xlen) == 32 then {
+        zero_extend(0b1) << (rs2_val[4..0])
+    } else {
+        zero_extend(0b1) << (rs2_val[5..0])
+    };
+    let result : xlenbits = match op {
+        RISCV_BCLR => rs1_val & ~(mask),
+        RISCV_BEXT => zero_extend(bool_to_bits((rs1_val & mask) != zeros())),
+        RISCV_BINV => rs1_val ^ mask,
+        RISCV_BSET => rs1_val | mask,
+    };
+    X(rd) = result;
+    RETIRE_SUCCESS
 }

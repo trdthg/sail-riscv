@@ -15,11 +15,11 @@ mapping clause encdec = RISCV_SLLIUW(shamt, rs1, rd) if haveZba() & sizeof(xlen)
 mapping clause assembly = RISCV_SLLIUW(shamt, rs1, rd)
   <-> "slli.uw" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ hex_bits_6(shamt)
 
-function clause execute (RISCV_SLLIUW(shamt, rs1, rd)) = {
-  let rs1_val = X(rs1);
-  let result : xlenbits = zero_extend(rs1_val[31..0]) << shamt;
-  X(rd) = result;
-  RETIRE_SUCCESS
+function clause execute RISCV_SLLIUW(shamt, rs1, rd) = {
+    let rs1_val = X(rs1);
+    let result : xlenbits = zero_extend(rs1_val[31..0]) << shamt;
+    X(rd) = result;
+    RETIRE_SUCCESS
 }
 
 /* ****************************************************************** */
@@ -47,18 +47,18 @@ mapping zba_rtypeuw_mnemonic : bropw_zba <-> string = {
 mapping clause assembly = ZBA_RTYPEUW(rs2, rs1, rd, op)
   <-> zba_rtypeuw_mnemonic(op) ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
-function clause execute (ZBA_RTYPEUW(rs2, rs1, rd, op)) = {
-  let rs1_val = X(rs1);
-  let rs2_val = X(rs2);
-  let shamt : bits(2) = match op {
-    RISCV_ADDUW    => 0b00,
-    RISCV_SH1ADDUW => 0b01,
-    RISCV_SH2ADDUW => 0b10,
-    RISCV_SH3ADDUW => 0b11
-  };
-  let result : xlenbits = (zero_extend(rs1_val[31..0]) << shamt) + rs2_val;
-  X(rd) = result;
-  RETIRE_SUCCESS
+function clause execute ZBA_RTYPEUW(rs2, rs1, rd, op) = {
+    let rs1_val = X(rs1);
+    let rs2_val = X(rs2);
+    let shamt : bits(2) = match op {
+        RISCV_ADDUW => 0b00,
+        RISCV_SH1ADDUW => 0b01,
+        RISCV_SH2ADDUW => 0b10,
+        RISCV_SH3ADDUW => 0b11,
+    };
+    let result : xlenbits = (zero_extend(rs1_val[31..0]) << shamt) + rs2_val;
+    X(rd) = result;
+    RETIRE_SUCCESS
 }
 
 /* ****************************************************************** */
@@ -80,15 +80,15 @@ mapping zba_rtype_mnemonic : brop_zba <-> string = {
 mapping clause assembly = ZBA_RTYPE(rs2, rs1, rd, op)
   <-> zba_rtype_mnemonic(op) ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
-function clause execute (ZBA_RTYPE(rs2, rs1, rd, op)) = {
-  let rs1_val = X(rs1);
-  let rs2_val = X(rs2);
-  let shamt : bits(2) = match op {
-    RISCV_SH1ADD => 0b01,
-    RISCV_SH2ADD => 0b10,
-    RISCV_SH3ADD => 0b11
-  };
-  let result : xlenbits = (rs1_val << shamt) + rs2_val;
-  X(rd) = result;
-  RETIRE_SUCCESS
+function clause execute ZBA_RTYPE(rs2, rs1, rd, op) = {
+    let rs1_val = X(rs1);
+    let rs2_val = X(rs2);
+    let shamt : bits(2) = match op {
+        RISCV_SH1ADD => 0b01,
+        RISCV_SH2ADD => 0b10,
+        RISCV_SH3ADD => 0b11,
+    };
+    let result : xlenbits = (rs1_val << shamt) + rs2_val;
+    X(rd) = result;
+    RETIRE_SUCCESS
 }

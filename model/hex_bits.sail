@@ -1,6 +1,12 @@
 // Note: This file is temporarily copied here from the Sail compiler. It can
 // be removed when Sail 0.18 is released.
 
+$ifndef _HEX_BITS
+$define _HEX_BITS
+
+$include <vector.sail>
+$include <string.sail>
+
 /*==========================================================================*/
 /*     Sail                                                                 */
 /*                                                                          */
@@ -67,20 +73,13 @@
 /*  OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF      */
 /*  SUCH DAMAGE.                                                            */
 /*==========================================================================*/
-
-$ifndef _HEX_BITS
-$define _HEX_BITS
-
-$include <vector.sail>
-$include <string.sail>
-
-val "parse_hex_bits" : forall 'n, 'n > 0. (int('n), string) -> bits('n)
-val "valid_hex_bits" : forall 'n, 'n > 0. (int('n), string) -> bool
+val parse_hex_bits = pure { _: "parse_hex_bits" } : forall 'n, 'n > 0. (int('n), string) -> bits('n)
+val valid_hex_bits = pure { _: "valid_hex_bits" } : forall 'n, 'n > 0. (int('n), string) -> bool
 
 val hex_bits : forall 'n, 'n > 0. bits('n) <-> (int('n), string)
 
-function hex_bits_forwards(bv) = (length(bv), hex_str(unsigned(bv)))
-function hex_bits_forwards_matches(bv) = true
+function hex_bits_forwards bv = (length(bv), hex_str(unsigned(bv)))
+function hex_bits_forwards_matches bv = true
 
 function hex_bits_backwards(n, str) = parse_hex_bits(n, str)
 function hex_bits_backwards_matches(n, str) = valid_hex_bits(n, str)

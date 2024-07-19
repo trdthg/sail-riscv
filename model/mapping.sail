@@ -1,6 +1,12 @@
 // Note: This file is temporarily copied here from the Sail compiler. It can
 // be removed when Sail 0.18 is released.
 
+$ifndef _MAPPING
+$define _MAPPING
+
+$include <arith.sail>
+$include <option.sail>
+
 /*==========================================================================*/
 /*     Sail                                                                 */
 /*                                                                          */
@@ -67,28 +73,20 @@
 /*  OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF      */
 /*  SUCH DAMAGE.                                                            */
 /*==========================================================================*/
-
-$ifndef _MAPPING
-$define _MAPPING
-
-$include <arith.sail>
-$include <option.sail>
-
-val string_take = pure "string_take" : (string, nat) -> string
-val string_drop = pure "string_drop" : (string, nat) -> string
-val string_length = pure "string_length" : string -> nat
-val string_append = pure {coq: "String.append", c: "concat_str", _: "string_append"} : (string, string) -> string
-val string_startswith = pure "string_startswith" : (string, string) -> bool
+val string_take = pure { _: "string_take" } : (string, nat) -> string
+val string_drop = pure { _: "string_drop" } : (string, nat) -> string
+val string_length = pure { _: "string_length" } : string -> nat
+val string_append = pure { coq: "String.append", c: "concat_str", _: "string_append" } : (string, string) -> string
+val string_startswith = pure { _: "string_startswith" } : (string, string) -> bool
 
 val n_leading_spaces = pure { coq: "n_leading_spaces_Z" } : string -> nat
-function n_leading_spaces s =
-  match s {
+function n_leading_spaces s = match s {
     "" => 0,
     _ => match string_take(s, 1) {
-      " " => 1 + n_leading_spaces(string_drop(s, 1)),
-      _ => 0
-    }
-  }
+        " " => 1 + n_leading_spaces(string_drop(s, 1)),
+        _ => 0,
+    },
+}
 
 /*!
 In a string mapping this is treated as `[ ]+`, i.e one or more space
@@ -96,13 +94,13 @@ characters. It is printed as a single space `" "`.
 */
 val spc : unit <-> string
 
-function spc_forwards() = " "
-function spc_forwards_matches() = true
+function spc_forwards () = " "
+function spc_forwards_matches () = true
 
 function spc_backwards _ = ()
 function spc_backwards_matches s = {
-  let len = string_length(s);
-  n_leading_spaces(s) == len & len > 0
+    let len = string_length(s);
+    n_leading_spaces(s) == len & len > 0
 }
 
 /*!
@@ -111,8 +109,8 @@ characters. It is printed as the empty string.
 */
 val opt_spc : unit <-> string
 
-function opt_spc_forwards() = ""
-function opt_spc_forwards_matches() = true
+function opt_spc_forwards () = ""
+function opt_spc_forwards_matches () = true
 
 function opt_spc_backwards _ = ()
 function opt_spc_backwards_matches s = n_leading_spaces(s) == string_length(s)
@@ -123,8 +121,8 @@ characters. It differs however in that it is printed as a single space `" "`.
 */
 val def_spc : unit <-> string
 
-function def_spc_forwards() = " "
-function def_spc_forwards_matches() = true
+function def_spc_forwards () = " "
+function def_spc_forwards_matches () = true
 
 function def_spc_backwards _ = ()
 function def_spc_backwards_matches s = n_leading_spaces(s) == string_length(s)
