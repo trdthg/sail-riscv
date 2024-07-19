@@ -25,42 +25,42 @@ mapping clause encdec = VVMTYPE(funct6, vs2, vs1, vd) if haveVExt()
   <-> encdec_vvmfunct6(funct6) @ 0b0 @ vs2 @ vs1 @ 0b000 @ vd @ 0b1010111 if haveVExt()
 
 function clause execute VVMTYPE(funct6, vs2, vs1, vd) = {
-    let SEW = get_sew();
-    let LMUL_pow = get_lmul_pow();
-    let num_elem = get_num_elem(LMUL_pow, SEW);
+  let SEW = get_sew();
+  let LMUL_pow = get_lmul_pow();
+  let num_elem = get_num_elem(LMUL_pow, SEW);
 
-    if illegal_vd_unmasked() then {
-        handle_illegal();
-        return RETIRE_FAIL
-    };
+  if illegal_vd_unmasked() then {
+    handle_illegal();
+    return RETIRE_FAIL
+  };
 
-    let (n as 'n) = num_elem;
-    let (m as 'm) = SEW;
+  let (n as 'n) = num_elem;
+  let (m as 'm) = SEW;
 
-    let vm_val : vector('n, dec, bool) = read_vmask_carry(num_elem, 0b0, 0b00000);
-    let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
-    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-    let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
-    result : vector('n, dec, bool) = undefined;
-    mask : vector('n, dec, bool) = undefined;
+  let vm_val : vector('n, dec, bool) = read_vmask_carry(num_elem, 0b0, 0b00000);
+  let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
+  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+  let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
+  result : vector('n, dec, bool) = undefined;
+  mask : vector('n, dec, bool) = undefined;
 
-    (result, mask) = init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val);
+  (result, mask) = init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val);
 
-    foreach (i from 0 to (num_elem - 1)) {
-        if mask[
-            i
-        ] then {
-            let res : bool = match funct6 {
-                VVM_VMADC => unsigned(vs2_val[i]) + unsigned(vs1_val[i]) + unsigned(bool_to_bits(vm_val[i])) > 2 ^SEW - 1,
-                VVM_VMSBC => unsigned(vs2_val[i]) - unsigned(vs1_val[i]) - unsigned(bool_to_bits(vm_val[i])) < 0,
-            };
-            result[i] = res
-        }
-    };
+  foreach (i from 0 to (num_elem - 1)) {
+    if mask[
+      i
+    ] then {
+      let res : bool = match funct6 {
+        VVM_VMADC => unsigned(vs2_val[i]) + unsigned(vs1_val[i]) + unsigned(bool_to_bits(vm_val[i])) > 2 ^SEW - 1,
+        VVM_VMSBC => unsigned(vs2_val[i]) - unsigned(vs1_val[i]) - unsigned(bool_to_bits(vm_val[i])) < 0,
+      };
+      result[i] = res
+    }
+  };
 
-    write_vmask(num_elem, vd, result);
-    vstart = zeros();
-    RETIRE_SUCCESS
+  write_vmask(num_elem, vd, result);
+  vstart = zeros();
+  RETIRE_SUCCESS
 }
 
 mapping vvmtype_mnemonic : vvmfunct6 <-> string = {
@@ -86,41 +86,41 @@ mapping clause encdec = VVMCTYPE(funct6, vs2, vs1, vd) if haveVExt()
   <-> encdec_vvmcfunct6(funct6) @ 0b1 @ vs2 @ vs1 @ 0b000 @ vd @ 0b1010111 if haveVExt()
 
 function clause execute VVMCTYPE(funct6, vs2, vs1, vd) = {
-    let SEW = get_sew();
-    let LMUL_pow = get_lmul_pow();
-    let num_elem = get_num_elem(LMUL_pow, SEW);
+  let SEW = get_sew();
+  let LMUL_pow = get_lmul_pow();
+  let num_elem = get_num_elem(LMUL_pow, SEW);
 
-    if illegal_vd_unmasked() then {
-        handle_illegal();
-        return RETIRE_FAIL
-    };
+  if illegal_vd_unmasked() then {
+    handle_illegal();
+    return RETIRE_FAIL
+  };
 
-    let (n as 'n) = num_elem;
-    let (m as 'm) = SEW;
+  let (n as 'n) = num_elem;
+  let (m as 'm) = SEW;
 
-    let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
-    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-    let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
-    result : vector('n, dec, bool) = undefined;
-    mask : vector('n, dec, bool) = undefined;
+  let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
+  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+  let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
+  result : vector('n, dec, bool) = undefined;
+  mask : vector('n, dec, bool) = undefined;
 
-    (result, mask) = init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val);
+  (result, mask) = init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val);
 
-    foreach (i from 0 to (num_elem - 1)) {
-        if mask[
-            i
-        ] then {
-            let res : bool = match funct6 {
-                VVMC_VMADC => unsigned(vs2_val[i]) + unsigned(vs1_val[i]) > 2 ^SEW - 1,
-                VVMC_VMSBC => unsigned(vs2_val[i]) - unsigned(vs1_val[i]) < 0,
-            };
-            result[i] = res
-        }
-    };
+  foreach (i from 0 to (num_elem - 1)) {
+    if mask[
+      i
+    ] then {
+      let res : bool = match funct6 {
+        VVMC_VMADC => unsigned(vs2_val[i]) + unsigned(vs1_val[i]) > 2 ^SEW - 1,
+        VVMC_VMSBC => unsigned(vs2_val[i]) - unsigned(vs1_val[i]) < 0,
+      };
+      result[i] = res
+    }
+  };
 
-    write_vmask(num_elem, vd, result);
-    vstart = zeros();
-    RETIRE_SUCCESS
+  write_vmask(num_elem, vd, result);
+  vstart = zeros();
+  RETIRE_SUCCESS
 }
 
 mapping vvmctype_mnemonic : vvmcfunct6 <-> string = {
@@ -146,56 +146,50 @@ mapping clause encdec = VVMSTYPE(funct6, vs2, vs1, vd) if haveVExt()
   <-> encdec_vvmsfunct6(funct6) @ 0b0 @ vs2 @ vs1 @ 0b000 @ vd @ 0b1010111 if haveVExt()
 
 function clause execute VVMSTYPE(funct6, vs2, vs1, vd) = {
-    let SEW = get_sew();
-    let LMUL_pow = get_lmul_pow();
-    let num_elem = get_num_elem(LMUL_pow, SEW);
+  let SEW = get_sew();
+  let LMUL_pow = get_lmul_pow();
+  let num_elem = get_num_elem(LMUL_pow, SEW);
 
-    if illegal_vd_masked(vd) then {
-        handle_illegal();
-        return RETIRE_FAIL
-    };
+  if illegal_vd_masked(vd) then {
+    handle_illegal();
+    return RETIRE_FAIL
+  };
 
-    let (n as 'n) = num_elem;
-    let (m as 'm) = SEW;
+  let (n as 'n) = num_elem;
+  let (m as 'm) = SEW;
 
-    /* for bypassing normal masking in init_masked_result */
-    vec_trues : vector('n, dec, bool) = undefined;
-    foreach (i from 0 to (num_elem - 1)) {
-        vec_trues[i] = true
-    };
+  /* for bypassing normal masking in init_masked_result */
+  vec_trues : vector('n, dec, bool) = undefined;
+  foreach (i from 0 to (num_elem - 1)) {
+    vec_trues[i] = true
+  };
 
-    let vm_val : vector('n, dec, bool) = read_vmask_carry(num_elem, 0b0, 0b00000);
-    let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
-    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-    let vd_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
-    result : vector('n, dec, bits('m)) = undefined;
-    mask : vector('n, dec, bool) = undefined;
+  let vm_val : vector('n, dec, bool) = read_vmask_carry(num_elem, 0b0, 0b00000);
+  let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
+  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+  let vd_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
+  result : vector('n, dec, bits('m)) = undefined;
+  mask : vector('n, dec, bool) = undefined;
 
-    (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vec_trues);
+  (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vec_trues);
 
-    foreach (i from 0 to (num_elem - 1)) {
-        if mask[
-            i
-        ] then {
-            result[
-                i
-            ] =
-                match funct6 {
-                    VVMS_VADC => to_bits(
-                        SEW,
-                        unsigned(vs2_val[i]) + unsigned(vs1_val[i]) + unsigned(bool_to_bits(vm_val[i])),
-                    ),
-                    VVMS_VSBC => to_bits(
-                        SEW,
-                        unsigned(vs2_val[i]) - unsigned(vs1_val[i]) - unsigned(bool_to_bits(vm_val[i])),
-                    ),
-                }
+  foreach (i from 0 to (num_elem - 1)) {
+    if mask[
+      i
+    ] then {
+      result[
+        i
+      ] =
+        match funct6 {
+          VVMS_VADC => to_bits(SEW, unsigned(vs2_val[i]) + unsigned(vs1_val[i]) + unsigned(bool_to_bits(vm_val[i]))),
+          VVMS_VSBC => to_bits(SEW, unsigned(vs2_val[i]) - unsigned(vs1_val[i]) - unsigned(bool_to_bits(vm_val[i]))),
         }
-    };
+    }
+  };
 
-    write_vreg(num_elem, SEW, LMUL_pow, vd, result);
-    vstart = zeros();
-    RETIRE_SUCCESS
+  write_vreg(num_elem, SEW, LMUL_pow, vd, result);
+  vstart = zeros();
+  RETIRE_SUCCESS
 }
 
 mapping vvmstype_mnemonic : vvmsfunct6 <-> string = {
@@ -223,46 +217,46 @@ mapping clause encdec = VVCMPTYPE(funct6, vm, vs2, vs1, vd) if haveVExt()
   <-> encdec_vvcmpfunct6(funct6) @ vm @ vs2 @ vs1 @ 0b000 @ vd @ 0b1010111 if haveVExt()
 
 function clause execute VVCMPTYPE(funct6, vm, vs2, vs1, vd) = {
-    let SEW = get_sew();
-    let LMUL_pow = get_lmul_pow();
-    let num_elem = get_num_elem(LMUL_pow, SEW);
+  let SEW = get_sew();
+  let LMUL_pow = get_lmul_pow();
+  let num_elem = get_num_elem(LMUL_pow, SEW);
 
-    if illegal_vd_unmasked() then {
-        handle_illegal();
-        return RETIRE_FAIL
-    };
+  if illegal_vd_unmasked() then {
+    handle_illegal();
+    return RETIRE_FAIL
+  };
 
-    let (n as 'n) = num_elem;
-    let (m as 'm) = SEW;
+  let (n as 'n) = num_elem;
+  let (m as 'm) = SEW;
 
-    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
-    let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
-    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-    let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
-    result : vector('n, dec, bool) = undefined;
-    mask : vector('n, dec, bool) = undefined;
+  let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
+  let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
+  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+  let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
+  result : vector('n, dec, bool) = undefined;
+  mask : vector('n, dec, bool) = undefined;
 
-    (result, mask) = init_masked_result_cmp(num_elem, SEW, LMUL_pow, vd_val, vm_val);
+  (result, mask) = init_masked_result_cmp(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
-    foreach (i from 0 to (num_elem - 1)) {
-        if mask[
-            i
-        ] then {
-            let res : bool = match funct6 {
-                VVCMP_VMSEQ => (vs2_val[i]) == (vs1_val[i]),
-                VVCMP_VMSNE => (vs2_val[i]) != (vs1_val[i]),
-                VVCMP_VMSLTU => unsigned(vs2_val[i]) < unsigned(vs1_val[i]),
-                VVCMP_VMSLT => signed(vs2_val[i]) < signed(vs1_val[i]),
-                VVCMP_VMSLEU => unsigned(vs2_val[i]) <= unsigned(vs1_val[i]),
-                VVCMP_VMSLE => signed(vs2_val[i]) <= signed(vs1_val[i]),
-            };
-            result[i] = res
-        }
-    };
+  foreach (i from 0 to (num_elem - 1)) {
+    if mask[
+      i
+    ] then {
+      let res : bool = match funct6 {
+        VVCMP_VMSEQ => (vs2_val[i]) == (vs1_val[i]),
+        VVCMP_VMSNE => (vs2_val[i]) != (vs1_val[i]),
+        VVCMP_VMSLTU => unsigned(vs2_val[i]) < unsigned(vs1_val[i]),
+        VVCMP_VMSLT => signed(vs2_val[i]) < signed(vs1_val[i]),
+        VVCMP_VMSLEU => unsigned(vs2_val[i]) <= unsigned(vs1_val[i]),
+        VVCMP_VMSLE => signed(vs2_val[i]) <= signed(vs1_val[i]),
+      };
+      result[i] = res
+    }
+  };
 
-    write_vmask(num_elem, vd, result);
-    vstart = zeros();
-    RETIRE_SUCCESS
+  write_vmask(num_elem, vd, result);
+  vstart = zeros();
+  RETIRE_SUCCESS
 }
 
 mapping vvcmptype_mnemonic : vvcmpfunct6 <-> string = {
@@ -292,42 +286,42 @@ mapping clause encdec = VXMTYPE(funct6, vs2, rs1, vd) if haveVExt()
   <-> encdec_vxmfunct6(funct6) @ 0b0 @ vs2 @ rs1 @ 0b100 @ vd @ 0b1010111 if haveVExt()
 
 function clause execute VXMTYPE(funct6, vs2, rs1, vd) = {
-    let SEW = get_sew();
-    let LMUL_pow = get_lmul_pow();
-    let num_elem = get_num_elem(LMUL_pow, SEW);
+  let SEW = get_sew();
+  let LMUL_pow = get_lmul_pow();
+  let num_elem = get_num_elem(LMUL_pow, SEW);
 
-    if illegal_vd_unmasked() then {
-        handle_illegal();
-        return RETIRE_FAIL
-    };
+  if illegal_vd_unmasked() then {
+    handle_illegal();
+    return RETIRE_FAIL
+  };
 
-    let (n as 'n) = num_elem;
-    let (m as 'm) = SEW;
+  let (n as 'n) = num_elem;
+  let (m as 'm) = SEW;
 
-    let vm_val : vector('n, dec, bool) = read_vmask_carry(num_elem, 0b0, 0b00000);
-    let rs1_val : bits('m) = get_scalar(rs1, SEW);
-    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-    let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
-    result : vector('n, dec, bool) = undefined;
-    mask : vector('n, dec, bool) = undefined;
+  let vm_val : vector('n, dec, bool) = read_vmask_carry(num_elem, 0b0, 0b00000);
+  let rs1_val : bits('m) = get_scalar(rs1, SEW);
+  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+  let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
+  result : vector('n, dec, bool) = undefined;
+  mask : vector('n, dec, bool) = undefined;
 
-    (result, mask) = init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val);
+  (result, mask) = init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val);
 
-    foreach (i from 0 to (num_elem - 1)) {
-        if mask[
-            i
-        ] then {
-            let res : bool = match funct6 {
-                VXM_VMADC => unsigned(vs2_val[i]) + unsigned(rs1_val) + unsigned(bool_to_bits(vm_val[i])) > 2 ^SEW - 1,
-                VXM_VMSBC => unsigned(vs2_val[i]) - unsigned(rs1_val) - unsigned(bool_to_bits(vm_val[i])) < 0,
-            };
-            result[i] = res
-        }
-    };
+  foreach (i from 0 to (num_elem - 1)) {
+    if mask[
+      i
+    ] then {
+      let res : bool = match funct6 {
+        VXM_VMADC => unsigned(vs2_val[i]) + unsigned(rs1_val) + unsigned(bool_to_bits(vm_val[i])) > 2 ^SEW - 1,
+        VXM_VMSBC => unsigned(vs2_val[i]) - unsigned(rs1_val) - unsigned(bool_to_bits(vm_val[i])) < 0,
+      };
+      result[i] = res
+    }
+  };
 
-    write_vmask(num_elem, vd, result);
-    vstart = zeros();
-    RETIRE_SUCCESS
+  write_vmask(num_elem, vd, result);
+  vstart = zeros();
+  RETIRE_SUCCESS
 }
 
 mapping vxmtype_mnemonic : vxmfunct6 <-> string = {
@@ -353,41 +347,41 @@ mapping clause encdec = VXMCTYPE(funct6, vs2, rs1, vd) if haveVExt()
   <-> encdec_vxmcfunct6(funct6) @ 0b1 @ vs2 @ rs1 @ 0b100 @ vd @ 0b1010111 if haveVExt()
 
 function clause execute VXMCTYPE(funct6, vs2, rs1, vd) = {
-    let SEW = get_sew();
-    let LMUL_pow = get_lmul_pow();
-    let num_elem = get_num_elem(LMUL_pow, SEW);
+  let SEW = get_sew();
+  let LMUL_pow = get_lmul_pow();
+  let num_elem = get_num_elem(LMUL_pow, SEW);
 
-    if illegal_vd_unmasked() then {
-        handle_illegal();
-        return RETIRE_FAIL
-    };
+  if illegal_vd_unmasked() then {
+    handle_illegal();
+    return RETIRE_FAIL
+  };
 
-    let (n as 'n) = num_elem;
-    let (m as 'm) = SEW;
+  let (n as 'n) = num_elem;
+  let (m as 'm) = SEW;
 
-    let rs1_val : bits('m) = get_scalar(rs1, SEW);
-    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-    let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
-    result : vector('n, dec, bool) = undefined;
-    mask : vector('n, dec, bool) = undefined;
+  let rs1_val : bits('m) = get_scalar(rs1, SEW);
+  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+  let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
+  result : vector('n, dec, bool) = undefined;
+  mask : vector('n, dec, bool) = undefined;
 
-    (result, mask) = init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val);
+  (result, mask) = init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val);
 
-    foreach (i from 0 to (num_elem - 1)) {
-        if mask[
-            i
-        ] then {
-            let res : bool = match funct6 {
-                VXMC_VMADC => unsigned(vs2_val[i]) + unsigned(rs1_val) > 2 ^SEW - 1,
-                VXMC_VMSBC => unsigned(vs2_val[i]) - unsigned(rs1_val) < 0,
-            };
-            result[i] = res
-        }
-    };
+  foreach (i from 0 to (num_elem - 1)) {
+    if mask[
+      i
+    ] then {
+      let res : bool = match funct6 {
+        VXMC_VMADC => unsigned(vs2_val[i]) + unsigned(rs1_val) > 2 ^SEW - 1,
+        VXMC_VMSBC => unsigned(vs2_val[i]) - unsigned(rs1_val) < 0,
+      };
+      result[i] = res
+    }
+  };
 
-    write_vmask(num_elem, vd, result);
-    vstart = zeros();
-    RETIRE_SUCCESS
+  write_vmask(num_elem, vd, result);
+  vstart = zeros();
+  RETIRE_SUCCESS
 }
 
 mapping vxmctype_mnemonic : vxmcfunct6 <-> string = {
@@ -413,56 +407,50 @@ mapping clause encdec = VXMSTYPE(funct6, vs2, rs1, vd) if haveVExt()
   <-> encdec_vxmsfunct6(funct6) @ 0b0 @ vs2 @ rs1 @ 0b100 @ vd @ 0b1010111 if haveVExt()
 
 function clause execute VXMSTYPE(funct6, vs2, rs1, vd) = {
-    let SEW = get_sew();
-    let LMUL_pow = get_lmul_pow();
-    let num_elem = get_num_elem(LMUL_pow, SEW);
+  let SEW = get_sew();
+  let LMUL_pow = get_lmul_pow();
+  let num_elem = get_num_elem(LMUL_pow, SEW);
 
-    if illegal_vd_masked(vd) then {
-        handle_illegal();
-        return RETIRE_FAIL
-    };
+  if illegal_vd_masked(vd) then {
+    handle_illegal();
+    return RETIRE_FAIL
+  };
 
-    let (n as 'n) = num_elem;
-    let (m as 'm) = SEW;
+  let (n as 'n) = num_elem;
+  let (m as 'm) = SEW;
 
-    /* for bypassing normal masking in init_masked_result */
-    vec_trues : vector('n, dec, bool) = undefined;
-    foreach (i from 0 to (num_elem - 1)) {
-        vec_trues[i] = true
-    };
+  /* for bypassing normal masking in init_masked_result */
+  vec_trues : vector('n, dec, bool) = undefined;
+  foreach (i from 0 to (num_elem - 1)) {
+    vec_trues[i] = true
+  };
 
-    let vm_val : vector('n, dec, bool) = read_vmask_carry(num_elem, 0b0, 0b00000);
-    let rs1_val : bits('m) = get_scalar(rs1, SEW);
-    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-    let vd_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
-    result : vector('n, dec, bits('m)) = undefined;
-    mask : vector('n, dec, bool) = undefined;
+  let vm_val : vector('n, dec, bool) = read_vmask_carry(num_elem, 0b0, 0b00000);
+  let rs1_val : bits('m) = get_scalar(rs1, SEW);
+  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+  let vd_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
+  result : vector('n, dec, bits('m)) = undefined;
+  mask : vector('n, dec, bool) = undefined;
 
-    (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vec_trues);
+  (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vec_trues);
 
-    foreach (i from 0 to (num_elem - 1)) {
-        if mask[
-            i
-        ] then {
-            result[
-                i
-            ] =
-                match funct6 {
-                    VXMS_VADC => to_bits(
-                        SEW,
-                        unsigned(vs2_val[i]) + unsigned(rs1_val) + unsigned(bool_to_bits(vm_val[i])),
-                    ),
-                    VXMS_VSBC => to_bits(
-                        SEW,
-                        unsigned(vs2_val[i]) - unsigned(rs1_val) - unsigned(bool_to_bits(vm_val[i])),
-                    ),
-                }
+  foreach (i from 0 to (num_elem - 1)) {
+    if mask[
+      i
+    ] then {
+      result[
+        i
+      ] =
+        match funct6 {
+          VXMS_VADC => to_bits(SEW, unsigned(vs2_val[i]) + unsigned(rs1_val) + unsigned(bool_to_bits(vm_val[i]))),
+          VXMS_VSBC => to_bits(SEW, unsigned(vs2_val[i]) - unsigned(rs1_val) - unsigned(bool_to_bits(vm_val[i]))),
         }
-    };
+    }
+  };
 
-    write_vreg(num_elem, SEW, LMUL_pow, vd, result);
-    vstart = zeros();
-    RETIRE_SUCCESS
+  write_vreg(num_elem, SEW, LMUL_pow, vd, result);
+  vstart = zeros();
+  RETIRE_SUCCESS
 }
 
 mapping vxmstype_mnemonic : vxmsfunct6 <-> string = {
@@ -492,48 +480,48 @@ mapping clause encdec = VXCMPTYPE(funct6, vm, vs2, rs1, vd) if haveVExt()
   <-> encdec_vxcmpfunct6(funct6) @ vm @ vs2 @ rs1 @ 0b100 @ vd @ 0b1010111 if haveVExt()
 
 function clause execute VXCMPTYPE(funct6, vm, vs2, rs1, vd) = {
-    let SEW = get_sew();
-    let LMUL_pow = get_lmul_pow();
-    let num_elem = get_num_elem(LMUL_pow, SEW);
+  let SEW = get_sew();
+  let LMUL_pow = get_lmul_pow();
+  let num_elem = get_num_elem(LMUL_pow, SEW);
 
-    if illegal_vd_unmasked() then {
-        handle_illegal();
-        return RETIRE_FAIL
-    };
+  if illegal_vd_unmasked() then {
+    handle_illegal();
+    return RETIRE_FAIL
+  };
 
-    let (n as 'n) = num_elem;
-    let (m as 'm) = SEW;
+  let (n as 'n) = num_elem;
+  let (m as 'm) = SEW;
 
-    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
-    let rs1_val : bits('m) = get_scalar(rs1, SEW);
-    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-    let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
-    result : vector('n, dec, bool) = undefined;
-    mask : vector('n, dec, bool) = undefined;
+  let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
+  let rs1_val : bits('m) = get_scalar(rs1, SEW);
+  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+  let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
+  result : vector('n, dec, bool) = undefined;
+  mask : vector('n, dec, bool) = undefined;
 
-    (result, mask) = init_masked_result_cmp(num_elem, SEW, LMUL_pow, vd_val, vm_val);
+  (result, mask) = init_masked_result_cmp(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
-    foreach (i from 0 to (num_elem - 1)) {
-        if mask[
-            i
-        ] then {
-            let res : bool = match funct6 {
-                VXCMP_VMSEQ => (vs2_val[i]) == rs1_val,
-                VXCMP_VMSNE => (vs2_val[i]) != rs1_val,
-                VXCMP_VMSLTU => unsigned(vs2_val[i]) < unsigned(rs1_val),
-                VXCMP_VMSLT => signed(vs2_val[i]) < signed(rs1_val),
-                VXCMP_VMSLEU => unsigned(vs2_val[i]) <= unsigned(rs1_val),
-                VXCMP_VMSLE => signed(vs2_val[i]) <= signed(rs1_val),
-                VXCMP_VMSGTU => unsigned(vs2_val[i]) > unsigned(rs1_val),
-                VXCMP_VMSGT => signed(vs2_val[i]) > signed(rs1_val),
-            };
-            result[i] = res
-        }
-    };
+  foreach (i from 0 to (num_elem - 1)) {
+    if mask[
+      i
+    ] then {
+      let res : bool = match funct6 {
+        VXCMP_VMSEQ => (vs2_val[i]) == rs1_val,
+        VXCMP_VMSNE => (vs2_val[i]) != rs1_val,
+        VXCMP_VMSLTU => unsigned(vs2_val[i]) < unsigned(rs1_val),
+        VXCMP_VMSLT => signed(vs2_val[i]) < signed(rs1_val),
+        VXCMP_VMSLEU => unsigned(vs2_val[i]) <= unsigned(rs1_val),
+        VXCMP_VMSLE => signed(vs2_val[i]) <= signed(rs1_val),
+        VXCMP_VMSGTU => unsigned(vs2_val[i]) > unsigned(rs1_val),
+        VXCMP_VMSGT => signed(vs2_val[i]) > signed(rs1_val),
+      };
+      result[i] = res
+    }
+  };
 
-    write_vmask(num_elem, vd, result);
-    vstart = zeros();
-    RETIRE_SUCCESS
+  write_vmask(num_elem, vd, result);
+  vstart = zeros();
+  RETIRE_SUCCESS
 }
 
 mapping vxcmptype_mnemonic : vxcmpfunct6 <-> string = {
@@ -564,41 +552,41 @@ mapping clause encdec = VIMTYPE(funct6, vs2, simm, vd) if haveVExt()
   <-> encdec_vimfunct6(funct6) @ 0b0 @ vs2 @ simm @ 0b011 @ vd @ 0b1010111 if haveVExt()
 
 function clause execute VIMTYPE(funct6, vs2, simm, vd) = {
-    let SEW = get_sew();
-    let LMUL_pow = get_lmul_pow();
-    let num_elem = get_num_elem(LMUL_pow, SEW);
+  let SEW = get_sew();
+  let LMUL_pow = get_lmul_pow();
+  let num_elem = get_num_elem(LMUL_pow, SEW);
 
-    if illegal_vd_unmasked() then {
-        handle_illegal();
-        return RETIRE_FAIL
-    };
+  if illegal_vd_unmasked() then {
+    handle_illegal();
+    return RETIRE_FAIL
+  };
 
-    let (n as 'n) = num_elem;
-    let (m as 'm) = SEW;
+  let (n as 'n) = num_elem;
+  let (m as 'm) = SEW;
 
-    let vm_val : vector('n, dec, bool) = read_vmask_carry(num_elem, 0b0, 0b00000);
-    let imm_val : bits('m) = sign_extend(simm);
-    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-    let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
-    result : vector('n, dec, bool) = undefined;
-    mask : vector('n, dec, bool) = undefined;
+  let vm_val : vector('n, dec, bool) = read_vmask_carry(num_elem, 0b0, 0b00000);
+  let imm_val : bits('m) = sign_extend(simm);
+  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+  let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
+  result : vector('n, dec, bool) = undefined;
+  mask : vector('n, dec, bool) = undefined;
 
-    (result, mask) = init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val);
+  (result, mask) = init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val);
 
-    foreach (i from 0 to (num_elem - 1)) {
-        if mask[
-            i
-        ] then {
-            let res : bool = match funct6 {
-                VIM_VMADC => unsigned(vs2_val[i]) + unsigned(imm_val) + unsigned(bool_to_bits(vm_val[i])) > 2 ^SEW - 1,
-            };
-            result[i] = res
-        }
-    };
+  foreach (i from 0 to (num_elem - 1)) {
+    if mask[
+      i
+    ] then {
+      let res : bool = match funct6 {
+        VIM_VMADC => unsigned(vs2_val[i]) + unsigned(imm_val) + unsigned(bool_to_bits(vm_val[i])) > 2 ^SEW - 1,
+      };
+      result[i] = res
+    }
+  };
 
-    write_vmask(num_elem, vd, result);
-    vstart = zeros();
-    RETIRE_SUCCESS
+  write_vmask(num_elem, vd, result);
+  vstart = zeros();
+  RETIRE_SUCCESS
 }
 
 mapping vimtype_mnemonic : vimfunct6 <-> string = {
@@ -622,38 +610,38 @@ mapping clause encdec = VIMCTYPE(funct6, vs2, simm, vd) if haveVExt()
   <-> encdec_vimcfunct6(funct6) @ 0b1 @ vs2 @ simm @ 0b011 @ vd @ 0b1010111 if haveVExt()
 
 function clause execute VIMCTYPE(funct6, vs2, simm, vd) = {
-    let SEW = get_sew();
-    let LMUL_pow = get_lmul_pow();
-    let num_elem = get_num_elem(LMUL_pow, SEW);
+  let SEW = get_sew();
+  let LMUL_pow = get_lmul_pow();
+  let num_elem = get_num_elem(LMUL_pow, SEW);
 
-    if illegal_vd_unmasked() then {
-        handle_illegal();
-        return RETIRE_FAIL
-    };
+  if illegal_vd_unmasked() then {
+    handle_illegal();
+    return RETIRE_FAIL
+  };
 
-    let (n as 'n) = num_elem;
-    let (m as 'm) = SEW;
+  let (n as 'n) = num_elem;
+  let (m as 'm) = SEW;
 
-    let imm_val : bits('m) = sign_extend(simm);
-    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-    let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
-    result : vector('n, dec, bool) = undefined;
-    mask : vector('n, dec, bool) = undefined;
+  let imm_val : bits('m) = sign_extend(simm);
+  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+  let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
+  result : vector('n, dec, bool) = undefined;
+  mask : vector('n, dec, bool) = undefined;
 
-    (result, mask) = init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val);
+  (result, mask) = init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val);
 
-    foreach (i from 0 to (num_elem - 1)) {
-        if mask[
-            i
-        ] then {
-            let res : bool = match funct6 { VIMC_VMADC => unsigned(vs2_val[i]) + unsigned(imm_val) > 2 ^SEW - 1,  };
-            result[i] = res
-        }
-    };
+  foreach (i from 0 to (num_elem - 1)) {
+    if mask[
+      i
+    ] then {
+      let res : bool = match funct6 { VIMC_VMADC => unsigned(vs2_val[i]) + unsigned(imm_val) > 2 ^SEW - 1,  };
+      result[i] = res
+    }
+  };
 
-    write_vmask(num_elem, vd, result);
-    vstart = zeros();
-    RETIRE_SUCCESS
+  write_vmask(num_elem, vd, result);
+  vstart = zeros();
+  RETIRE_SUCCESS
 }
 
 mapping vimctype_mnemonic : vimcfunct6 <-> string = {
@@ -677,52 +665,49 @@ mapping clause encdec = VIMSTYPE(funct6, vs2, simm, vd) if haveVExt()
   <-> encdec_vimsfunct6(funct6) @ 0b0 @ vs2 @ simm @ 0b011 @ vd @ 0b1010111 if haveVExt()
 
 function clause execute VIMSTYPE(funct6, vs2, simm, vd) = {
-    let SEW = get_sew();
-    let LMUL_pow = get_lmul_pow();
-    let num_elem = get_num_elem(LMUL_pow, SEW);
+  let SEW = get_sew();
+  let LMUL_pow = get_lmul_pow();
+  let num_elem = get_num_elem(LMUL_pow, SEW);
 
-    if illegal_vd_masked(vd) then {
-        handle_illegal();
-        return RETIRE_FAIL
-    };
+  if illegal_vd_masked(vd) then {
+    handle_illegal();
+    return RETIRE_FAIL
+  };
 
-    let (n as 'n) = num_elem;
-    let (m as 'm) = SEW;
+  let (n as 'n) = num_elem;
+  let (m as 'm) = SEW;
 
-    /* for bypassing normal masking in init_masked_result */
-    vec_trues : vector('n, dec, bool) = undefined;
-    foreach (i from 0 to (num_elem - 1)) {
-        vec_trues[i] = true
-    };
+  /* for bypassing normal masking in init_masked_result */
+  vec_trues : vector('n, dec, bool) = undefined;
+  foreach (i from 0 to (num_elem - 1)) {
+    vec_trues[i] = true
+  };
 
-    let vm_val : vector('n, dec, bool) = read_vmask_carry(num_elem, 0b0, 0b00000);
-    let imm_val : bits('m) = sign_extend(simm);
-    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-    let vd_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
-    result : vector('n, dec, bits('m)) = undefined;
-    mask : vector('n, dec, bool) = undefined;
+  let vm_val : vector('n, dec, bool) = read_vmask_carry(num_elem, 0b0, 0b00000);
+  let imm_val : bits('m) = sign_extend(simm);
+  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+  let vd_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
+  result : vector('n, dec, bits('m)) = undefined;
+  mask : vector('n, dec, bool) = undefined;
 
-    (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vec_trues);
+  (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vec_trues);
 
-    foreach (i from 0 to (num_elem - 1)) {
-        if mask[
-            i
-        ] then {
-            result[
-                i
-            ] =
-                match funct6 {
-                    VIMS_VADC => to_bits(
-                        SEW,
-                        unsigned(vs2_val[i]) + unsigned(imm_val) + unsigned(bool_to_bits(vm_val[i])),
-                    ),
-                }
+  foreach (i from 0 to (num_elem - 1)) {
+    if mask[
+      i
+    ] then {
+      result[
+        i
+      ] =
+        match funct6 {
+          VIMS_VADC => to_bits(SEW, unsigned(vs2_val[i]) + unsigned(imm_val) + unsigned(bool_to_bits(vm_val[i]))),
         }
-    };
+    }
+  };
 
-    write_vreg(num_elem, SEW, LMUL_pow, vd, result);
-    vstart = zeros();
-    RETIRE_SUCCESS
+  write_vreg(num_elem, SEW, LMUL_pow, vd, result);
+  vstart = zeros();
+  RETIRE_SUCCESS
 }
 
 mapping vimstype_mnemonic : vimsfunct6 <-> string = {
@@ -749,46 +734,46 @@ mapping clause encdec = VICMPTYPE(funct6, vm, vs2, simm, vd) if haveVExt()
   <-> encdec_vicmpfunct6(funct6) @ vm @ vs2 @ simm @ 0b011 @ vd @ 0b1010111 if haveVExt()
 
 function clause execute VICMPTYPE(funct6, vm, vs2, simm, vd) = {
-    let SEW = get_sew();
-    let LMUL_pow = get_lmul_pow();
-    let num_elem = get_num_elem(LMUL_pow, SEW);
+  let SEW = get_sew();
+  let LMUL_pow = get_lmul_pow();
+  let num_elem = get_num_elem(LMUL_pow, SEW);
 
-    if illegal_vd_unmasked() then {
-        handle_illegal();
-        return RETIRE_FAIL
-    };
+  if illegal_vd_unmasked() then {
+    handle_illegal();
+    return RETIRE_FAIL
+  };
 
-    let (n as 'n) = num_elem;
-    let (m as 'm) = SEW;
+  let (n as 'n) = num_elem;
+  let (m as 'm) = SEW;
 
-    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
-    let imm_val : bits('m) = sign_extend(simm);
-    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-    let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
-    result : vector('n, dec, bool) = undefined;
-    mask : vector('n, dec, bool) = undefined;
+  let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
+  let imm_val : bits('m) = sign_extend(simm);
+  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+  let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
+  result : vector('n, dec, bool) = undefined;
+  mask : vector('n, dec, bool) = undefined;
 
-    (result, mask) = init_masked_result_cmp(num_elem, SEW, LMUL_pow, vd_val, vm_val);
+  (result, mask) = init_masked_result_cmp(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
-    foreach (i from 0 to (num_elem - 1)) {
-        if mask[
-            i
-        ] then {
-            let res : bool = match funct6 {
-                VICMP_VMSEQ => (vs2_val[i]) == imm_val,
-                VICMP_VMSNE => (vs2_val[i]) != imm_val,
-                VICMP_VMSLEU => unsigned(vs2_val[i]) <= unsigned(imm_val),
-                VICMP_VMSLE => signed(vs2_val[i]) <= signed(imm_val),
-                VICMP_VMSGTU => unsigned(vs2_val[i]) > unsigned(imm_val),
-                VICMP_VMSGT => signed(vs2_val[i]) > signed(imm_val),
-            };
-            result[i] = res
-        }
-    };
+  foreach (i from 0 to (num_elem - 1)) {
+    if mask[
+      i
+    ] then {
+      let res : bool = match funct6 {
+        VICMP_VMSEQ => (vs2_val[i]) == imm_val,
+        VICMP_VMSNE => (vs2_val[i]) != imm_val,
+        VICMP_VMSLEU => unsigned(vs2_val[i]) <= unsigned(imm_val),
+        VICMP_VMSLE => signed(vs2_val[i]) <= signed(imm_val),
+        VICMP_VMSGTU => unsigned(vs2_val[i]) > unsigned(imm_val),
+        VICMP_VMSGT => signed(vs2_val[i]) > signed(imm_val),
+      };
+      result[i] = res
+    }
+  };
 
-    write_vmask(num_elem, vd, result);
-    vstart = zeros();
-    RETIRE_SUCCESS
+  write_vmask(num_elem, vd, result);
+  vstart = zeros();
+  RETIRE_SUCCESS
 }
 
 mapping vicmptype_mnemonic : vicmpfunct6 <-> string = {
@@ -818,46 +803,46 @@ mapping clause encdec = FVVMTYPE(funct6, vm, vs2, vs1, vd) if haveVExt()
   <-> encdec_fvvmfunct6(funct6) @ vm @ vs2 @ vs1 @ 0b001 @ vd @ 0b1010111 if haveVExt()
 
 function clause execute FVVMTYPE(funct6, vm, vs2, vs1, vd) = {
-    let rm_3b = fcsr[FRM];
-    let SEW = get_sew();
-    let LMUL_pow = get_lmul_pow();
-    let num_elem = get_num_elem(LMUL_pow, SEW);
+  let rm_3b = fcsr[FRM];
+  let SEW = get_sew();
+  let LMUL_pow = get_lmul_pow();
+  let num_elem = get_num_elem(LMUL_pow, SEW);
 
-    if illegal_fp_vd_unmasked(SEW, rm_3b) then {
-        handle_illegal();
-        return RETIRE_FAIL
-    };
-    assert(SEW != 8);
+  if illegal_fp_vd_unmasked(SEW, rm_3b) then {
+    handle_illegal();
+    return RETIRE_FAIL
+  };
+  assert(SEW != 8);
 
-    let (n as 'n) = num_elem;
-    let (m as 'm) = SEW;
+  let (n as 'n) = num_elem;
+  let (m as 'm) = SEW;
 
-    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
-    let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
-    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-    let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
-    result : vector('n, dec, bool) = undefined;
-    mask : vector('n, dec, bool) = undefined;
+  let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
+  let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
+  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+  let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
+  result : vector('n, dec, bool) = undefined;
+  mask : vector('n, dec, bool) = undefined;
 
-    (result, mask) = init_masked_result_cmp(num_elem, SEW, LMUL_pow, vd_val, vm_val);
+  (result, mask) = init_masked_result_cmp(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
-    foreach (i from 0 to (num_elem - 1)) {
-        if mask[
-            i
-        ] then {
-            let res : bool = match funct6 {
-                FVVM_VMFEQ => fp_eq(vs2_val[i], vs1_val[i]),
-                FVVM_VMFNE => ~(fp_eq(vs2_val[i], vs1_val[i])),
-                FVVM_VMFLE => fp_le(vs2_val[i], vs1_val[i]),
-                FVVM_VMFLT => fp_lt(vs2_val[i], vs1_val[i]),
-            };
-            result[i] = res
-        }
-    };
+  foreach (i from 0 to (num_elem - 1)) {
+    if mask[
+      i
+    ] then {
+      let res : bool = match funct6 {
+        FVVM_VMFEQ => fp_eq(vs2_val[i], vs1_val[i]),
+        FVVM_VMFNE => ~(fp_eq(vs2_val[i], vs1_val[i])),
+        FVVM_VMFLE => fp_le(vs2_val[i], vs1_val[i]),
+        FVVM_VMFLT => fp_lt(vs2_val[i], vs1_val[i]),
+      };
+      result[i] = res
+    }
+  };
 
-    write_vmask(num_elem, vd, result);
-    vstart = zeros();
-    RETIRE_SUCCESS
+  write_vmask(num_elem, vd, result);
+  vstart = zeros();
+  RETIRE_SUCCESS
 }
 
 mapping fvvmtype_mnemonic : fvvmfunct6 <-> string = {
@@ -887,48 +872,48 @@ mapping clause encdec = FVFMTYPE(funct6, vm, vs2, rs1, vd) if haveVExt()
   <-> encdec_fvfmfunct6(funct6) @ vm @ vs2 @ rs1 @ 0b101 @ vd @ 0b1010111 if haveVExt()
 
 function clause execute FVFMTYPE(funct6, vm, vs2, rs1, vd) = {
-    let rm_3b = fcsr[FRM];
-    let SEW = get_sew();
-    let LMUL_pow = get_lmul_pow();
-    let num_elem = get_num_elem(LMUL_pow, SEW);
+  let rm_3b = fcsr[FRM];
+  let SEW = get_sew();
+  let LMUL_pow = get_lmul_pow();
+  let num_elem = get_num_elem(LMUL_pow, SEW);
 
-    if illegal_fp_vd_unmasked(SEW, rm_3b) then {
-        handle_illegal();
-        return RETIRE_FAIL
-    };
-    assert(SEW != 8);
+  if illegal_fp_vd_unmasked(SEW, rm_3b) then {
+    handle_illegal();
+    return RETIRE_FAIL
+  };
+  assert(SEW != 8);
 
-    let (n as 'n) = num_elem;
-    let (m as 'm) = SEW;
+  let (n as 'n) = num_elem;
+  let (m as 'm) = SEW;
 
-    let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
-    let rs1_val : bits('m) = get_scalar_fp(rs1, sizeof('m));
-    let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
-    let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
-    result : vector('n, dec, bool) = undefined;
-    mask : vector('n, dec, bool) = undefined;
+  let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
+  let rs1_val : bits('m) = get_scalar_fp(rs1, sizeof('m));
+  let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
+  let vd_val : vector('n, dec, bool) = read_vmask(num_elem, 0b0, vd);
+  result : vector('n, dec, bool) = undefined;
+  mask : vector('n, dec, bool) = undefined;
 
-    (result, mask) = init_masked_result_cmp(num_elem, SEW, LMUL_pow, vd_val, vm_val);
+  (result, mask) = init_masked_result_cmp(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
-    foreach (i from 0 to (num_elem - 1)) {
-        if mask[
-            i
-        ] then {
-            let res : bool = match funct6 {
-                VFM_VMFEQ => fp_eq(vs2_val[i], rs1_val),
-                VFM_VMFNE => ~(fp_eq(vs2_val[i], rs1_val)),
-                VFM_VMFLE => fp_le(vs2_val[i], rs1_val),
-                VFM_VMFLT => fp_lt(vs2_val[i], rs1_val),
-                VFM_VMFGE => fp_ge(vs2_val[i], rs1_val),
-                VFM_VMFGT => fp_gt(vs2_val[i], rs1_val),
-            };
-            result[i] = res
-        }
-    };
+  foreach (i from 0 to (num_elem - 1)) {
+    if mask[
+      i
+    ] then {
+      let res : bool = match funct6 {
+        VFM_VMFEQ => fp_eq(vs2_val[i], rs1_val),
+        VFM_VMFNE => ~(fp_eq(vs2_val[i], rs1_val)),
+        VFM_VMFLE => fp_le(vs2_val[i], rs1_val),
+        VFM_VMFLT => fp_lt(vs2_val[i], rs1_val),
+        VFM_VMFGE => fp_ge(vs2_val[i], rs1_val),
+        VFM_VMFGT => fp_gt(vs2_val[i], rs1_val),
+      };
+      result[i] = res
+    }
+  };
 
-    write_vmask(num_elem, vd, result);
-    vstart = zeros();
-    RETIRE_SUCCESS
+  write_vmask(num_elem, vd, result);
+  vstart = zeros();
+  RETIRE_SUCCESS
 }
 
 mapping fvfmtype_mnemonic : fvfmfunct6 <-> string = {

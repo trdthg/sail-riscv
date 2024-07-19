@@ -19,15 +19,15 @@ function handle_trap_extension(p : Privilege, pc : xlenbits, u : option(unit)) -
 
 /* used for traps and ECALL */
 function prepare_trap_vector(p : Privilege, cause : Mcause) -> xlenbits = {
-    let tvec : Mtvec = match p {
-        Machine => mtvec,
-        Supervisor => stvec,
-        User => utvec,
-    };
-    match tvec_addr(tvec, cause) {
-        Some(epc) => epc,
-        None() => internal_error(__FILE__, __LINE__, "Invalid tvec mode"),
-    }
+  let tvec : Mtvec = match p {
+    Machine => mtvec,
+    Supervisor => stvec,
+    User => utvec,
+  };
+  match tvec_addr(tvec, cause) {
+    Some(epc) => epc,
+    None() => internal_error(__FILE__, __LINE__, "Invalid tvec mode"),
+  }
 }
 
 /* xRET handling involves three functions:
@@ -38,20 +38,20 @@ function prepare_trap_vector(p : Privilege, cause : Mcause) -> xlenbits = {
  */
 val get_xret_target : Privilege -> xlenbits
 function get_xret_target p = match p {
-    Machine => mepc,
-    Supervisor => sepc,
-    User => uepc,
+  Machine => mepc,
+  Supervisor => sepc,
+  User => uepc,
 }
 
 val set_xret_target : (Privilege, xlenbits) -> xlenbits
 function set_xret_target(p, value) = {
-    let target = legalize_xepc(value);
-    match p {
-        Machine => mepc = target,
-        Supervisor => sepc = target,
-        User => uepc = target,
-    };
-    target
+  let target = legalize_xepc(value);
+  match p {
+    Machine => mepc = target,
+    Supervisor => sepc = target,
+    User => uepc = target,
+  };
+  target
 }
 
 val prepare_xret_target : Privilege -> xlenbits
@@ -65,16 +65,16 @@ function get_stvec () -> xlenbits = stvec.bits
 function get_utvec () -> xlenbits = utvec.bits
 
 function set_mtvec value : xlenbits -> xlenbits = {
-    mtvec = legalize_tvec(mtvec, value);
-    mtvec.bits
+  mtvec = legalize_tvec(mtvec, value);
+  mtvec.bits
 }
 
 function set_stvec value : xlenbits -> xlenbits = {
-    stvec = legalize_tvec(stvec, value);
-    stvec.bits
+  stvec = legalize_tvec(stvec, value);
+  stvec.bits
 }
 
 function set_utvec value : xlenbits -> xlenbits = {
-    utvec = legalize_tvec(utvec, value);
-    utvec.bits
+  utvec = legalize_tvec(utvec, value);
+  utvec.bits
 }

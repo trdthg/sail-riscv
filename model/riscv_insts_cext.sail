@@ -31,9 +31,9 @@ mapping clause encdec_compressed = C_ADDI4SPN(rd, nz96 @ nz54 @ nz3 @ nz2)
       if nz96 @ nz54 @ nz3 @ nz2 != 0b00000000
 
 function clause execute C_ADDI4SPN(rdc, nzimm) = {
-    let imm : bits(12) = 0b00 @ nzimm @ 0b00;
-    let rd = creg2reg_idx(rdc);
-    execute(ITYPE(imm, sp, rd, RISCV_ADDI))
+  let imm : bits(12) = 0b00 @ nzimm @ 0b00;
+  let rd = creg2reg_idx(rdc);
+  execute(ITYPE(imm, sp, rd, RISCV_ADDI))
 }
 
 mapping clause assembly = C_ADDI4SPN(rdc, nzimm)
@@ -48,10 +48,10 @@ mapping clause encdec_compressed = C_LW(ui6 @ ui53 @ ui2, rs1, rd)
   <-> 0b010 @ ui53 : bits(3) @ rs1 : cregidx @ ui2 : bits(1) @ ui6 : bits(1) @ rd : cregidx @ 0b00
 
 function clause execute C_LW(uimm, rsc, rdc) = {
-    let imm : bits(12) = zero_extend(uimm @ 0b00);
-    let rd = creg2reg_idx(rdc);
-    let rs = creg2reg_idx(rsc);
-    execute(LOAD(imm, rs, rd, false, WORD, false, false))
+  let imm : bits(12) = zero_extend(uimm @ 0b00);
+  let rd = creg2reg_idx(rdc);
+  let rs = creg2reg_idx(rsc);
+  execute(LOAD(imm, rs, rd, false, WORD, false, false))
 }
 
 mapping clause assembly = C_LW(uimm, rsc, rdc)
@@ -66,10 +66,10 @@ mapping clause encdec_compressed = C_LD(ui76 @ ui53, rs1, rd)
       if sizeof(xlen) == 64
 
 function clause execute C_LD(uimm, rsc, rdc) = {
-    let imm : bits(12) = zero_extend(uimm @ 0b000);
-    let rd = creg2reg_idx(rdc);
-    let rs = creg2reg_idx(rsc);
-    execute(LOAD(imm, rs, rd, false, DOUBLE, false, false))
+  let imm : bits(12) = zero_extend(uimm @ 0b000);
+  let rd = creg2reg_idx(rdc);
+  let rs = creg2reg_idx(rsc);
+  execute(LOAD(imm, rs, rd, false, DOUBLE, false, false))
 }
 
 mapping clause assembly = C_LD(uimm, rsc, rdc)
@@ -84,10 +84,10 @@ mapping clause encdec_compressed = C_SW(ui6 @ ui53 @ ui2, rs1, rs2)
   <-> 0b110 @ ui53 : bits(3) @ rs1 : cregidx @ ui2 : bits(1) @ ui6 : bits(1) @ rs2 : cregidx @ 0b00
 
 function clause execute C_SW(uimm, rsc1, rsc2) = {
-    let imm : bits(12) = zero_extend(uimm @ 0b00);
-    let rs1 = creg2reg_idx(rsc1);
-    let rs2 = creg2reg_idx(rsc2);
-    execute(STORE(imm, rs2, rs1, WORD, false, false))
+  let imm : bits(12) = zero_extend(uimm @ 0b00);
+  let rs1 = creg2reg_idx(rsc1);
+  let rs2 = creg2reg_idx(rsc2);
+  execute(STORE(imm, rs2, rs1, WORD, false, false))
 }
 
 mapping clause assembly = C_SW(uimm, rsc1, rsc2)
@@ -102,10 +102,10 @@ mapping clause encdec_compressed = C_SD(ui76 @ ui53, rs1, rs2)
       if sizeof(xlen) == 64
 
 function clause execute C_SD(uimm, rsc1, rsc2) = {
-    let imm : bits(12) = zero_extend(uimm @ 0b000);
-    let rs1 = creg2reg_idx(rsc1);
-    let rs2 = creg2reg_idx(rsc2);
-    execute(STORE(imm, rs2, rs1, DOUBLE, false, false))
+  let imm : bits(12) = zero_extend(uimm @ 0b000);
+  let rs1 = creg2reg_idx(rsc1);
+  let rs2 = creg2reg_idx(rsc2);
+  execute(STORE(imm, rs2, rs1, DOUBLE, false, false))
 }
 
 mapping clause assembly = C_SD(uimm, rsc1, rsc2)
@@ -122,8 +122,8 @@ mapping clause encdec_compressed = C_ADDI(nzi5 @ nzi40, rsd)
       if nzi5 @ nzi40 != 0b000000 & rsd != zreg
 
 function clause execute C_ADDI(nzi, rsd) = {
-    let imm : bits(12) = sign_extend(nzi);
-    execute(ITYPE(imm, rsd, rsd, RISCV_ADDI))
+  let imm : bits(12) = sign_extend(nzi);
+  execute(ITYPE(imm, rsd, rsd, RISCV_ADDI))
 }
 
 mapping clause assembly = C_ADDI(nzi, rsd)
@@ -170,8 +170,8 @@ mapping clause encdec_compressed = C_LI(imm5 @ imm40, rd)
       if rd != zreg
 
 function clause execute C_LI(imm, rd) = {
-    let imm : bits(12) = sign_extend(imm);
-    execute(ITYPE(imm, zreg, rd, RISCV_ADDI))
+  let imm : bits(12) = sign_extend(imm);
+  execute(ITYPE(imm, zreg, rd, RISCV_ADDI))
 }
 
 mapping clause assembly = C_LI(imm, rd)
@@ -188,8 +188,8 @@ mapping clause encdec_compressed = C_ADDI16SP(nzi9 @ nzi87 @ nzi6 @ nzi5 @ nzi4)
       if nzi9 @ nzi87 @ nzi6 @ nzi5 @ nzi4 != 0b000000
 
 function clause execute C_ADDI16SP(imm) = {
-    let imm : bits(12) = sign_extend(imm @ 0x0);
-    execute(ITYPE(imm, sp, sp, RISCV_ADDI))
+  let imm : bits(12) = sign_extend(imm @ 0x0);
+  execute(ITYPE(imm, sp, sp, RISCV_ADDI))
 }
 
 mapping clause assembly = C_ADDI16SP(imm)
@@ -206,8 +206,8 @@ mapping clause encdec_compressed = C_LUI(imm17 @ imm1612, rd)
       if rd != zreg & rd != sp & imm17 @ imm1612 != 0b000000
 
 function clause execute C_LUI(imm, rd) = {
-    let res : bits(20) = sign_extend(imm);
-    execute(UTYPE(res, rd, RISCV_LUI))
+  let res : bits(20) = sign_extend(imm);
+  execute(UTYPE(res, rd, RISCV_LUI))
 }
 
 mapping clause assembly = C_LUI(imm, rd)
@@ -224,8 +224,8 @@ mapping clause encdec_compressed = C_SRLI(nzui5 @ nzui40, rsd)
       if nzui5 @ nzui40 != 0b000000 & (sizeof(xlen) == 64 | nzui5 == 0b0)
 
 function clause execute C_SRLI(shamt, rsd) = {
-    let rsd = creg2reg_idx(rsd);
-    execute(SHIFTIOP(shamt, rsd, rsd, RISCV_SRLI))
+  let rsd = creg2reg_idx(rsd);
+  execute(SHIFTIOP(shamt, rsd, rsd, RISCV_SRLI))
 }
 
 mapping clause assembly = C_SRLI(shamt, rsd)
@@ -242,8 +242,8 @@ mapping clause encdec_compressed = C_SRAI(nzui5 @ nzui40, rsd)
       if nzui5 @ nzui40 != 0b000000 & (sizeof(xlen) == 64 | nzui5 == 0b0)
 
 function clause execute C_SRAI(shamt, rsd) = {
-    let rsd = creg2reg_idx(rsd);
-    execute(SHIFTIOP(shamt, rsd, rsd, RISCV_SRAI))
+  let rsd = creg2reg_idx(rsd);
+  execute(SHIFTIOP(shamt, rsd, rsd, RISCV_SRAI))
 }
 
 mapping clause assembly = C_SRAI(shamt, rsd)
@@ -258,8 +258,8 @@ mapping clause encdec_compressed = C_ANDI(i5 @ i40, rsd)
   <-> 0b100 @ i5 : bits(1) @ 0b10 @ rsd : cregidx @ i40 : bits(5) @ 0b01
 
 function clause execute C_ANDI(imm, rsd) = {
-    let rsd = creg2reg_idx(rsd);
-    execute(ITYPE(sign_extend(imm), rsd, rsd, RISCV_ANDI))
+  let rsd = creg2reg_idx(rsd);
+  execute(ITYPE(sign_extend(imm), rsd, rsd, RISCV_ANDI))
 }
 
 mapping clause assembly = C_ANDI(imm, rsd)
@@ -272,9 +272,9 @@ mapping clause encdec_compressed = C_SUB(rsd, rs2)
   <-> 0b100 @ 0b0 @ 0b11 @ rsd : cregidx @ 0b00 @ rs2 : cregidx @ 0b01
 
 function clause execute C_SUB(rsd, rs2) = {
-    let rsd = creg2reg_idx(rsd);
-    let rs2 = creg2reg_idx(rs2);
-    execute(RTYPE(rs2, rsd, rsd, RISCV_SUB))
+  let rsd = creg2reg_idx(rsd);
+  let rs2 = creg2reg_idx(rs2);
+  execute(RTYPE(rs2, rsd, rsd, RISCV_SUB))
 }
 
 mapping clause assembly = C_SUB(rsd, rs2)
@@ -287,9 +287,9 @@ mapping clause encdec_compressed = C_XOR(rsd, rs2)
   <-> 0b100 @ 0b0 @ 0b11 @ rsd : cregidx @ 0b01 @ rs2 : cregidx @ 0b01
 
 function clause execute C_XOR(rsd, rs2) = {
-    let rsd = creg2reg_idx(rsd);
-    let rs2 = creg2reg_idx(rs2);
-    execute(RTYPE(rs2, rsd, rsd, RISCV_XOR))
+  let rsd = creg2reg_idx(rsd);
+  let rs2 = creg2reg_idx(rs2);
+  execute(RTYPE(rs2, rsd, rsd, RISCV_XOR))
 }
 
 mapping clause assembly = C_XOR(rsd, rs2)
@@ -302,9 +302,9 @@ mapping clause encdec_compressed = C_OR(rsd, rs2)
   <-> 0b100 @ 0b0 @ 0b11 @ rsd : cregidx @ 0b10 @ rs2 : cregidx @ 0b01
 
 function clause execute C_OR(rsd, rs2) = {
-    let rsd = creg2reg_idx(rsd);
-    let rs2 = creg2reg_idx(rs2);
-    execute(RTYPE(rs2, rsd, rsd, RISCV_OR))
+  let rsd = creg2reg_idx(rsd);
+  let rs2 = creg2reg_idx(rs2);
+  execute(RTYPE(rs2, rsd, rsd, RISCV_OR))
 }
 
 mapping clause assembly = C_OR(rsd, rs2)
@@ -317,9 +317,9 @@ mapping clause encdec_compressed = C_AND(rsd, rs2)
   <-> 0b100 @ 0b0 @ 0b11 @ rsd : cregidx @ 0b11 @ rs2 : cregidx @ 0b01
 
 function clause execute C_AND(rsd, rs2) = {
-    let rsd = creg2reg_idx(rsd);
-    let rs2 = creg2reg_idx(rs2);
-    execute(RTYPE(rs2, rsd, rsd, RISCV_AND))
+  let rsd = creg2reg_idx(rsd);
+  let rs2 = creg2reg_idx(rs2);
+  execute(RTYPE(rs2, rsd, rsd, RISCV_AND))
 }
 
 mapping clause assembly = C_AND(rsd, rs2)
@@ -334,9 +334,9 @@ mapping clause encdec_compressed = C_SUBW(rsd, rs2)
       if sizeof(xlen) == 64
 
 function clause execute C_SUBW(rsd, rs2) = {
-    let rsd = creg2reg_idx(rsd);
-    let rs2 = creg2reg_idx(rs2);
-    execute(RTYPEW(rs2, rsd, rsd, RISCV_SUBW))
+  let rsd = creg2reg_idx(rsd);
+  let rs2 = creg2reg_idx(rs2);
+  execute(RTYPEW(rs2, rsd, rsd, RISCV_SUBW))
 }
 
 mapping clause assembly = C_SUBW(rsd, rs2)
@@ -353,9 +353,9 @@ mapping clause encdec_compressed = C_ADDW(rsd, rs2)
       if sizeof(xlen) == 64
 
 function clause execute C_ADDW(rsd, rs2) = {
-    let rsd = creg2reg_idx(rsd);
-    let rs2 = creg2reg_idx(rs2);
-    execute(RTYPEW(rs2, rsd, rsd, RISCV_ADDW))
+  let rsd = creg2reg_idx(rsd);
+  let rs2 = creg2reg_idx(rs2);
+  execute(RTYPEW(rs2, rsd, rsd, RISCV_ADDW))
 }
 
 mapping clause assembly = C_ADDW(rsd, rs2)
@@ -420,8 +420,8 @@ mapping clause encdec_compressed = C_LWSP(ui76 @ ui5 @ ui42, rd)
       if rd != zreg
 
 function clause execute C_LWSP(uimm, rd) = {
-    let imm : bits(12) = zero_extend(uimm @ 0b00);
-    execute(LOAD(imm, sp, rd, false, WORD, false, false))
+  let imm : bits(12) = zero_extend(uimm @ 0b00);
+  execute(LOAD(imm, sp, rd, false, WORD, false, false))
 }
 
 mapping clause assembly = C_LWSP(uimm, rd)
@@ -438,8 +438,8 @@ mapping clause encdec_compressed = C_LDSP(ui86 @ ui5 @ ui43, rd)
       if rd != zreg & sizeof(xlen) == 64
 
 function clause execute C_LDSP(uimm, rd) = {
-    let imm : bits(12) = zero_extend(uimm @ 0b000);
-    execute(LOAD(imm, sp, rd, false, DOUBLE, false, false))
+  let imm : bits(12) = zero_extend(uimm @ 0b000);
+  execute(LOAD(imm, sp, rd, false, DOUBLE, false, false))
 }
 
 mapping clause assembly = C_LDSP(uimm, rd)
@@ -454,8 +454,8 @@ mapping clause encdec_compressed = C_SWSP(ui76 @ ui52, rs2)
   <-> 0b110 @ ui52 : bits(4) @ ui76 : bits(2) @ rs2 : regidx @ 0b10
 
 function clause execute C_SWSP(uimm, rs2) = {
-    let imm : bits(12) = zero_extend(uimm @ 0b00);
-    execute(STORE(imm, rs2, sp, WORD, false, false))
+  let imm : bits(12) = zero_extend(uimm @ 0b00);
+  execute(STORE(imm, rs2, sp, WORD, false, false))
 }
 
 mapping clause assembly = C_SWSP(uimm, rs2)
@@ -470,8 +470,8 @@ mapping clause encdec_compressed = C_SDSP(ui86 @ ui53, rs2)
       if sizeof(xlen) == 64
 
 function clause execute C_SDSP(uimm, rs2) = {
-    let imm : bits(12) = zero_extend(uimm @ 0b000);
-    execute(STORE(imm, rs2, sp, DOUBLE, false, false))
+  let imm : bits(12) = zero_extend(uimm @ 0b000);
+  execute(STORE(imm, rs2, sp, DOUBLE, false, false))
 }
 
 mapping clause assembly = C_SDSP(uimm, rs2)

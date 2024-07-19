@@ -52,16 +52,16 @@ type amo    = bits(1)
 enum Architecture = { RV32, RV64, RV128 }
 type arch_xlen = bits(2)
 function architecture a : arch_xlen -> option(Architecture) = match a {
-    0b01 => Some(RV32),
-    0b10 => Some(RV64),
-    0b11 => Some(RV128),
-    _ => None(),
+  0b01 => Some(RV32),
+  0b10 => Some(RV64),
+  0b11 => Some(RV128),
+  _ => None(),
 }
 
 function arch_to_bits a : Architecture -> arch_xlen = match a {
-    RV32 => 0b01,
-    RV64 => 0b10,
-    RV128 => 0b11,
+  RV32 => 0b01,
+  RV64 => 0b10,
+  RV128 => 0b11,
 }
 
 /* model-internal exceptions */
@@ -75,8 +75,8 @@ function not_implemented message = throw Error_not_implemented(message)
 
 val internal_error : forall ('a : Type). (string, int, string) -> 'a
 function internal_error(file, line, s) = {
-    assert(false, file ^ ":" ^ dec_str(line) ^ ": " ^ s);
-    throw Error_internal_error()
+  assert(false, file ^ ":" ^ dec_str(line) ^ ": " ^ s);
+  throw Error_internal_error()
 }
 
 /* privilege levels */
@@ -85,9 +85,9 @@ enum Privilege = { User, Supervisor, Machine }
 
 val privLevel_to_bits : Privilege -> priv_level
 function privLevel_to_bits p = match p {
-    User => 0b00,
-    Supervisor => 0b01,
-    Machine => 0b11,
+  User => 0b00,
+  Supervisor => 0b01,
+  Machine => 0b11,
 }
 
 /*!
@@ -96,17 +96,17 @@ Calling with a reserved code will result in an internal error.
  */
 val privLevel_of_bits : priv_level -> Privilege
 function privLevel_of_bits p = match p {
-    0b00 => User,
-    0b01 => Supervisor,
-    0b11 => Machine,
-    0b10 => internal_error(__FILE__, __LINE__, "Invalid privilege level: " ^ BitStr(p)),
+  0b00 => User,
+  0b01 => Supervisor,
+  0b11 => Machine,
+  0b10 => internal_error(__FILE__, __LINE__, "Invalid privilege level: " ^ BitStr(p)),
 }
 
 val privLevel_to_str : Privilege -> string
 function privLevel_to_str p = match p {
-    User => "U",
-    Supervisor => "S",
-    Machine => "M",
+  User => "U",
+  Supervisor => "S",
+  Machine => "M",
 }
 
 overload to_str = {privLevel_to_str}
@@ -126,28 +126,28 @@ enum word_width = { BYTE, HALF, WORD, DOUBLE }
 
 /* architectural interrupt definitions */
 enum InterruptType = {
-    I_U_Software,
-    I_S_Software,
-    I_M_Software,
-    I_U_Timer,
-    I_S_Timer,
-    I_M_Timer,
-    I_U_External,
-    I_S_External,
-    I_M_External,
+  I_U_Software,
+  I_S_Software,
+  I_M_Software,
+  I_U_Timer,
+  I_S_Timer,
+  I_M_Timer,
+  I_U_External,
+  I_S_External,
+  I_M_External,
 }
 
 val interruptType_to_bits : InterruptType -> exc_code
 function interruptType_to_bits i = match i {
-    I_U_Software => 0x00,
-    I_S_Software => 0x01,
-    I_M_Software => 0x03,
-    I_U_Timer => 0x04,
-    I_S_Timer => 0x05,
-    I_M_Timer => 0x07,
-    I_U_External => 0x08,
-    I_S_External => 0x09,
-    I_M_External => 0x0b,
+  I_U_Software => 0x00,
+  I_S_Software => 0x01,
+  I_M_Software => 0x03,
+  I_U_Timer => 0x04,
+  I_S_Timer => 0x05,
+  I_M_Timer => 0x07,
+  I_U_External => 0x08,
+  I_S_External => 0x09,
+  I_M_External => 0x0b,
 }
 
 /* architectural exception definitions */
@@ -175,68 +175,68 @@ union ExceptionType = {
 
 val exceptionType_to_bits : ExceptionType -> exc_code
 function exceptionType_to_bits e = match e {
-    E_Fetch_Addr_Align() => 0x00,
-    E_Fetch_Access_Fault() => 0x01,
-    E_Illegal_Instr() => 0x02,
-    E_Breakpoint() => 0x03,
-    E_Load_Addr_Align() => 0x04,
-    E_Load_Access_Fault() => 0x05,
-    E_SAMO_Addr_Align() => 0x06,
-    E_SAMO_Access_Fault() => 0x07,
-    E_U_EnvCall() => 0x08,
-    E_S_EnvCall() => 0x09,
-    E_Reserved_10() => 0x0a,
-    E_M_EnvCall() => 0x0b,
-    E_Fetch_Page_Fault() => 0x0c,
-    E_Load_Page_Fault() => 0x0d,
-    E_Reserved_14() => 0x0e,
-    E_SAMO_Page_Fault() => 0x0f,
-    /* extensions */
-    E_Extension(e) => ext_exc_type_to_bits(e),
+  E_Fetch_Addr_Align() => 0x00,
+  E_Fetch_Access_Fault() => 0x01,
+  E_Illegal_Instr() => 0x02,
+  E_Breakpoint() => 0x03,
+  E_Load_Addr_Align() => 0x04,
+  E_Load_Access_Fault() => 0x05,
+  E_SAMO_Addr_Align() => 0x06,
+  E_SAMO_Access_Fault() => 0x07,
+  E_U_EnvCall() => 0x08,
+  E_S_EnvCall() => 0x09,
+  E_Reserved_10() => 0x0a,
+  E_M_EnvCall() => 0x0b,
+  E_Fetch_Page_Fault() => 0x0c,
+  E_Load_Page_Fault() => 0x0d,
+  E_Reserved_14() => 0x0e,
+  E_SAMO_Page_Fault() => 0x0f,
+  /* extensions */
+  E_Extension(e) => ext_exc_type_to_bits(e),
 }
 
 val num_of_ExceptionType : ExceptionType -> {'n, 0 <= 'n < xlen. int('n)}
 function num_of_ExceptionType e = match e {
-    E_Fetch_Addr_Align() => 0,
-    E_Fetch_Access_Fault() => 1,
-    E_Illegal_Instr() => 2,
-    E_Breakpoint() => 3,
-    E_Load_Addr_Align() => 4,
-    E_Load_Access_Fault() => 5,
-    E_SAMO_Addr_Align() => 6,
-    E_SAMO_Access_Fault() => 7,
-    E_U_EnvCall() => 8,
-    E_S_EnvCall() => 9,
-    E_Reserved_10() => 10,
-    E_M_EnvCall() => 11,
-    E_Fetch_Page_Fault() => 12,
-    E_Load_Page_Fault() => 13,
-    E_Reserved_14() => 14,
-    E_SAMO_Page_Fault() => 15,
-    /* extensions */
-    E_Extension(e) => num_of_ext_exc_type(e),
+  E_Fetch_Addr_Align() => 0,
+  E_Fetch_Access_Fault() => 1,
+  E_Illegal_Instr() => 2,
+  E_Breakpoint() => 3,
+  E_Load_Addr_Align() => 4,
+  E_Load_Access_Fault() => 5,
+  E_SAMO_Addr_Align() => 6,
+  E_SAMO_Access_Fault() => 7,
+  E_U_EnvCall() => 8,
+  E_S_EnvCall() => 9,
+  E_Reserved_10() => 10,
+  E_M_EnvCall() => 11,
+  E_Fetch_Page_Fault() => 12,
+  E_Load_Page_Fault() => 13,
+  E_Reserved_14() => 14,
+  E_SAMO_Page_Fault() => 15,
+  /* extensions */
+  E_Extension(e) => num_of_ext_exc_type(e),
 }
 
 val exceptionType_to_str : ExceptionType -> string
 function exceptionType_to_str e = match e {
-    E_Fetch_Addr_Align() => "misaligned-fetch",
-    E_Fetch_Access_Fault() => "fetch-access-fault",
-    E_Illegal_Instr() => "illegal-instruction",
-    E_Breakpoint() => "breakpoint",
-    E_Load_Addr_Align() => "misaligned-load",
-    E_Load_Access_Fault() => "load-access-fault",
-    E_SAMO_Addr_Align() => "misaligned-store/amo",
-    E_SAMO_Access_Fault() => "store/amo-access-fault",
-    E_U_EnvCall() => "u-call",
-    E_S_EnvCall() => "s-call",
-    E_Reserved_10() => "reserved-0",
-    E_M_EnvCall() => "m-call",
-    E_Fetch_Page_Fault() => "fetch-page-fault",
-    E_Load_Page_Fault() => "load-page-fault",
-    E_Reserved_14() => "reserved-1",
-    E_SAMO_Page_Fault() => "store/amo-page-fault",
-    /* extensions */
-    E_Extension(e) => ext_exc_type_to_str(e),
+  E_Fetch_Addr_Align() => "misaligned-fetch",
+  E_Fetch_Access_Fault() => "fetch-access-fault",
+  E_Illegal_Instr() => "illegal-instruction",
+  E_Breakpoint() => "breakpoint",
+  E_Load_Addr_Align() => "misaligned-load",
+  E_Load_Access_Fault() => "load-access-fault",
+  E_SAMO_Addr_Align() => "misaligned-store/amo",
+  E_SAMO_Access_Fault() => "store/amo-access-fault",
+  E_U_EnvCall() => "u-call",
+  E_S_EnvCall() => "s-call",
+  E_Reserved_10() => "reserved-0",
+  E_M_EnvCall() => "m-call",
+  E_Fetch_Page_Fault() => "fetch-page-fault",
+  E_Load_Page_Fault() => "load-page-fault",
+  E_Reserved_14() => "reserved-1",
+  E_SAMO_Page_Fault() => "store/amo-page-fault",
+  /* extensions */
+  E_Extension(e) => ext_exc_type_to_str(e),
 }
 
 overload to_str = {exceptionType_to_str}
@@ -247,9 +247,9 @@ enum TrapVectorMode = { TV_Direct, TV_Vector, TV_Reserved }
 
 val trapVectorMode_of_bits : tv_mode -> TrapVectorMode
 function trapVectorMode_of_bits m = match m {
-    0b00 => TV_Direct,
-    0b01 => TV_Vector,
-    _ => TV_Reserved,
+  0b00 => TV_Direct,
+  0b01 => TV_Vector,
+  _ => TV_Reserved,
 }
 
 /* extension context status */
@@ -258,18 +258,18 @@ enum ExtStatus = { Off, Initial, Clean, Dirty }
 
 val extStatus_to_bits : ExtStatus -> ext_status
 function extStatus_to_bits e = match e {
-    Off => 0b00,
-    Initial => 0b01,
-    Clean => 0b10,
-    Dirty => 0b11,
+  Off => 0b00,
+  Initial => 0b01,
+  Clean => 0b10,
+  Dirty => 0b11,
 }
 
 val extStatus_of_bits : ext_status -> ExtStatus
 function extStatus_of_bits e = match e {
-    0b00 => Off,
-    0b01 => Initial,
-    0b10 => Clean,
-    0b11 => Dirty,
+  0b00 => Off,
+  0b01 => Initial,
+  0b10 => Clean,
+  0b11 => Dirty,
 }
 
 /* supervisor-level address translation modes */
@@ -277,11 +277,11 @@ type satp_mode = bits(4)
 enum SATPMode = { Sbare, Sv32, Sv39, Sv48 }
 
 function satp64Mode_of_bits(a : Architecture, m : satp_mode) -> option(SATPMode) = match (a, m) {
-    (_, 0x0) => Some(Sbare),
-    (RV32, 0x1) => Some(Sv32),
-    (RV64, 0x8) => Some(Sv39),
-    (RV64, 0x9) => Some(Sv48),
-    (_, _) => None(),
+  (_, 0x0) => Some(Sbare),
+  (RV32, 0x1) => Some(Sv32),
+  (RV64, 0x8) => Some(Sv39),
+  (RV64, 0x9) => Some(Sv48),
+  (_, _) => None(),
 }
 
 /* CSR access control bits (from CSR addresses) */
@@ -302,16 +302,16 @@ enum sop = { RISCV_SLLI, RISCV_SRLI, RISCV_SRAI }
 
 /* shift ops */
 enum rop = {
-    RISCV_ADD,
-    RISCV_SUB,
-    RISCV_SLL,
-    RISCV_SLT,
-    RISCV_SLTU,
-    RISCV_XOR,
-    RISCV_SRL,
-    RISCV_SRA,
-    RISCV_OR,
-    RISCV_AND,
+  RISCV_ADD,
+  RISCV_SUB,
+  RISCV_SLL,
+  RISCV_SLT,
+  RISCV_SLTU,
+  RISCV_XOR,
+  RISCV_SRL,
+  RISCV_SRA,
+  RISCV_OR,
+  RISCV_AND,
 }
 
 /* reg-reg ops */
@@ -330,15 +330,15 @@ enum csrop = { CSRRW, CSRRS, CSRRC }
 enum brop_zba = { RISCV_SH1ADD, RISCV_SH2ADD, RISCV_SH3ADD }
 
 enum brop_zbb = {
-    RISCV_ANDN,
-    RISCV_ORN,
-    RISCV_XNOR,
-    RISCV_MAX,
-    RISCV_MAXU,
-    RISCV_MIN,
-    RISCV_MINU,
-    RISCV_ROL,
-    RISCV_ROR,
+  RISCV_ANDN,
+  RISCV_ORN,
+  RISCV_XNOR,
+  RISCV_MAX,
+  RISCV_MAXU,
+  RISCV_MIN,
+  RISCV_MINU,
+  RISCV_ROL,
+  RISCV_ROR,
 }
 
 enum brop_zbkb = { RISCV_PACK, RISCV_PACKH }
@@ -393,5 +393,5 @@ and https://github.com/riscv/sail-riscv/pull/197 .
  */
 val report_invalid_width : forall ('a : Type). (string, int, word_width, string) -> 'a
 function report_invalid_width(f, l, w, k) -> 'a = {
-    internal_error(f, l, "Invalid width, " ^ size_mnemonic(w) ^ ", for " ^ k ^ " with xlen=" ^ dec_str(sizeof(xlen)))
+  internal_error(f, l, "Invalid width, " ^ size_mnemonic(w) ^ ", for " ^ k ^ " with xlen=" ^ dec_str(sizeof(xlen)))
 }

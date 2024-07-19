@@ -81,11 +81,11 @@ val string_startswith = pure { _: "string_startswith" } : (string, string) -> bo
 
 val n_leading_spaces = pure { coq: "n_leading_spaces_Z" } : string -> nat
 function n_leading_spaces s = match s {
-    "" => 0,
-    _ => match string_take(s, 1) {
-        " " => 1 + n_leading_spaces(string_drop(s, 1)),
-        _ => 0,
-    },
+  "" => 0,
+  _ => match string_take(s, 1) {
+    " " => 1 + n_leading_spaces(string_drop(s, 1)),
+    _ => 0,
+  },
 }
 
 /*!
@@ -99,8 +99,8 @@ function spc_forwards_matches () = true
 
 function spc_backwards _ = ()
 function spc_backwards_matches s = {
-    let len = string_length(s);
-    n_leading_spaces(s) == len & len > 0
+  let len = string_length(s);
+  n_leading_spaces(s) == len & len > 0
 }
 
 /*!

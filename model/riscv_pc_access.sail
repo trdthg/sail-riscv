@@ -21,11 +21,11 @@ function get_next_pc () = nextPC
 
 val set_next_pc : xlenbits -> unit
 function set_next_pc pc = {
-    sail_branch_announce(sizeof(xlen), pc);
-    nextPC = pc
+  sail_branch_announce(sizeof(xlen), pc);
+  nextPC = pc
 }
 
 val tick_pc : unit -> unit
 function tick_pc () = {
-    PC = nextPC
+  PC = nextPC
 }

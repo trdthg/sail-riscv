@@ -17,7 +17,7 @@ type ext_fetch_addr_error = unit
  *           any address translation errors are reported for pc, not the returned value.
  */
 function ext_fetch_check_pc(start_pc : xlenbits, pc : xlenbits) -> Ext_FetchAddr_Check(ext_fetch_addr_error) = Ext_FetchAddr_OK(
-    pc,
+  pc,
 )
 
 function ext_handle_fetch_check_error err : ext_fetch_addr_error -> unit = ()
@@ -48,12 +48,12 @@ type ext_data_addr_error = unit
 /* Default data addr is just base register + immediate offset (may be zero).
    Extensions might override and add additional checks. */
 function ext_data_get_addr(
-    base : regidx,
-    offset : xlenbits,
-    acc : AccessType(ext_access_type),
-    width : range(1, max_mem_access),
+  base : regidx,
+  offset : xlenbits,
+  acc : AccessType(ext_access_type),
+  width : range(1, max_mem_access),
 ) -> (
-    Ext_DataAddr_Check(ext_data_addr_error)
+  Ext_DataAddr_Check(ext_data_addr_error)
 ) = let addr = X(base) + offset in Ext_DataAddr_OK(addr)
 
 function ext_handle_data_check_error err : ext_data_addr_error -> unit = ()

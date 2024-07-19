@@ -20,9 +20,9 @@ $include "hex_bits_signed.sail"
 
 val not_bit : bit -> bit
 function not_bit b = if b == bitone then {
-    bitzero
+  bitzero
 } else {
-    bitone
+  bitone
 }
 
 overload ~ = {not_bool, not_vec, not_bit}
@@ -36,8 +36,8 @@ overload operator & = {and_vec}
 overload operator | = {or_vec}
 
 function bit_str b : bit -> string = match b {
-    bitzero => "0b0",
-    bitone => "0b1",
+  bitzero => "0b0",
+  bitone => "0b1",
 }
 
 overload BitStr = {bits_str, bit_str}
@@ -53,28 +53,28 @@ val sub_vec_int = pure { c: "sub_bits_int", _: "sub_vec_int" } : forall 'n. (bit
 overload operator - = {sub_vec, sub_vec_int}
 
 val quot_round_zero = pure {
-    ocaml: "quot_round_zero",
-    interpreter: "quot_round_zero",
-    lem: "hardware_quot",
-    c: "tdiv_int",
-    coq: "Z.quot"
+  ocaml: "quot_round_zero",
+  interpreter: "quot_round_zero",
+  lem: "hardware_quot",
+  c: "tdiv_int",
+  coq: "Z.quot"
 } : (int, int) -> int
 val rem_round_zero = pure {
-    ocaml: "rem_round_zero",
-    interpreter: "rem_round_zero",
-    lem: "hardware_mod",
-    c: "tmod_int",
-    coq: "Z.rem"
+  ocaml: "rem_round_zero",
+  interpreter: "rem_round_zero",
+  lem: "hardware_mod",
+  c: "tmod_int",
+  coq: "Z.rem"
 } : (int, int) -> int
 
 /* The following defines % as euclidean modulus */
 overload operator % = {emod_int}
 
 val min_int = pure { ocaml: "min_int", interpreter: "min_int", lem: "min", coq: "min_atom", c: "min_int" } : forall 'x 'y.
-    (int('x), int('y)) -> {'z, ('x <= 'y & 'z == 'x) | ('x > 'y & 'z == 'y). int('z)}
+  (int('x), int('y)) -> {'z, ('x <= 'y & 'z == 'x) | ('x > 'y & 'z == 'y). int('z)}
 
 val max_int = pure { ocaml: "max_int", interpreter: "max_int", lem: "max", coq: "max_atom", c: "max_int" } : forall 'x 'y.
-    (int('x), int('y)) -> {'z, ('x >= 'y & 'z == 'x) | ('x < 'y & 'z == 'y). int('z)}
+  (int('x), int('y)) -> {'z, ('x >= 'y & 'z == 'x) | ('x < 'y & 'z == 'y). int('z)}
 
 overload min = {min_int}
 
@@ -86,32 +86,32 @@ val print = pure { _: "print_endline" } : string -> unit
 val print_string = pure { _: "print_string" } : (string, string) -> unit
 
 val print_instr = pure {
-    ocaml: "Platform.print_instr",
-    interpreter: "print_endline",
-    c: "print_instr",
-    lem: "print_dbg",
-    _: "print_endline"
+  ocaml: "Platform.print_instr",
+  interpreter: "print_endline",
+  c: "print_instr",
+  lem: "print_dbg",
+  _: "print_endline"
 } : string -> unit
 val print_reg = pure {
-    ocaml: "Platform.print_reg",
-    interpreter: "print_endline",
-    c: "print_reg",
-    lem: "print_dbg",
-    _: "print_endline"
+  ocaml: "Platform.print_reg",
+  interpreter: "print_endline",
+  c: "print_reg",
+  lem: "print_dbg",
+  _: "print_endline"
 } : string -> unit
 val print_mem = pure {
-    ocaml: "Platform.print_mem_access",
-    interpreter: "print_endline",
-    c: "print_mem_access",
-    lem: "print_dbg",
-    _: "print_endline"
+  ocaml: "Platform.print_mem_access",
+  interpreter: "print_endline",
+  c: "print_mem_access",
+  lem: "print_dbg",
+  _: "print_endline"
 } : string -> unit
 val print_platform = pure {
-    ocaml: "Platform.print_platform",
-    interpreter: "print_endline",
-    c: "print_platform",
-    lem: "print_dbg",
-    _: "print_endline"
+  ocaml: "Platform.print_platform",
+  interpreter: "print_endline",
+  c: "print_platform",
+  lem: "print_dbg",
+  _: "print_endline"
 } : string -> unit
 
 val get_config_print_instr = pure { ocaml: "Platform.get_config_print_instr", c: "get_config_print_instr" } : unit -> bool
@@ -204,14 +204,14 @@ overload operator << = {shift_bits_left, shiftl}
 
 /* Ideally these would be sail builtin */
 function shift_right_arith64(v : bits(64), shift : bits(6)) -> bits(64) = let v128 : bits(128) = sign_extend(v) in
-    (v128 >> shift)[
-        63..0
-    ]
+  (v128 >> shift)[
+    63..0
+  ]
 
 function shift_right_arith32(v : bits(32), shift : bits(5)) -> bits(32) = let v64 : bits(64) = sign_extend(v) in
-    (v64 >> shift)[
-        31..0
-    ]
+  (v64 >> shift)[
+    31..0
+  ]
 
 infix 7 >>>
 infix 7 <<<
@@ -232,9 +232,9 @@ overload operator >>> = {rotate_bits_right, rotater}
 overload operator <<< = {rotate_bits_left, rotatel}
 
 function reverse_bits_in_byte xs : bits(8) -> bits(8) = {
-    ys : bits(8) = zeros();
-    foreach (i from 0 to 7) ys[i] = xs[7 - i];
-    ys
+  ys : bits(8) = zeros();
+  foreach (i from 0 to 7) ys[i] = xs[7 - i];
+  ys
 }
 
 overload reverse = {reverse_bits_in_byte}
@@ -248,14 +248,14 @@ overload operator * = {mult_atom, mult_int}
  */
 val log2 : forall 'n, 'n in {1, 2, 4, 8, 16, 32, 64}. int('n) -> int
 function log2 n = {
-    let result : int = match n {
-        1 => 0,
-        2 => 1,
-        4 => 2,
-        8 => 3,
-        16 => 4,
-        32 => 5,
-        64 => 6,
-    };
-    result
+  let result : int = match n {
+    1 => 0,
+    2 => 1,
+    4 => 2,
+    8 => 3,
+    16 => 4,
+    32 => 5,
+    64 => 6,
+  };
+  result
 }
