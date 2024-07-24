@@ -284,11 +284,7 @@ function clause execute AES64KS1I(rnum, rs1, rd) = {
   assert(sizeof(xlen) == 64);
   let prev : bits(32) = X(rs1)[63..32];
   let subwords : bits(32) = aes_subword_fwd(prev);
-  let result : bits(32) = if rnum == 0xA then {
-    subwords
-  } else {
-    (subwords >>> 8) ^ aes_decode_rcon(rnum)
-  };
+  let result : bits(32) = if rnum == 0xA then { subwords } else { (subwords >>> 8) ^ aes_decode_rcon(rnum) };
   X(rd) = result @ result;
   RETIRE_SUCCESS
 }

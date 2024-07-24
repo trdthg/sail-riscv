@@ -29,15 +29,11 @@ function rvfi_set_instr_packet p = rvfi_instruction = Mk_RVFI_DII_Instruction_Pa
 
 val rvfi_get_cmd : unit -> bits(8)
 
-function rvfi_get_cmd () = rvfi_instruction[
-  rvfi_cmd
-]
+function rvfi_get_cmd () = rvfi_instruction[rvfi_cmd]
 
 val rvfi_get_insn : unit -> bits(32)
 
-function rvfi_get_insn () = rvfi_instruction[
-  rvfi_insn
-]
+function rvfi_get_insn () = rvfi_instruction[rvfi_insn]
 
 val print_instr_packet : bits(64) -> unit
 
@@ -268,16 +264,8 @@ function rvfi_get_exec_packet_v1 () = {
 val rvfi_get_v2_trace_size : unit -> bits(64)
 function rvfi_get_v2_trace_size () = {
   let trace_size : bits(64) = to_bits(64, 512);
-  let trace_size = if rvfi_int_data_present then {
-    trace_size + 320
-  } else {
-    trace_size
-  };
-  let trace_size = if rvfi_mem_data_present then {
-    trace_size + 704
-  } else {
-    trace_size
-  };
+  let trace_size = if rvfi_int_data_present then { trace_size + 320 } else { trace_size };
+  let trace_size = if rvfi_mem_data_present then { trace_size + 704 } else { trace_size };
   return trace_size >> 3 // we have to return bytes not bits
 }
 

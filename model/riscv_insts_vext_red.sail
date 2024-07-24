@@ -50,9 +50,7 @@ function clause execute RIVVTYPE(funct6, vm, vs2, vs1, vd) = {
 
   sum : bits('o) = read_single_element(SEW_widen, 0, vs1); /* vs1 regardless of LMUL setting */
   foreach (i from 0 to (num_elem_vs - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       let elem : bits('o) = match funct6 {
         IVV_VWREDSUMU => to_bits(SEW_widen, unsigned(vs2_val[i])),
         IVV_VWREDSUM => to_bits(SEW_widen, signed(vs2_val[i])),
@@ -120,9 +118,7 @@ function clause execute RMVVTYPE(funct6, vm, vs2, vs1, vd) = {
 
   sum : bits('m) = read_single_element(SEW, 0, vs1); /* vs1 regardless of LMUL setting */
   foreach (i from 0 to (num_elem_vs - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       sum =
         match funct6 {
           MVV_VREDSUM => sum + (vs2_val[i]),
@@ -201,9 +197,7 @@ function process_rfvv_single(funct6, vm, vs2, vs1, vd, num_elem_vs, SEW, LMUL_po
 
   sum : bits('m) = read_single_element(SEW, 0, vs1); /* vs1 regardless of LMUL setting */
   foreach (i from 0 to (num_elem_vs - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       sum =
         match funct6 {
           /* currently ordered/unordered sum reductions do the same operations */
@@ -254,9 +248,7 @@ function process_rfvv_widen(funct6, vm, vs2, vs1, vd, num_elem_vs, SEW, LMUL_pow
 
   sum : bits('o) = read_single_element(SEW_widen, 0, vs1); /* vs1 regardless of LMUL setting */
   foreach (i from 0 to (num_elem_vs - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       /* currently ordered/unordered sum reductions do the same operations */
       sum = fp_add(rm_3b, sum, fp_widen(vs2_val[i]))
     }
@@ -275,7 +267,9 @@ function clause execute RFVVTYPE(funct6, vm, vs2, vs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem_vs = get_num_elem(LMUL_pow, SEW);
 
-  if funct6 == FVV_VFWREDOSUM | funct6 == FVV_VFWREDUSUM then {
+  if
+    funct6 == FVV_VFWREDOSUM | funct6 == FVV_VFWREDUSUM
+  then {
     process_rfvv_widen(funct6, vm, vs2, vs1, vd, num_elem_vs, SEW, LMUL_pow)
   } else {
     process_rfvv_single(funct6, vm, vs2, vs1, vd, num_elem_vs, SEW, LMUL_pow)

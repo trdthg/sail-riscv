@@ -54,12 +54,8 @@ function clause execute FVVTYPE(funct6, vm, vs2, vs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           FVV_VADD => fp_add(rm_3b, vs2_val[i], vs1_val[i]),
           FVV_VSUB => fp_sub(rm_3b, vs2_val[i], vs1_val[i]),
@@ -67,9 +63,12 @@ function clause execute FVVTYPE(funct6, vm, vs2, vs1, vd) = {
           FVV_VMAX => fp_max(vs2_val[i], vs1_val[i]),
           FVV_VMUL => fp_mul(rm_3b, vs2_val[i], vs1_val[i]),
           FVV_VDIV => fp_div(rm_3b, vs2_val[i], vs1_val[i]),
-          FVV_VSGNJ => [vs1_val[i][sizeof('m) - 1]] @ vs2_val[i][(sizeof('m) - 2)..0],
-          FVV_VSGNJN => (0b1 ^ [vs1_val[i][sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
-          FVV_VSGNJX => ([vs2_val[i][sizeof('m) - 1]] ^ [vs1_val[i][sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
+          FVV_VSGNJ =>
+            [vs1_val[i][sizeof('m) - 1]] @ vs2_val[i][(sizeof('m) - 2)..0],
+          FVV_VSGNJN =>
+            (0b1 ^ [vs1_val[i][sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
+          FVV_VSGNJX =>
+            ([vs2_val[i][sizeof('m) - 1]] ^ [vs1_val[i][sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
         }
     }
   };
@@ -137,12 +136,8 @@ function clause execute FVVMATYPE(funct6, vm, vs2, vs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           FVV_VMACC => fp_muladd(rm_3b, vs1_val[i], vs2_val[i], vd_val[i]),
           FVV_VNMACC => fp_nmulsub(rm_3b, vs1_val[i], vs2_val[i], vd_val[i]),
@@ -217,12 +212,8 @@ function clause execute FWVVTYPE(funct6, vm, vs2, vs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           FWVV_VADD => fp_add(rm_3b, fp_widen(vs2_val[i]), fp_widen(vs1_val[i])),
           FWVV_VSUB => fp_sub(rm_3b, fp_widen(vs2_val[i]), fp_widen(vs1_val[i])),
@@ -289,12 +280,8 @@ function clause execute FWVVMATYPE(funct6, vm, vs1, vs2, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           FWVV_VMACC => fp_muladd(rm_3b, fp_widen(vs1_val[i]), fp_widen(vs2_val[i]), vd_val[i]),
           FWVV_VNMACC => fp_nmulsub(rm_3b, fp_widen(vs1_val[i]), fp_widen(vs2_val[i]), vd_val[i]),
@@ -359,12 +346,8 @@ function clause execute FWVTYPE(funct6, vm, vs2, vs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           FWV_VADD => fp_add(rm_3b, vs2_val[i], fp_widen(vs1_val[i])),
           FWV_VSUB => fp_sub(rm_3b, vs2_val[i], fp_widen(vs1_val[i])),
@@ -424,12 +407,8 @@ function clause execute VFUNARY0(vm, vs2, vfunary0, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match vfunary0 {
           FV_CVT_XU_F => {
             let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
@@ -550,12 +529,8 @@ function clause execute VFWUNARY0(vm, vs2, vfwunary0, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match vfwunary0 {
           FWV_CVT_XU_F => {
             let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
@@ -702,12 +677,8 @@ function clause execute VFNUNARY0(vm, vs2, vfnunary0, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match vfnunary0 {
           FNV_CVT_XU_F => {
             let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
@@ -853,12 +824,8 @@ function clause execute VFUNARY1(vm, vs2, vfunary1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match vfunary1 {
           FVV_VSQRT => {
             let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
@@ -988,12 +955,8 @@ function clause execute FVFTYPE(funct6, vm, vs2, rs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           VF_VADD => fp_add(rm_3b, vs2_val[i], rs1_val),
           VF_VSUB => fp_sub(rm_3b, vs2_val[i], rs1_val),
@@ -1003,28 +966,23 @@ function clause execute FVFTYPE(funct6, vm, vs2, rs1, vd) = {
           VF_VMUL => fp_mul(rm_3b, vs2_val[i], rs1_val),
           VF_VDIV => fp_div(rm_3b, vs2_val[i], rs1_val),
           VF_VRDIV => fp_div(rm_3b, rs1_val, vs2_val[i]),
-          VF_VSGNJ => [rs1_val[sizeof('m) - 1]] @ vs2_val[i][(sizeof('m) - 2)..0],
-          VF_VSGNJN => (0b1 ^ [rs1_val[sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
-          VF_VSGNJX => ([vs2_val[i][sizeof('m) - 1]] ^ [rs1_val[sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
+          VF_VSGNJ =>
+            [rs1_val[sizeof('m) - 1]] @ vs2_val[i][(sizeof('m) - 2)..0],
+          VF_VSGNJN =>
+            (0b1 ^ [rs1_val[sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
+          VF_VSGNJX =>
+            ([vs2_val[i][sizeof('m) - 1]] ^ [rs1_val[sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
           VF_VSLIDE1UP => {
             if vs2 == vd then {
               handle_illegal();
               return RETIRE_FAIL
             };
-            if i == 0 then {
-              rs1_val
-            } else {
-              vs2_val[i - 1]
-            }
+            if i == 0 then { rs1_val } else { vs2_val[i - 1] }
           },
           VF_VSLIDE1DOWN => {
             let last_elem = get_end_element();
             assert(last_elem < num_elem);
-            if i < last_elem then {
-              vs2_val[i + 1]
-            } else {
-              rs1_val
-            }
+            if i < last_elem then { vs2_val[i + 1] } else { rs1_val }
           },
         }
     }
@@ -1097,12 +1055,8 @@ function clause execute FVFMATYPE(funct6, vm, vs2, rs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           VF_VMACC => fp_muladd(rm_3b, rs1_val, vs2_val[i], vd_val[i]),
           VF_VNMACC => fp_nmulsub(rm_3b, rs1_val, vs2_val[i], vd_val[i]),
@@ -1176,12 +1130,8 @@ function clause execute FWVFTYPE(funct6, vm, vs2, rs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           FWVF_VADD => fp_add(rm_3b, fp_widen(vs2_val[i]), fp_widen(rs1_val)),
           FWVF_VSUB => fp_sub(rm_3b, fp_widen(vs2_val[i]), fp_widen(rs1_val)),
@@ -1247,12 +1197,8 @@ function clause execute FWVFMATYPE(funct6, vm, rs1, vs2, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           FWVF_VMACC => fp_muladd(rm_3b, fp_widen(rs1_val), fp_widen(vs2_val[i]), vd_val[i]),
           FWVF_VNMACC => fp_nmulsub(rm_3b, fp_widen(rs1_val), fp_widen(vs2_val[i]), vd_val[i]),
@@ -1316,12 +1262,8 @@ function clause execute FWFTYPE(funct6, vm, vs2, rs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           FWF_VADD => fp_add(rm_3b, vs2_val[i], fp_widen(rs1_val)),
           FWF_VSUB => fp_sub(rm_3b, vs2_val[i], fp_widen(rs1_val)),
@@ -1382,17 +1324,13 @@ function clause execute VFMERGE(vs2, rs1, vd) = {
     if i < start_element then {
       result[i] = vd_val[i]
     } else {
-      if i > end_element | i >= real_num_elem then {
-        result[
-          i
-        ] =
+      if
+        i > end_element | i >= real_num_elem
+      then {
+        result[i] =
           match tail_ag {
-            UNDISTURBED => vd_val[
-              i
-            ],
-            AGNOSTIC => vd_val[
-              i
-            ], /* TODO: configuration support */
+            UNDISTURBED => vd_val[i],
+            AGNOSTIC => vd_val[i], /* TODO: configuration support */
           }
       } else {
         /* the merge operates on all body elements */
@@ -1440,11 +1378,7 @@ function clause execute VFMV(rs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[i] = rs1_val
-    }
+    if mask[i] then { result[i] = rs1_val }
   };
 
   write_vreg(num_elem, SEW, LMUL_pow, vd, result);
@@ -1484,25 +1418,15 @@ function clause execute VFMVSF(rs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, 0, vd_val, vm_val);
 
   /* one body element */
-  if mask[
-    0
-  ] then {
-    result[0] = rs1_val
-  };
+  if mask[0] then { result[0] = rs1_val };
 
   /* others treated as tail elements */
   let tail_ag : agtype = get_vtype_vta();
   foreach (i from 1 to (num_elem - 1)) {
-    result[
-      i
-    ] =
+    result[i] =
       match tail_ag {
-        UNDISTURBED => vd_val[
-          i
-        ],
-        AGNOSTIC => vd_val[
-          i
-        ], /* TODO: configuration support */
+        UNDISTURBED => vd_val[i],
+        AGNOSTIC => vd_val[i], /* TODO: configuration support */
       }
   };
 

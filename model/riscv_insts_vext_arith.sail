@@ -67,12 +67,8 @@ function clause execute VVTYPE(funct6, vm, vs2, vs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           VV_VADD => (vs2_val[i]) + (vs1_val[i]),
           VV_VSUB => (vs2_val[i]) - (vs1_val[i]),
@@ -88,9 +84,7 @@ function clause execute VVTYPE(funct6, vm, vs2, vs1, vd) = {
             sign_extend(sizeof('m) + 1, vs2_val[i]) + sign_extend(sizeof('m) + 1, vs1_val[i]),
           ),
           VV_VSSUBU => {
-            if unsigned(vs2_val[i]) < unsigned(vs1_val[i]) then {
-              zeros()
-            } else {
+            if unsigned(vs2_val[i]) < unsigned(vs1_val[i]) then { zeros() } else {
               unsigned_saturation(
                 sizeof('m),
                 zero_extend(sizeof('m) + 1, vs2_val[i]) - zero_extend(sizeof('m) + 1, vs1_val[i]),
@@ -143,11 +137,7 @@ function clause execute VVTYPE(funct6, vm, vs2, vs1, vd) = {
             let idx = unsigned(vs1_val[i]);
             let VLMAX = int_power(2, LMUL_pow + VLEN_pow - SEW_pow);
             assert(VLMAX <= sizeof('n));
-            if idx < VLMAX then {
-              vs2_val[idx]
-            } else {
-              zeros()
-            }
+            if idx < VLMAX then { vs2_val[idx] } else { zeros() }
           },
           VV_VRGATHEREI16 => {
             if vs1 == vd | vs2 == vd then {
@@ -160,11 +150,7 @@ function clause execute VVTYPE(funct6, vm, vs2, vs1, vd) = {
             let idx = unsigned(vs1_new[i]);
             let VLMAX = int_power(2, LMUL_pow + VLEN_pow - SEW_pow);
             assert(VLMAX <= sizeof('n));
-            if idx < VLMAX then {
-              vs2_val[idx]
-            } else {
-              zeros()
-            }
+            if idx < VLMAX then { vs2_val[idx] } else { zeros() }
           },
         }
     }
@@ -242,12 +228,8 @@ function clause execute NVSTYPE(funct6, vm, vs2, vs1, vd) = {
 
   assert(SEW_widen <= 64);
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           NVS_VNSRL => {
             let shift_amount = get_shift_amount(vs1_val[i], SEW_widen);
@@ -316,14 +298,10 @@ function clause execute NVTYPE(funct6, vm, vs2, vs1, vd) = {
 
   assert(SEW_widen <= 64);
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       let shift_amount = get_shift_amount(vs1_val[i], SEW_widen);
       let rounding_incr = get_fixed_rounding_incr(vs2_val[i], shift_amount);
-      result[
-        i
-      ] =
+      result[i] =
         match funct6 {
           NV_VNCLIPU => {
             let result_wide = ((vs2_val[i]) >> shift_amount) + zero_extend(sizeof('o), rounding_incr);
@@ -388,17 +366,13 @@ function clause execute MASKTYPEV(vs2, vs1, vd) = {
     if i < start_element then {
       result[i] = vd_val[i]
     } else {
-      if i > end_element | i >= real_num_elem then {
-        result[
-          i
-        ] =
+      if
+        i > end_element | i >= real_num_elem
+      then {
+        result[i] =
           match tail_ag {
-            UNDISTURBED => vd_val[
-              i
-            ],
-            AGNOSTIC => vd_val[
-              i
-            ], /* TODO: configuration support */
+            UNDISTURBED => vd_val[i],
+            AGNOSTIC => vd_val[i], /* TODO: configuration support */
           }
       } else {
         /* the merge operates on all body elements */
@@ -443,11 +417,7 @@ function clause execute MOVETYPEV(vs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[i] = vs1_val[i]
-    }
+    if mask[i] then { result[i] = vs1_val[i] }
   };
 
   write_vreg(num_elem, SEW, LMUL_pow, vd, result);
@@ -510,12 +480,8 @@ function clause execute VXTYPE(funct6, vm, vs2, rs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           VX_VADD => (vs2_val[i]) + rs1_val,
           VX_VSUB => (vs2_val[i]) - rs1_val,
@@ -532,9 +498,7 @@ function clause execute VXTYPE(funct6, vm, vs2, rs1, vd) = {
             sign_extend(sizeof('m) + 1, vs2_val[i]) + sign_extend(sizeof('m) + 1, rs1_val),
           ),
           VX_VSSUBU => {
-            if unsigned(vs2_val[i]) < unsigned(rs1_val) then {
-              zeros()
-            } else {
+            if unsigned(vs2_val[i]) < unsigned(rs1_val) then { zeros() } else {
               unsigned_saturation(
                 sizeof('m),
                 zero_extend(sizeof('m) + 1, vs2_val[i]) - zero_extend(sizeof('m) + 1, rs1_val),
@@ -654,12 +618,8 @@ function clause execute NXSTYPE(funct6, vm, vs2, rs1, vd) = {
 
   assert(SEW_widen <= 64);
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           NXS_VNSRL => {
             let shift_amount = get_shift_amount(rs1_val, SEW_widen);
@@ -728,14 +688,10 @@ function clause execute NXTYPE(funct6, vm, vs2, rs1, vd) = {
 
   assert(SEW_widen <= 64);
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       let shift_amount = get_shift_amount(rs1_val, SEW_widen);
       let rounding_incr = get_fixed_rounding_incr(vs2_val[i], shift_amount);
-      result[
-        i
-      ] =
+      result[i] =
         match funct6 {
           NX_VNCLIPU => {
             let result_wide = ((vs2_val[i]) >> shift_amount) + zero_extend(sizeof('o), rounding_incr);
@@ -801,28 +757,22 @@ function clause execute VXSG(funct6, vm, vs2, rs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           VX_VSLIDEUP => {
             if vs2 == vd then {
               handle_illegal();
               return RETIRE_FAIL
             };
-            if i >= rs1_val then {
-              vs2_val[i - rs1_val]
-            } else {
-              vd_val[i]
-            }
+            if i >= rs1_val then { vs2_val[i - rs1_val] } else { vd_val[i] }
           },
           VX_VSLIDEDOWN => {
             let VLMAX = int_power(2, LMUL_pow + VLEN_pow - SEW_pow);
             assert(VLMAX > 0 & VLMAX <= sizeof('n));
-            if i + rs1_val < VLMAX then {
+            if
+              i + rs1_val < VLMAX
+            then {
               vs2_val[i + rs1_val]
             } else {
               zeros()
@@ -835,11 +785,7 @@ function clause execute VXSG(funct6, vm, vs2, rs1, vd) = {
             };
             let VLMAX = int_power(2, LMUL_pow + VLEN_pow - SEW_pow);
             assert(VLMAX > 0 & VLMAX <= sizeof('n));
-            if rs1_val < VLMAX then {
-              vs2_val[rs1_val]
-            } else {
-              zeros()
-            }
+            if rs1_val < VLMAX then { vs2_val[rs1_val] } else { zeros() }
           },
         }
     }
@@ -896,17 +842,13 @@ function clause execute MASKTYPEX(vs2, rs1, vd) = {
     if i < start_element then {
       result[i] = vd_val[i]
     } else {
-      if i > end_element | i >= real_num_elem then {
-        result[
-          i
-        ] =
+      if
+        i > end_element | i >= real_num_elem
+      then {
+        result[i] =
           match tail_ag {
-            UNDISTURBED => vd_val[
-              i
-            ],
-            AGNOSTIC => vd_val[
-              i
-            ], /* TODO: configuration support */
+            UNDISTURBED => vd_val[i],
+            AGNOSTIC => vd_val[i], /* TODO: configuration support */
           }
       } else {
         /* the merge operates on all body elements */
@@ -951,11 +893,7 @@ function clause execute MOVETYPEX(rs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[i] = rs1_val
-    }
+    if mask[i] then { result[i] = rs1_val }
   };
 
   write_vreg(num_elem, SEW, LMUL_pow, vd, result);
@@ -1010,12 +948,8 @@ function clause execute VITYPE(funct6, vm, vs2, simm, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           VI_VADD => (vs2_val[i]) + imm_val,
           VI_VRSUB => imm_val - (vs2_val[i]),
@@ -1121,12 +1055,8 @@ function clause execute NISTYPE(funct6, vm, vs2, simm, vd) = {
 
   assert(SEW_widen <= 64);
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           NIS_VNSRL => {
             let shift_amount = get_shift_amount(imm_val, SEW_widen);
@@ -1195,14 +1125,10 @@ function clause execute NITYPE(funct6, vm, vs2, simm, vd) = {
 
   assert(SEW_widen <= 64);
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       let shift_amount = get_shift_amount(imm_val, SEW_widen);
       let rounding_incr = get_fixed_rounding_incr(vs2_val[i], shift_amount);
-      result[
-        i
-      ] =
+      result[i] =
         match funct6 {
           NI_VNCLIPU => {
             let result_wide = ((vs2_val[i]) >> shift_amount) + zero_extend(sizeof('o), rounding_incr);
@@ -1268,28 +1194,22 @@ function clause execute VISG(funct6, vm, vs2, simm, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           VI_VSLIDEUP => {
             if vs2 == vd then {
               handle_illegal();
               return RETIRE_FAIL
             };
-            if i >= imm_val then {
-              vs2_val[i - imm_val]
-            } else {
-              vd_val[i]
-            }
+            if i >= imm_val then { vs2_val[i - imm_val] } else { vd_val[i] }
           },
           VI_VSLIDEDOWN => {
             let VLMAX = int_power(2, LMUL_pow + VLEN_pow - SEW_pow);
             assert(VLMAX > 0 & VLMAX <= sizeof('n));
-            if i + imm_val < VLMAX then {
+            if
+              i + imm_val < VLMAX
+            then {
               vs2_val[i + imm_val]
             } else {
               zeros()
@@ -1302,11 +1222,7 @@ function clause execute VISG(funct6, vm, vs2, simm, vd) = {
             };
             let VLMAX = int_power(2, LMUL_pow + VLEN_pow - SEW_pow);
             assert(VLMAX > 0 & VLMAX <= sizeof('n));
-            if imm_val < VLMAX then {
-              vs2_val[imm_val]
-            } else {
-              zeros()
-            }
+            if imm_val < VLMAX then { vs2_val[imm_val] } else { zeros() }
           },
         }
     }
@@ -1363,17 +1279,13 @@ function clause execute MASKTYPEI(vs2, simm, vd) = {
     if i < start_element then {
       result[i] = vd_val[i]
     } else {
-      if i > end_element | i >= real_num_elem then {
-        result[
-          i
-        ] =
+      if
+        i > end_element | i >= real_num_elem
+      then {
+        result[i] =
           match tail_ag {
-            UNDISTURBED => vd_val[
-              i
-            ],
-            AGNOSTIC => vd_val[
-              i
-            ], /* TODO: configuration support */
+            UNDISTURBED => vd_val[i],
+            AGNOSTIC => vd_val[i], /* TODO: configuration support */
           }
       } else {
         /* the merge operates on all body elements */
@@ -1418,11 +1330,7 @@ function clause execute MOVETYPEI(vd, simm) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[i] = imm_val
-    }
+    if mask[i] then { result[i] = imm_val }
   };
 
   write_vreg(num_elem, SEW, LMUL_pow, vd, result);
@@ -1460,9 +1368,7 @@ function clause execute VMVRTYPE(vs2, simm, vd) = {
   let vd_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, EMUL_pow, vd);
   result : vector('n, dec, bits('m)) = undefined;
 
-  foreach (i from 0 to (num_elem - 1)) {
-    result[i] = if i < start_element then vd_val[i] else vs2_val[i]
-  };
+  foreach (i from 0 to (num_elem - 1)) { result[i] = if i < start_element then vd_val[i] else vs2_val[i] };
 
   write_vreg(num_elem, SEW, EMUL_pow, vd, result);
   vstart = zeros();
@@ -1523,12 +1429,8 @@ function clause execute MVVTYPE(funct6, vm, vs2, vs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           MVV_VAADDU => {
             let result_add = zero_extend(sizeof('m) + 1, vs2_val[i]) + zero_extend(sizeof('m) + 1, vs1_val[i]);
@@ -1555,9 +1457,7 @@ function clause execute MVVTYPE(funct6, vm, vs2, vs1, vd) = {
           MVV_VMULHU => get_slice_int(SEW, unsigned(vs2_val[i]) * unsigned(vs1_val[i]), SEW),
           MVV_VMULHSU => get_slice_int(SEW, signed(vs2_val[i]) * unsigned(vs1_val[i]), SEW),
           MVV_VDIVU => {
-            let q : int = if unsigned(vs1_val[i]) == 0 then {
-              -1
-            } else {
+            let q : int = if unsigned(vs1_val[i]) == 0 then { -1 } else {
               quot_round_zero(unsigned(vs2_val[i]), unsigned(vs1_val[i]))
             };
             to_bits(SEW, q)
@@ -1565,24 +1465,16 @@ function clause execute MVVTYPE(funct6, vm, vs2, vs1, vd) = {
           MVV_VDIV => {
             let elem_max : int = 2 ^(SEW - 1) - 1;
             let elem_min : int = 0 - 2 ^(SEW - 1);
-            let q : int = if signed(vs1_val[i]) == 0 then {
-              -1
-            } else {
+            let q : int = if signed(vs1_val[i]) == 0 then { -1 } else {
               quot_round_zero(signed(vs2_val[i]), signed(vs1_val[i]))
             };
 
             /* check for signed overflow */
-            let q' : int = if q > elem_max then {
-              elem_min
-            } else {
-              q
-            };
+            let q' : int = if q > elem_max then { elem_min } else { q };
             to_bits(SEW, q')
           },
           MVV_VREMU => {
-            let r : int = if unsigned(vs1_val[i]) == 0 then {
-              unsigned(vs2_val[i])
-            } else {
+            let r : int = if unsigned(vs1_val[i]) == 0 then { unsigned(vs2_val[i]) } else {
               rem_round_zero(unsigned(vs2_val[i]), unsigned(vs1_val[i]))
             };
 
@@ -1590,9 +1482,7 @@ function clause execute MVVTYPE(funct6, vm, vs2, vs1, vd) = {
             to_bits(SEW, r)
           },
           MVV_VREM => {
-            let r : int = if signed(vs1_val[i]) == 0 then {
-              signed(vs2_val[i])
-            } else {
+            let r : int = if signed(vs1_val[i]) == 0 then { signed(vs2_val[i]) } else {
               rem_round_zero(signed(vs2_val[i]), signed(vs1_val[i]))
             };
 
@@ -1663,12 +1553,8 @@ function clause execute MVVMATYPE(funct6, vm, vs2, vs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           MVV_VMACC => get_slice_int(SEW, signed(vs1_val[i]) * signed(vs2_val[i]), 0) + (vd_val[i]),
           MVV_VNMSAC => (vd_val[i]) - get_slice_int(SEW, signed(vs1_val[i]) * signed(vs2_val[i]), 0),
@@ -1736,12 +1622,8 @@ function clause execute WVVTYPE(funct6, vm, vs2, vs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           WVV_VADD => to_bits(SEW_widen, signed(vs2_val[i]) + signed(vs1_val[i])),
           WVV_VSUB => to_bits(SEW_widen, signed(vs2_val[i]) - signed(vs1_val[i])),
@@ -1812,12 +1694,8 @@ function clause execute WVTYPE(funct6, vm, vs2, vs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           WV_VADD => to_bits(SEW_widen, signed(vs2_val[i]) + signed(vs1_val[i])),
           WV_VSUB => to_bits(SEW_widen, signed(vs2_val[i]) - signed(vs1_val[i])),
@@ -1883,12 +1761,8 @@ function clause execute WMVVTYPE(funct6, vm, vs2, vs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           WMVV_VWMACC => to_bits(SEW_widen, signed(vs1_val[i]) * signed(vs2_val[i])) + (vd_val[i]),
           WMVV_VWMACCU => to_bits(SEW_widen, unsigned(vs1_val[i]) * unsigned(vs2_val[i])) + (vd_val[i]),
@@ -1949,12 +1823,8 @@ function clause execute VEXT2TYPE(funct6, vm, vs2, vd) = {
 
   assert(SEW > SEW_half);
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           VEXT2_ZVF2 => zero_extend(vs2_val[i]),
           VEXT2_SVF2 => sign_extend(vs2_val[i]),
@@ -2014,12 +1884,8 @@ function clause execute VEXT4TYPE(funct6, vm, vs2, vd) = {
 
   assert(SEW > SEW_quart);
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           VEXT4_ZVF4 => zero_extend(vs2_val[i]),
           VEXT4_SVF4 => sign_extend(vs2_val[i]),
@@ -2079,12 +1945,8 @@ function clause execute VEXT8TYPE(funct6, vm, vs2, vd) = {
 
   assert(SEW > SEW_eighth);
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           VEXT8_ZVF8 => zero_extend(vs2_val[i]),
           VEXT8_SVF8 => sign_extend(vs2_val[i]),
@@ -2127,12 +1989,8 @@ function clause execute VMVXS(vs2, rd) = {
   let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, 0, vs2);
   X(rd) =
     if sizeof(xlen) < SEW then slice(vs2_val[0], 0, sizeof(xlen)) else if sizeof(xlen) > SEW then sign_extend(
-      vs2_val[
-        0
-      ],
-    ) else vs2_val[
-      0
-    ];
+      vs2_val[0],
+    ) else vs2_val[0];
   vstart = zeros();
 
   RETIRE_SUCCESS
@@ -2172,9 +2030,7 @@ function clause execute MVVCOMPRESS(vs2, vs1, vd) = {
   vd_idx : nat = 0;
   foreach (i from 0 to (num_elem - 1)) {
     if i <= end_element then {
-      if vs1_val[
-        i
-      ] then {
+      if vs1_val[i] then {
         let (p as 'p) = vd_idx;
         assert(sizeof('p) < sizeof('n));
         result[sizeof('p)] = vs2_val[i];
@@ -2188,16 +2044,10 @@ function clause execute MVVCOMPRESS(vs2, vs1, vd) = {
     let tail_ag : agtype = get_vtype_vta();
     let (p as 'p) = vd_idx;
     foreach (i from sizeof('p) to (num_elem - 1)) {
-      result[
-        i
-      ] =
+      result[i] =
         match tail_ag {
-          UNDISTURBED => vd_val[
-            i
-          ],
-          AGNOSTIC => vd_val[
-            i
-          ], /* TODO: configuration support */
+          UNDISTURBED => vd_val[i],
+          AGNOSTIC => vd_val[i], /* TODO: configuration support */
         }
     }
   };
@@ -2256,12 +2106,8 @@ function clause execute MVXTYPE(funct6, vm, vs2, rs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           MVX_VAADDU => {
             let result_add = zero_extend(sizeof('m) + 1, vs2_val[i]) + zero_extend(sizeof('m) + 1, rs1_val);
@@ -2288,29 +2134,19 @@ function clause execute MVXTYPE(funct6, vm, vs2, rs1, vd) = {
               handle_illegal();
               return RETIRE_FAIL
             };
-            if i == 0 then {
-              rs1_val
-            } else {
-              vs2_val[i - 1]
-            }
+            if i == 0 then { rs1_val } else { vs2_val[i - 1] }
           },
           MVX_VSLIDE1DOWN => {
             let last_elem = get_end_element();
             assert(last_elem < num_elem);
-            if i < last_elem then {
-              vs2_val[i + 1]
-            } else {
-              rs1_val
-            }
+            if i < last_elem then { vs2_val[i + 1] } else { rs1_val }
           },
           MVX_VMUL => get_slice_int(SEW, signed(vs2_val[i]) * signed(rs1_val), 0),
           MVX_VMULH => get_slice_int(SEW, signed(vs2_val[i]) * signed(rs1_val), SEW),
           MVX_VMULHU => get_slice_int(SEW, unsigned(vs2_val[i]) * unsigned(rs1_val), SEW),
           MVX_VMULHSU => get_slice_int(SEW, signed(vs2_val[i]) * unsigned(rs1_val), SEW),
           MVX_VDIVU => {
-            let q : int = if unsigned(rs1_val) == 0 then {
-              -1
-            } else {
+            let q : int = if unsigned(rs1_val) == 0 then { -1 } else {
               quot_round_zero(unsigned(vs2_val[i]), unsigned(rs1_val))
             };
             to_bits(SEW, q)
@@ -2318,24 +2154,16 @@ function clause execute MVXTYPE(funct6, vm, vs2, rs1, vd) = {
           MVX_VDIV => {
             let elem_max : int = 2 ^(SEW - 1) - 1;
             let elem_min : int = 0 - 2 ^(SEW - 1);
-            let q : int = if signed(rs1_val) == 0 then {
-              -1
-            } else {
+            let q : int = if signed(rs1_val) == 0 then { -1 } else {
               quot_round_zero(signed(vs2_val[i]), signed(rs1_val))
             };
 
             /* check for signed overflow */
-            let q' : int = if q > elem_max then {
-              elem_min
-            } else {
-              q
-            };
+            let q' : int = if q > elem_max then { elem_min } else { q };
             to_bits(SEW, q')
           },
           MVX_VREMU => {
-            let r : int = if unsigned(rs1_val) == 0 then {
-              unsigned(vs2_val[i])
-            } else {
+            let r : int = if unsigned(rs1_val) == 0 then { unsigned(vs2_val[i]) } else {
               rem_round_zero(unsigned(vs2_val[i]), unsigned(rs1_val))
             };
 
@@ -2343,9 +2171,7 @@ function clause execute MVXTYPE(funct6, vm, vs2, rs1, vd) = {
             to_bits(SEW, r)
           },
           MVX_VREM => {
-            let r : int = if signed(rs1_val) == 0 then {
-              signed(vs2_val[i])
-            } else {
+            let r : int = if signed(rs1_val) == 0 then { signed(vs2_val[i]) } else {
               rem_round_zero(signed(vs2_val[i]), signed(rs1_val))
             };
 
@@ -2418,12 +2244,8 @@ function clause execute MVXMATYPE(funct6, vm, vs2, rs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           MVX_VMACC => get_slice_int(SEW, signed(rs1_val) * signed(vs2_val[i]), 0) + (vd_val[i]),
           MVX_VNMSAC => (vd_val[i]) - get_slice_int(SEW, signed(rs1_val) * signed(vs2_val[i]), 0),
@@ -2491,12 +2313,8 @@ function clause execute WVXTYPE(funct6, vm, vs2, rs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           WVX_VADD => to_bits(SEW_widen, signed(vs2_val[i]) + signed(rs1_val)),
           WVX_VSUB => to_bits(SEW_widen, signed(vs2_val[i]) - signed(rs1_val)),
@@ -2566,12 +2384,8 @@ function clause execute WXTYPE(funct6, vm, vs2, rs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           WX_VADD => to_bits(SEW_widen, signed(vs2_val[i]) + signed(rs1_val)),
           WX_VSUB => to_bits(SEW_widen, signed(vs2_val[i]) - signed(rs1_val)),
@@ -2637,12 +2451,8 @@ function clause execute WMVXTYPE(funct6, vm, vs2, rs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW_widen, LMUL_pow_widen, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           WMVX_VWMACCU => to_bits(SEW_widen, unsigned(rs1_val) * unsigned(vs2_val[i])) + (vd_val[i]),
           WMVX_VWMACC => to_bits(SEW_widen, signed(rs1_val) * signed(vs2_val[i])) + (vd_val[i]),
@@ -2695,25 +2505,15 @@ function clause execute VMVSX(rs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, 0, vd_val, vm_val);
 
   /* one body element */
-  if mask[
-    0
-  ] then {
-    result[0] = rs1_val
-  };
+  if mask[0] then { result[0] = rs1_val };
 
   /* others treated as tail elements */
   let tail_ag : agtype = get_vtype_vta();
   foreach (i from 1 to (num_elem - 1)) {
-    result[
-      i
-    ] =
+    result[i] =
       match tail_ag {
-        UNDISTURBED => vd_val[
-          i
-        ],
-        AGNOSTIC => vd_val[
-          i
-        ], /* TODO: configuration support */
+        UNDISTURBED => vd_val[i],
+        AGNOSTIC => vd_val[i], /* TODO: configuration support */
       }
   };
 

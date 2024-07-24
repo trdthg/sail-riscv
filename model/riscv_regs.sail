@@ -145,9 +145,7 @@ function wX(r : regno, in_v : xlenbits) -> unit = {
 
 function rX_bits i : regidx -> xlenbits = rX(unsigned(i))
 
-function wX_bits(i : regidx, data : xlenbits) -> unit = {
-  wX(unsigned(i)) = data
-}
+function wX_bits(i : regidx, data : xlenbits) -> unit = { wX(unsigned(i)) = data }
 
 overload X = {rX_bits, wX_bits, rX, wX}
 

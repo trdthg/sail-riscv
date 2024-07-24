@@ -52,11 +52,7 @@ function isla_footprint_no_init opcode = {
     isla_reset_registers();
     sail_end_cycle();
 
-    let instr = if length(opcode) == 16 then {
-      ext_decode_compressed(opcode)
-    } else {
-      ext_decode(opcode)
-    };
+    let instr = if length(opcode) == 16 then { ext_decode_compressed(opcode) } else { ext_decode(opcode) };
     let _ = execute(instr);
     true
   } catch {

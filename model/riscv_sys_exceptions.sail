@@ -58,11 +58,14 @@ val prepare_xret_target : Privilege -> xlenbits
 function prepare_xret_target p = get_xret_target(p)
 
 /* other trap-related CSRs */
-function get_mtvec () -> xlenbits = mtvec.bits
+function get_mtvec () -> xlenbits =
+  mtvec.bits
 
-function get_stvec () -> xlenbits = stvec.bits
+function get_stvec () -> xlenbits =
+  stvec.bits
 
-function get_utvec () -> xlenbits = utvec.bits
+function get_utvec () -> xlenbits =
+  utvec.bits
 
 function set_mtvec value : xlenbits -> xlenbits = {
   mtvec = legalize_tvec(mtvec, value);

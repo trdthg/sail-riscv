@@ -49,12 +49,8 @@ function clause execute MMTYPE(funct6, vs2, vs1, vd) = {
   (result, mask) = init_masked_result_carry(num_elem, SEW, 0, vd_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
+    if mask[i] then {
+      result[i] =
         match funct6 {
           MM_VMAND => (vs2_val[i]) & (vs1_val[i]),
           MM_VMNAND => not((vs2_val[i]) & (vs1_val[i])),
@@ -115,9 +111,7 @@ function clause execute VCPOP_M(vm, vs2, rd) = {
 
   count : nat = 0;
   foreach (i from 0 to (num_elem - 1)) {
-    if (mask[i]) & (vs2_val[i]) then {
-      count = count + 1
-    }
+    if (mask[i]) & (vs2_val[i]) then { count = count + 1 }
   };
 
   X(rd) = to_bits(sizeof(xlen), count);
@@ -157,9 +151,7 @@ function clause execute VFIRST_M(vm, vs2, rd) = {
   index : int = -1;
   foreach (i from 0 to (num_elem - 1)) {
     if index == -1 then {
-      if (mask[i]) & (vs2_val[i]) then {
-        index = i
-      }
+      if (mask[i]) & (vs2_val[i]) then { index = i }
     }
   };
 
@@ -200,14 +192,8 @@ function clause execute VMSBF_M(vm, vs2, vd) = {
 
   found_elem : bool = false;
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      if vs2_val[
-        i
-      ] then {
-        found_elem = true
-      };
+    if mask[i] then {
+      if vs2_val[i] then { found_elem = true };
       result[i] = if found_elem then false else true
     }
   };
@@ -249,15 +235,9 @@ function clause execute VMSIF_M(vm, vs2, vd) = {
 
   found_elem : bool = false;
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       result[i] = if found_elem then false else true;
-      if vs2_val[
-        i
-      ] then {
-        found_elem = true
-      }
+      if vs2_val[i] then { found_elem = true }
     }
   };
 
@@ -298,15 +278,11 @@ function clause execute VMSOF_M(vm, vs2, vd) = {
 
   found_elem : bool = false;
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       if (vs2_val[i]) & not(found_elem) then {
         result[i] = true;
         found_elem = true
-      } else {
-        result[i] = false
-      }
+      } else { result[i] = false }
     }
   };
 
@@ -347,15 +323,9 @@ function clause execute VIOTA_M(vm, vs2, vd) = {
 
   sum : int = 0;
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       result[i] = to_bits(SEW, sum);
-      if vs2_val[
-        i
-      ] then {
-        sum = sum + 1
-      }
+      if vs2_val[i] then { sum = sum + 1 }
     }
   };
 
@@ -394,11 +364,7 @@ function clause execute VID_V(vm, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[i] = to_bits(SEW, i)
-    }
+    if mask[i] then { result[i] = to_bits(SEW, i) }
   };
 
   write_vreg(num_elem, SEW, LMUL_pow, vd, result);

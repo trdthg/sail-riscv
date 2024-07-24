@@ -96,11 +96,7 @@ function parse_hex_bits_signed(n, str) = {
 }
 
 function valid_hex_bits_signed(n, str) = {
-  if string_take(str, 1) == "-" then {
-    valid_hex_bits(n, string_drop(str, 1))
-  } else {
-    valid_hex_bits(n, str)
-  }
+  if string_take(str, 1) == "-" then { valid_hex_bits(n, string_drop(str, 1)) } else { valid_hex_bits(n, str) }
 }
 
 function hex_bits_signed_backwards(n, str) = parse_hex_bits_signed(n, str)

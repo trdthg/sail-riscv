@@ -24,9 +24,7 @@ function step step_no : int -> bool = {
 
   let (retired, stepped) : (Retired, bool) = match dispatchInterrupt(cur_privilege) {
     Some(intr, priv) => {
-      if get_config_print_instr() then {
-        print_bits("Handling interrupt: ", interruptType_to_bits(intr))
-      };
+      if get_config_print_instr() then { print_bits("Handling interrupt: ", interruptType_to_bits(intr)) };
       handle_interrupt(intr, priv);
       (RETIRE_FAIL, false)
     },
@@ -111,11 +109,7 @@ function loop () : unit -> unit = {
     /* check htif exit */
     if htif_done then {
       let exit_val = unsigned(htif_exit_code);
-      if exit_val == 0 then {
-        print("SUCCESS")
-      } else {
-        print_int("FAILURE: ", exit_val)
-      }
+      if exit_val == 0 then { print("SUCCESS") } else { print_int("FAILURE: ", exit_val) }
     } else {
       /* update time */
       i = i + 1;

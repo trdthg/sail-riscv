@@ -83,9 +83,7 @@ function dirty_v_context () -> unit = {
 }
 
 function dirty_v_context_if_present () -> unit = {
-  if sys_enable_vext() then {
-    dirty_v_context()
-  }
+  if sys_enable_vext() then { dirty_v_context() }
 }
 
 function rV r : regno -> vregtype = {
@@ -180,9 +178,7 @@ function wV(r : regno, in_v : vregtype) -> unit = {
 
 function rV_bits i : regidx -> vregtype = rV(unsigned(i))
 
-function wV_bits(i : regidx, data : vregtype) -> unit = {
-  wV(unsigned(i)) = data
-}
+function wV_bits(i : regidx, data : vregtype) -> unit = { wV(unsigned(i)) = data }
 
 overload V = {rV_bits, wV_bits, rV, wV}
 
@@ -241,11 +237,7 @@ function ext_write_vcsr(vxrm_val, vxsat_val) = {
 val get_num_elem : (int, int) -> nat
 function get_num_elem(LMUL_pow, SEW) = {
   let VLEN = unsigned(vlenb) * 8;
-  let LMUL_pow_reg = if LMUL_pow < 0 then {
-    0
-  } else {
-    LMUL_pow
-  };
+  let LMUL_pow_reg = if LMUL_pow < 0 then { 0 } else { LMUL_pow };
 
   /* Ignore lmul < 1 so that the entire vreg is read, allowing all masking to
    * be handled in init_masked_result */
@@ -288,18 +280,18 @@ val read_vreg : forall 'n 'm 'p, 'n >= 0. (int('n), int('m), int('p), regidx) ->
 function read_vreg(num_elem, SEW, LMUL_pow, vrid) = {
   var result : vector('n, dec, bits('m)) = undefined;
   let VLEN = unsigned(vlenb) * 8;
-  let LMUL_pow_reg = if LMUL_pow < 0 then {
-    0
-  } else {
-    LMUL_pow
-  };
+  let LMUL_pow_reg = if LMUL_pow < 0 then { 0 } else { LMUL_pow };
 
   /* Check for valid vrid */
-  if unsigned(vrid) + 2 ^LMUL_pow_reg > 32 then {
+  if
+    unsigned(vrid) + 2 ^LMUL_pow_reg > 32
+  then {
     /* vrid would read past largest vreg (v31) */
     assert(false, "invalid register group: vrid overflow the largest number")
   } else {
-    if unsigned(vrid) % 2 ^LMUL_pow_reg != 0 then {
+    if
+      unsigned(vrid) % 2 ^LMUL_pow_reg != 0
+    then {
       /* vrid must be a multiple of emul */
       assert(false, "invalid register group: vrid is not a multiple of EMUL")
     } else {
@@ -349,11 +341,7 @@ function read_single_element(EEW, index, vrid) = {
 val write_vreg : forall 'n 'm 'p, 'n >= 0. (int('n), int('m), int('p), regidx, vector('n, dec, bits('m))) -> unit
 function write_vreg(num_elem, SEW, LMUL_pow, vrid, vec) = {
   let VLEN = unsigned(vlenb) * 8;
-  let LMUL_pow_reg = if LMUL_pow < 0 then {
-    0
-  } else {
-    LMUL_pow
-  };
+  let LMUL_pow_reg = if LMUL_pow < 0 then { 0 } else { LMUL_pow };
 
   let (num_elem_single as 'num_elem_single) : int = VLEN / SEW;
   assert(sizeof('num_elem_single) >= 0);
@@ -385,11 +373,7 @@ function write_single_element(EEW, index, vrid, value) = {
   r : vregtype = zeros();
   foreach (i from (sizeof('elem_per_reg) - 1) downto 0) {
     r = r << EEW;
-    if i == real_index then {
-      r = r | zero_extend(value)
-    } else {
-      r = r | zero_extend(vrid_val[i])
-    }
+    if i == real_index then { r = r | zero_extend(value) } else { r = r | zero_extend(vrid_val[i]) }
   };
   V(real_vrid) = r
 }
@@ -403,11 +387,7 @@ function read_vmask(num_elem, vm, vrid) = {
   var result : vector('n, dec, bool) = undefined;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if vm == 0b1 then {
-      result[i] = true
-    } else {
-      result[i] = bit_to_bool(vreg_val[i])
-    }
+    if vm == 0b1 then { result[i] = true } else { result[i] = bit_to_bool(vreg_val[i]) }
   };
 
   result
@@ -422,11 +402,7 @@ function read_vmask_carry(num_elem, vm, vrid) = {
   var result : vector('n, dec, bool) = undefined;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if vm == 0b1 then {
-      result[i] = false
-    } else {
-      result[i] = bit_to_bool(vreg_val[i])
-    }
+    if vm == 0b1 then { result[i] = false } else { result[i] = bit_to_bool(vreg_val[i]) }
   };
 
   result
@@ -441,9 +417,7 @@ function write_vmask(num_elem, vrid, v) = {
   let vreg_val : vregtype = V(vrid);
   var result : vregtype = undefined;
 
-  foreach (i from 0 to (num_elem - 1)) {
-    result[i] = bool_to_bit(v[i])
-  };
+  foreach (i from 0 to (num_elem - 1)) { result[i] = bool_to_bit(v[i]) };
   foreach (i from num_elem to (VLEN - 1)) {
     /* Mask tail is always agnostic */
     result[i] = vreg_val[i] /* TODO: configuration support */

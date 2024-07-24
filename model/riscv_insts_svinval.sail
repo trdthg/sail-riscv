@@ -12,9 +12,7 @@ mapping clause encdec =
       SINVAL_VMA(rs1, rs2)                                                  if haveSvinval()
   <-> 0b0001011 @ rs2 : regidx @ rs1 : regidx @ 0b000 @ 0b00000 @ 0b1110011 if haveSvinval()
 
-function clause execute SINVAL_VMA(rs1, rs2) = {
-  execute(SFENCE_VMA(rs1, rs2))
-}
+function clause execute SINVAL_VMA(rs1, rs2) = { execute(SFENCE_VMA(rs1, rs2)) }
 
 mapping clause assembly = SINVAL_VMA(rs1, rs2)
   <-> "sinval.vma" ^ spc() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)

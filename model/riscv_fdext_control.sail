@@ -19,7 +19,8 @@ function clause ext_is_CSR_defined 0x003 = haveFExt() | haveZfinx()
 
 function clause ext_read_CSR 0x001 = Some(zero_extend(fcsr[FFLAGS]))
 function clause ext_read_CSR 0x002 = Some(zero_extend(fcsr[FRM]))
-function clause ext_read_CSR 0x003 = Some(zero_extend(fcsr.bits))
+function clause ext_read_CSR 0x003 =
+  Some(zero_extend(fcsr.bits))
 
 function clause ext_write_CSR(0x001, value) = {
   ext_write_fcsr(fcsr[FRM], value[4..0]);

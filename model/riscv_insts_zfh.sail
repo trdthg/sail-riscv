@@ -21,19 +21,17 @@
 /* improvements, and version updates.                               */
 /* **************************************************************** */
 val fsplit_H : bits(16) -> (bits(1), bits(5), bits(10))
-function fsplit_H xf16 = (xf16[15..15], xf16[14..10], xf16[9..0])
+function fsplit_H xf16 =
+  (xf16[15..15], xf16[14..10], xf16[9..0])
 
 val fmake_H : (bits(1), bits(5), bits(10)) -> bits(16)
-function fmake_H(sign, exp, mant) = sign @ exp @ mant
+function fmake_H(sign, exp, mant) =
+  sign @ exp @ mant
 
 val negate_H : bits(16) -> bits(16)
 function negate_H xf16 = {
   let (sign, exp, mant) = fsplit_H(xf16);
-  let new_sign = if sign == 0b0 then {
-    0b1
-  } else {
-    0b0
-  };
+  let new_sign = if sign == 0b0 then { 0b1 } else { 0b0 };
   fmake_H(new_sign, exp, mant)
 }
 
@@ -113,39 +111,19 @@ function fle_H(v1, v2, is_quiet) = {
   let v2Is0 = f_is_neg_zero_H(v2) | f_is_pos_zero_H(v2);
 
   let result : bool = if (s1 == 0b0) & (s2 == 0b0) then {
-    if e1 == e2 then {
-      unsigned(m1) <= unsigned(m2)
-    } else {
-      unsigned(e1) < unsigned(e2)
-    }
+    if e1 == e2 then { unsigned(m1) <= unsigned(m2) } else { unsigned(e1) < unsigned(e2) }
   } else {
     if (s1 == 0b0) & (s2 == 0b1) then {
       v1Is0 & v2Is0 /* Equal in this case (+0=-0) */
     } else {
-      if (s1 == 0b1) & (s2 == 0b0) then {
-        true
-      } else {
-        if e1 == e2 then {
-          unsigned(m1) >= unsigned(m2)
-        } else {
-          unsigned(e1) > unsigned(e2)
-        }
+      if (s1 == 0b1) & (s2 == 0b0) then { true } else {
+        if e1 == e2 then { unsigned(m1) >= unsigned(m2) } else { unsigned(e1) > unsigned(e2) }
       }
     }
   };
 
-  let fflags = if is_quiet then {
-    if f_is_SNaN_H(v1) | f_is_SNaN_H(v2) then {
-      nvFlag()
-    } else {
-      zeros()
-    }
-  } else {
-    if f_is_NaN_H(v1) | f_is_NaN_H(v2) then {
-      nvFlag()
-    } else {
-      zeros()
-    }
+  let fflags = if is_quiet then { if f_is_SNaN_H(v1) | f_is_SNaN_H(v2) then { nvFlag() } else { zeros() } } else {
+    if f_is_NaN_H(v1) | f_is_NaN_H(v2) then { nvFlag() } else { zeros() }
   };
 
   (result, fflags)
@@ -932,38 +910,16 @@ mapping clause encdec = F_UN_TYPE_H(rs1, rd, FMV_H_X)                         if
 function clause execute F_UN_TYPE_H(rs1, rd, FCLASS_H) = {
   let rs1_val_H = F_or_X_H(rs1);
 
-  let rd_val_10b : bits(10) = if f_is_neg_inf_H(rs1_val_H) then {
-    0b0000000001
-  } else {
-    if f_is_neg_norm_H(rs1_val_H) then {
-      0b0000000010
-    } else {
-      if f_is_neg_subnorm_H(rs1_val_H) then {
-        0b0000000100
-      } else {
-        if f_is_neg_zero_H(rs1_val_H) then {
-          0b0000001000
-        } else {
-          if f_is_pos_zero_H(rs1_val_H) then {
-            0b0000010000
-          } else {
-            if f_is_pos_subnorm_H(rs1_val_H) then {
-              0b0000100000
-            } else {
-              if f_is_pos_norm_H(rs1_val_H) then {
-                0b0001000000
-              } else {
-                if f_is_pos_inf_H(rs1_val_H) then {
-                  0b0010000000
-                } else {
-                  if f_is_SNaN_H(rs1_val_H) then {
-                    0b0100000000
-                  } else {
-                    if f_is_QNaN_H(rs1_val_H) then {
-                      0b1000000000
-                    } else {
-                      zeros()
-                    }
+  let rd_val_10b : bits(10) = if f_is_neg_inf_H(rs1_val_H) then { 0b0000000001 } else {
+    if f_is_neg_norm_H(rs1_val_H) then { 0b0000000010 } else {
+      if f_is_neg_subnorm_H(rs1_val_H) then { 0b0000000100 } else {
+        if f_is_neg_zero_H(rs1_val_H) then { 0b0000001000 } else {
+          if f_is_pos_zero_H(rs1_val_H) then { 0b0000010000 } else {
+            if f_is_pos_subnorm_H(rs1_val_H) then { 0b0000100000 } else {
+              if f_is_pos_norm_H(rs1_val_H) then { 0b0001000000 } else {
+                if f_is_pos_inf_H(rs1_val_H) then { 0b0010000000 } else {
+                  if f_is_SNaN_H(rs1_val_H) then { 0b0100000000 } else {
+                    if f_is_QNaN_H(rs1_val_H) then { 0b1000000000 } else { zeros() }
                   }
                 }
               }

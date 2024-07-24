@@ -24,19 +24,27 @@ mapping clause encdec = MUL(rs2, rs1, rd, mul_op)                    if haveMulD
 function clause execute MUL(rs2, rs1, rd, mul_op) = {
   let rs1_val = X(rs1);
   let rs2_val = X(rs2);
-  let rs1_int : int = if mul_op.signed_rs1 then {
+  let rs1_int : int = if
+    mul_op.signed_rs1
+  then {
     signed(rs1_val)
   } else {
     unsigned(rs1_val)
   };
-  let rs2_int : int = if mul_op.signed_rs2 then {
+  let rs2_int : int = if
+    mul_op.signed_rs2
+  then {
     signed(rs2_val)
   } else {
     unsigned(rs2_val)
   };
   let result_wide = to_bits(2 * sizeof(xlen), rs1_int * rs2_int);
-  let result = if mul_op.high then {
-    result_wide[(2 * sizeof(xlen) - 1)..sizeof(xlen)]
+  let result = if
+    mul_op.high
+  then {
+    result_wide[
+      (2 * sizeof(xlen) - 1)..sizeof(xlen)
+    ]
   } else {
     result_wide[(sizeof(xlen) - 1)..0]
   };
@@ -63,24 +71,14 @@ mapping clause encdec = DIV(rs2, rs1, rd, s)                           if haveMu
 function clause execute DIV(rs2, rs1, rd, s) = {
   let rs1_val = X(rs1);
   let rs2_val = X(rs2);
-  let rs1_int : int = if s then {
-    signed(rs1_val)
-  } else {
-    unsigned(rs1_val)
-  };
-  let rs2_int : int = if s then {
-    signed(rs2_val)
-  } else {
-    unsigned(rs2_val)
-  };
-  let q : int = if rs2_int == 0 then {
-    -1
-  } else {
-    quot_round_zero(rs1_int, rs2_int)
-  };
+  let rs1_int : int = if s then { signed(rs1_val) } else { unsigned(rs1_val) };
+  let rs2_int : int = if s then { signed(rs2_val) } else { unsigned(rs2_val) };
+  let q : int = if rs2_int == 0 then { -1 } else { quot_round_zero(rs1_int, rs2_int) };
 
   /* check for signed overflow */
-  let q' : int = if s & q > xlen_max_signed then {
+  let q' : int = if
+    s & q > xlen_max_signed
+  then {
     xlen_min_signed
   } else {
     q
@@ -106,21 +104,9 @@ mapping clause encdec = REM(rs2, rs1, rd, s)                           if haveMu
 function clause execute REM(rs2, rs1, rd, s) = {
   let rs1_val = X(rs1);
   let rs2_val = X(rs2);
-  let rs1_int : int = if s then {
-    signed(rs1_val)
-  } else {
-    unsigned(rs1_val)
-  };
-  let rs2_int : int = if s then {
-    signed(rs2_val)
-  } else {
-    unsigned(rs2_val)
-  };
-  let r : int = if rs2_int == 0 then {
-    rs1_int
-  } else {
-    rem_round_zero(rs1_int, rs2_int)
-  };
+  let rs1_int : int = if s then { signed(rs1_val) } else { unsigned(rs1_val) };
+  let rs2_int : int = if s then { signed(rs2_val) } else { unsigned(rs2_val) };
+  let r : int = if rs2_int == 0 then { rs1_int } else { rem_round_zero(rs1_int, rs2_int) };
 
   /* signed overflow case returns zero naturally as required due to -1 divisor */
   X(rd) = to_bits(sizeof(xlen), r);
@@ -145,9 +131,7 @@ function clause execute MULW(rs2, rs1, rd) = {
   let rs2_int : int = signed(rs2_val);
 
   /* to_bits requires expansion to 64 bits followed by truncation */
-  let result32 = to_bits(64, rs1_int * rs2_int)[
-    31..0
-  ];
+  let result32 = to_bits(64, rs1_int * rs2_int)[31..0];
   let result : xlenbits = sign_extend(result32);
   X(rd) = result;
   RETIRE_SUCCESS
@@ -169,24 +153,14 @@ mapping clause encdec = DIVW(rs2, rs1, rd, s)
 function clause execute DIVW(rs2, rs1, rd, s) = {
   let rs1_val = X(rs1)[31..0];
   let rs2_val = X(rs2)[31..0];
-  let rs1_int : int = if s then {
-    signed(rs1_val)
-  } else {
-    unsigned(rs1_val)
-  };
-  let rs2_int : int = if s then {
-    signed(rs2_val)
-  } else {
-    unsigned(rs2_val)
-  };
-  let q : int = if rs2_int == 0 then {
-    -1
-  } else {
-    quot_round_zero(rs1_int, rs2_int)
-  };
+  let rs1_int : int = if s then { signed(rs1_val) } else { unsigned(rs1_val) };
+  let rs2_int : int = if s then { signed(rs2_val) } else { unsigned(rs2_val) };
+  let q : int = if rs2_int == 0 then { -1 } else { quot_round_zero(rs1_int, rs2_int) };
 
   /* check for signed overflow */
-  let q' : int = if s & q > (2 ^31 - 1) then {
+  let q' : int = if
+    s & q > (2 ^31 - 1)
+  then {
     0 - 2 ^31
   } else {
     q
@@ -211,21 +185,9 @@ mapping clause encdec = REMW(rs2, rs1, rd, s)
 function clause execute REMW(rs2, rs1, rd, s) = {
   let rs1_val = X(rs1)[31..0];
   let rs2_val = X(rs2)[31..0];
-  let rs1_int : int = if s then {
-    signed(rs1_val)
-  } else {
-    unsigned(rs1_val)
-  };
-  let rs2_int : int = if s then {
-    signed(rs2_val)
-  } else {
-    unsigned(rs2_val)
-  };
-  let r : int = if rs2_int == 0 then {
-    rs1_int
-  } else {
-    rem_round_zero(rs1_int, rs2_int)
-  };
+  let rs1_int : int = if s then { signed(rs1_val) } else { unsigned(rs1_val) };
+  let rs2_int : int = if s then { signed(rs2_val) } else { unsigned(rs2_val) };
+  let r : int = if rs2_int == 0 then { rs1_int } else { rem_round_zero(rs1_int, rs2_int) };
 
   /* signed overflow case returns zero naturally as required due to -1 divisor */
   X(rd) = sign_extend(to_bits(32, r));
