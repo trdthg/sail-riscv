@@ -305,8 +305,7 @@ function translate_TLB_hit(
   match pte_check {
     PTE_Check_Failure(ext_ptw, ext_ptw_fail) => TR_Failure(ext_get_ptw_error(ext_ptw_fail), ext_ptw),
     PTE_Check_Success(ext_ptw) => match update_PTE_Bits(sv_params, pte, ac) {
-      None() =>
-        TR_Address(ent.pAddr | (vAddr & ent.vAddrMask), ext_ptw),
+      None() => TR_Address(ent.pAddr | (vAddr & ent.vAddrMask), ext_ptw),
       Some(pte') =>
         // See riscv_platform.sail
         if not(plat_enable_dirty_update()) then {
@@ -319,8 +318,7 @@ function translate_TLB_hit(
             pte = pte',
           };
           write_TLB(tlb_index, n_ent);
-          let pte_phys_addr =
-              ent.pteAddr[(sizeof(xlen) - 1)..0];
+          let pte_phys_addr = ent.pteAddr[(sizeof(xlen) - 1)..0];
 
           match write_pte(pte_phys_addr, 2 ^sv_params.log_pte_size_bytes, pte') {
             MemValue(_) => (),

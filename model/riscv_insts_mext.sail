@@ -24,24 +24,10 @@ mapping clause encdec = MUL(rs2, rs1, rd, mul_op)                    if haveMulD
 function clause execute MUL(rs2, rs1, rd, mul_op) = {
   let rs1_val = X(rs1);
   let rs2_val = X(rs2);
-  let rs1_int : int = if
-    mul_op.signed_rs1
-  then {
-    signed(rs1_val)
-  } else {
-    unsigned(rs1_val)
-  };
-  let rs2_int : int = if
-    mul_op.signed_rs2
-  then {
-    signed(rs2_val)
-  } else {
-    unsigned(rs2_val)
-  };
+  let rs1_int : int = if mul_op.signed_rs1 then { signed(rs1_val) } else { unsigned(rs1_val) };
+  let rs2_int : int = if mul_op.signed_rs2 then { signed(rs2_val) } else { unsigned(rs2_val) };
   let result_wide = to_bits(2 * sizeof(xlen), rs1_int * rs2_int);
-  let result = if
-    mul_op.high
-  then {
+  let result = if mul_op.high then {
     result_wide[
       (2 * sizeof(xlen) - 1)..sizeof(xlen)
     ]

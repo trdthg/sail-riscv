@@ -177,17 +177,11 @@ val cancel_reservation = pure {
  */
 function exception_delegatee(e : ExceptionType, p : Privilege) -> Privilege = {
   let idx = num_of_ExceptionType(e);
-  let super = bit_to_bool(
-
-        medeleg.bits[idx],
-  );
+  let super = bit_to_bool(medeleg.bits[idx]);
 
   /* if S-mode is absent, medeleg delegates to U-mode if 'N' is supported. */
   let user = if haveSupMode() then {
-    super & haveNExt() & bit_to_bool(
-
-          sedeleg.bits[idx],
-    )
+    super & haveNExt() & bit_to_bool(sedeleg.bits[idx])
   } else {
     super & haveNExt()
   };
@@ -393,9 +387,7 @@ function trap_handler(
 
       handle_trap_extension(del_priv, pc, ext);
 
-      if get_config_print_reg() then {
-        print_reg("CSR mstatus <- " ^ BitStr(mstatus.bits))
-      };
+      if get_config_print_reg() then { print_reg("CSR mstatus <- " ^ BitStr(mstatus.bits)) };
 
       prepare_trap_vector(del_priv, mcause)
     },
@@ -420,9 +412,7 @@ function trap_handler(
 
       handle_trap_extension(del_priv, pc, ext);
 
-      if get_config_print_reg() then {
-        print_reg("CSR mstatus <- " ^ BitStr(mstatus.bits))
-      };
+      if get_config_print_reg() then { print_reg("CSR mstatus <- " ^ BitStr(mstatus.bits)) };
 
       prepare_trap_vector(del_priv, scause)
     },
@@ -441,9 +431,7 @@ function trap_handler(
 
       handle_trap_extension(del_priv, pc, ext);
 
-      if get_config_print_reg() then {
-        print_reg("CSR mstatus <- " ^ BitStr(mstatus.bits))
-      };
+      if get_config_print_reg() then { print_reg("CSR mstatus <- " ^ BitStr(mstatus.bits)) };
 
       prepare_trap_vector(del_priv, ucause)
     },
@@ -467,9 +455,7 @@ function exception_handler(cur_priv : Privilege, ctl : ctl_result, pc : xlenbits
       mstatus[MPP] = privLevel_to_bits(if haveUsrMode() then User else Machine);
       if cur_privilege != Machine then { mstatus[MPRV] = 0b0 };
 
-      if get_config_print_reg() then {
-        print_reg("CSR mstatus <- " ^ BitStr(mstatus.bits))
-      };
+      if get_config_print_reg() then { print_reg("CSR mstatus <- " ^ BitStr(mstatus.bits)) };
       if get_config_print_platform() then {
         print_platform("ret-ing from " ^ to_str(prev_priv) ^ " to " ^ to_str(cur_privilege))
       };
@@ -484,9 +470,7 @@ function exception_handler(cur_priv : Privilege, ctl : ctl_result, pc : xlenbits
       mstatus[SPP] = 0b0;
       if cur_privilege != Machine then { mstatus[MPRV] = 0b0 };
 
-      if get_config_print_reg() then {
-        print_reg("CSR mstatus <- " ^ BitStr(mstatus.bits))
-      };
+      if get_config_print_reg() then { print_reg("CSR mstatus <- " ^ BitStr(mstatus.bits)) };
       if get_config_print_platform() then {
         print_platform("ret-ing from " ^ to_str(prev_priv) ^ " to " ^ to_str(cur_privilege))
       };
@@ -499,9 +483,7 @@ function exception_handler(cur_priv : Privilege, ctl : ctl_result, pc : xlenbits
       mstatus[UPIE] = 0b1;
       cur_privilege = User;
 
-      if get_config_print_reg() then {
-        print_reg("CSR mstatus <- " ^ BitStr(mstatus.bits))
-      };
+      if get_config_print_reg() then { print_reg("CSR mstatus <- " ^ BitStr(mstatus.bits)) };
       if get_config_print_platform() then {
         print_platform("ret-ing from " ^ to_str(prev_priv) ^ " to " ^ to_str(cur_privilege))
       };

@@ -28,36 +28,22 @@ function readCSR csr : csreg -> xlenbits = {
     (0xF13, _) => mimpid,
     (0xF14, _) => mhartid,
     (0xF15, _) => mconfigptr,
-    (0x300, _) =>
-      mstatus.bits,
-    (0x301, _) =>
-      misa.bits,
-    (0x302, _) =>
-      medeleg.bits,
-    (0x303, _) =>
-      mideleg.bits,
-    (0x304, _) =>
-      mie.bits,
+    (0x300, _) => mstatus.bits,
+    (0x301, _) => misa.bits,
+    (0x302, _) => medeleg.bits,
+    (0x303, _) => mideleg.bits,
+    (0x304, _) => mie.bits,
     (0x305, _) => get_mtvec(),
-    (0x306, _) =>
-      zero_extend(mcounteren.bits),
-    (0x30A, _) =>
-
-          menvcfg.bits[(sizeof(xlen) - 1)..0],
-    (0x310, 32) =>
-      mstatush.bits,
-    (0x31A, 32) =>
-
-          menvcfg.bits[63..32],
-    (0x320, _) =>
-      zero_extend(mcountinhibit.bits),
+    (0x306, _) => zero_extend(mcounteren.bits),
+    (0x30A, _) => menvcfg.bits[(sizeof(xlen) - 1)..0],
+    (0x310, 32) => mstatush.bits,
+    (0x31A, 32) => menvcfg.bits[63..32],
+    (0x320, _) => zero_extend(mcountinhibit.bits),
     (0x340, _) => mscratch,
     (0x341, _) => get_xret_target(Machine) & pc_alignment_mask(),
-    (0x342, _) =>
-      mcause.bits,
+    (0x342, _) => mcause.bits,
     (0x343, _) => mtval,
-    (0x344, _) =>
-      mip.bits,
+    (0x344, _) => mip.bits,
     // pmpcfgN
     (0x3A @ idx : bits(4), _) if idx[0] == bitzero | sizeof(xlen) == 32 => pmpReadCfgReg(unsigned(idx)),
     // pmpaddrN. Unfortunately the PMP index does not nicely align with the CSR index bits.
@@ -74,36 +60,25 @@ function readCSR csr : csreg -> xlenbits = {
     (0x008, _) => zero_extend(vstart),
     (0x009, _) => zero_extend(vxsat),
     (0x00A, _) => zero_extend(vxrm),
-    (0x00F, _) =>
-      zero_extend(vcsr.bits),
+    (0x00F, _) => zero_extend(vcsr.bits),
     (0xC20, _) => vl,
-    (0xC21, _) =>
-      vtype.bits,
+    (0xC21, _) => vtype.bits,
     (0xC22, _) => vlenb,
     /* trigger/debug */
     (0x7a0, _) => ~(tselect), /* this indicates we don't have any trigger support */
     /* supervisor mode */
-    (0x100, _) =>
-      lower_mstatus(mstatus).bits,
-    (0x102, _) =>
-      sedeleg.bits,
-    (0x103, _) =>
-      sideleg.bits,
-    (0x104, _) =>
-      lower_mie(mie, mideleg).bits,
+    (0x100, _) => lower_mstatus(mstatus).bits,
+    (0x102, _) => sedeleg.bits,
+    (0x103, _) => sideleg.bits,
+    (0x104, _) => lower_mie(mie, mideleg).bits,
     (0x105, _) => get_stvec(),
-    (0x106, _) =>
-      zero_extend(scounteren.bits),
-    (0x10A, _) =>
-
-          senvcfg.bits[(sizeof(xlen) - 1)..0],
+    (0x106, _) => zero_extend(scounteren.bits),
+    (0x10A, _) => senvcfg.bits[(sizeof(xlen) - 1)..0],
     (0x140, _) => sscratch,
     (0x141, _) => get_xret_target(Supervisor) & pc_alignment_mask(),
-    (0x142, _) =>
-      scause.bits,
+    (0x142, _) => scause.bits,
     (0x143, _) => stval,
-    (0x144, _) =>
-      lower_mip(mip, mideleg).bits,
+    (0x144, _) => lower_mip(mip, mideleg).bits,
     (0x180, _) => satp,
     /* user mode counters */
     (0xC00, _) => mcycle[(sizeof(xlen) - 1)..0],
@@ -159,17 +134,8 @@ function writeCSR(csr : csreg, value : xlenbits) -> unit = {
       Some(zero_extend(mcounteren.bits))
     },
     (0x30A, 32) => {
-      menvcfg =
-        legalize_menvcfg(
-          menvcfg,
-
-              menvcfg.bits[63..32] @
-            value,
-        );
-      Some(
-
-            menvcfg.bits[31..0],
-      )
+      menvcfg = legalize_menvcfg(menvcfg, menvcfg.bits[63..32] @ value);
+      Some(menvcfg.bits[31..0])
     },
     (0x30A, 64) => {
       menvcfg = legalize_menvcfg(menvcfg, value);
@@ -179,17 +145,8 @@ function writeCSR(csr : csreg, value : xlenbits) -> unit = {
       Some(mstatush.bits) // ignore writes for now
     },
     (0x31A, 32) => {
-      menvcfg =
-        legalize_menvcfg(
-          menvcfg,
-          value @
-
-                menvcfg.bits[31..0],
-        );
-      Some(
-
-            menvcfg.bits[63..32],
-      )
+      menvcfg = legalize_menvcfg(menvcfg, value @ menvcfg.bits[31..0]);
+      Some(menvcfg.bits[63..32])
     },
     (0x320, _) => {
       mcountinhibit = legalize_mcountinhibit(mcountinhibit, value);
@@ -287,10 +244,7 @@ function writeCSR(csr : csreg, value : xlenbits) -> unit = {
     },
     (0x10A, _) => {
       senvcfg = legalize_senvcfg(senvcfg, zero_extend(value));
-      Some(
-
-            senvcfg.bits[(sizeof(xlen) - 1)..0],
-      )
+      Some(senvcfg.bits[(sizeof(xlen) - 1)..0])
     },
     (0x140, _) => {
       sscratch = value;

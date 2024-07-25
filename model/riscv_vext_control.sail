@@ -17,13 +17,11 @@ function clause ext_is_CSR_defined 0x00F = true
 
 function clause ext_read_CSR 0x009 = Some(zero_extend(vcsr[vxsat]))
 function clause ext_read_CSR 0x00A = Some(zero_extend(vcsr[vxrm]))
-function clause ext_read_CSR 0x00F =
-  Some(zero_extend(vcsr.bits))
+function clause ext_read_CSR 0x00F = Some(zero_extend(vcsr.bits))
 
 function clause ext_read_CSR 0x009 = Some(zero_extend(vcsr[vxsat]))
 function clause ext_read_CSR 0x00A = Some(zero_extend(vcsr[vxrm]))
-function clause ext_read_CSR 0x00F =
-  Some(zero_extend(vcsr.bits))
+function clause ext_read_CSR 0x00F = Some(zero_extend(vcsr.bits))
 
 function clause ext_write_CSR(0x009, value) = {
   ext_write_vcsr(vcsr[vxrm], value[0..0]);

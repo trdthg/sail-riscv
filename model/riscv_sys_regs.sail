@@ -262,12 +262,7 @@ function effectivePrivilege(t : AccessType(ext_access_type), m : Mstatus, priv :
   }
 
 function get_mstatus_SXL m : Mstatus -> arch_xlen = {
-  if sizeof(xlen) == 32 then {
-    arch_to_bits(RV32)
-  } else {
-
-        m.bits[35..34]
-  }
+  if sizeof(xlen) == 32 then { arch_to_bits(RV32) } else { m.bits[35..34] }
 }
 
 function set_mstatus_SXL(m : Mstatus, a : arch_xlen) -> Mstatus = {
@@ -280,12 +275,7 @@ function set_mstatus_SXL(m : Mstatus, a : arch_xlen) -> Mstatus = {
 }
 
 function get_mstatus_UXL m : Mstatus -> arch_xlen = {
-  if sizeof(xlen) == 32 then {
-    arch_to_bits(RV32)
-  } else {
-
-        m.bits[33..32]
-  }
+  if sizeof(xlen) == 32 then { arch_to_bits(RV32) } else { m.bits[33..32] }
 }
 
 function set_mstatus_UXL(m : Mstatus, a : arch_xlen) -> Mstatus = {
@@ -829,8 +819,7 @@ function legalize_satp64(a : Architecture, o : bits(64), v : bits(64)) -> bits(6
   match satp64Mode_of_bits(a, s[Mode]) {
     None() => o,
     Some(Sv32) => o, /* Sv32 is unsupported for now */
-    Some(_) =>
-      s.bits,
+    Some(_) => s.bits,
   }
 }
 
