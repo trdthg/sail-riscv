@@ -91,7 +91,11 @@ function check_PTE_permission(
     (Execute(), Supervisor) => (pte_U == 0b0) & (pte_X == 0b1),
     (_, Machine) => internal_error(__FILE__, __LINE__, "m-mode mem perm check"),
   };
-  if success then { PTE_Check_Success() } else { PTE_Check_Failure((), ()) }
+  if success then {
+    PTE_Check_Success()
+  } else {
+    PTE_Check_Failure((), ())
+  }
 }
 
 // Update PTE bits if needed; return new PTE if updated

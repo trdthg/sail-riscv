@@ -282,7 +282,9 @@ function clause execute VMSOF_M(vm, vs2, vd) = {
       if (vs2_val[i]) & not(found_elem) then {
         result[i] = true;
         found_elem = true
-      } else { result[i] = false }
+      } else {
+        result[i] = false
+      }
     }
   };
 

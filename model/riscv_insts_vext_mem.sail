@@ -69,7 +69,11 @@ mapping clause encdec = VLSEGTYPE(nf, vm, rs1, width, vd) if haveVExt()
 val process_vlseg : forall 'f 'b 'n 'p, (0 < 'f & 'f <= 8) & ('b in {1, 2, 4, 8}) & ('n >= 0).
   (int('f), bits(1), regidx, int('b), regidx, int('p), int('n)) -> Retired
 function process_vlseg(nf, vm, vd, load_width_bytes, rs1, EMUL_pow, num_elem) = {
-  let EMUL_reg : int = if EMUL_pow <= 0 then { 1 } else { int_power(2, EMUL_pow) };
+  let EMUL_reg : int = if EMUL_pow <= 0 then {
+    1
+  } else {
+    int_power(2, EMUL_pow)
+  };
   let width_type : word_width = size_bytes(load_width_bytes);
   let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
   let vd_seg : vector('n, dec, bits('f * 'b * 8)) = read_vreg_seg(num_elem, load_width_bytes * 8, EMUL_pow, nf, vd);
@@ -155,7 +159,11 @@ mapping clause encdec = VLSEGFFTYPE(nf, vm, rs1, width, vd) if haveVExt()
 val process_vlsegff : forall 'f 'b 'n 'p, (0 < 'f & 'f <= 8) & ('b in {1, 2, 4, 8}) & ('n >= 0).
   (int('f), bits(1), regidx, int('b), regidx, int('p), int('n)) -> Retired
 function process_vlsegff(nf, vm, vd, load_width_bytes, rs1, EMUL_pow, num_elem) = {
-  let EMUL_reg : int = if EMUL_pow <= 0 then { 1 } else { int_power(2, EMUL_pow) };
+  let EMUL_reg : int = if EMUL_pow <= 0 then {
+    1
+  } else {
+    int_power(2, EMUL_pow)
+  };
   let width_type : word_width = size_bytes(load_width_bytes);
   let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
   let vd_seg : vector('n, dec, bits('f * 'b * 8)) = read_vreg_seg(num_elem, load_width_bytes * 8, EMUL_pow, nf, vd);
@@ -287,7 +295,11 @@ mapping clause encdec = VSSEGTYPE(nf, vm, rs1, width, vs3) if haveVExt()
 val process_vsseg : forall 'f 'b 'n 'p, (0 < 'f & 'f <= 8) & ('b in {1, 2, 4, 8}) & ('n >= 0).
   (int('f), bits(1), regidx, int('b), regidx, int('p), int('n)) -> Retired
 function process_vsseg(nf, vm, vs3, load_width_bytes, rs1, EMUL_pow, num_elem) = {
-  let EMUL_reg : int = if EMUL_pow <= 0 then { 1 } else { int_power(2, EMUL_pow) };
+  let EMUL_reg : int = if EMUL_pow <= 0 then {
+    1
+  } else {
+    int_power(2, EMUL_pow)
+  };
   let width_type : word_width = size_bytes(load_width_bytes);
   let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
   let vs3_seg : vector('n, dec, bits('f * 'b * 8)) = read_vreg_seg(num_elem, load_width_bytes * 8, EMUL_pow, nf, vs3);
@@ -386,7 +398,11 @@ mapping clause encdec = VLSSEGTYPE(nf, vm, rs2, rs1, width, vd) if haveVExt()
 val process_vlsseg : forall 'f 'b 'n 'p, (0 < 'f & 'f <= 8) & ('b in {1, 2, 4, 8}) & ('n >= 0).
   (int('f), bits(1), regidx, int('b), regidx, regidx, int('p), int('n)) -> Retired
 function process_vlsseg(nf, vm, vd, load_width_bytes, rs1, rs2, EMUL_pow, num_elem) = {
-  let EMUL_reg : int = if EMUL_pow <= 0 then { 1 } else { int_power(2, EMUL_pow) };
+  let EMUL_reg : int = if EMUL_pow <= 0 then {
+    1
+  } else {
+    int_power(2, EMUL_pow)
+  };
   let width_type : word_width = size_bytes(load_width_bytes);
   let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
   let vd_seg : vector('n, dec, bits('f * 'b * 8)) = read_vreg_seg(num_elem, load_width_bytes * 8, EMUL_pow, nf, vd);
@@ -473,7 +489,11 @@ mapping clause encdec = VSSSEGTYPE(nf, vm, rs2, rs1, width, vs3) if haveVExt()
 val process_vssseg : forall 'f 'b 'n 'p, (0 < 'f & 'f <= 8) & ('b in {1, 2, 4, 8}) & ('n >= 0).
   (int('f), bits(1), regidx, int('b), regidx, regidx, int('p), int('n)) -> Retired
 function process_vssseg(nf, vm, vs3, load_width_bytes, rs1, rs2, EMUL_pow, num_elem) = {
-  let EMUL_reg : int = if EMUL_pow <= 0 then { 1 } else { int_power(2, EMUL_pow) };
+  let EMUL_reg : int = if EMUL_pow <= 0 then {
+    1
+  } else {
+    int_power(2, EMUL_pow)
+  };
   let width_type : word_width = size_bytes(load_width_bytes);
   let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
   let vs3_seg : vector('n, dec, bits('f * 'b * 8)) = read_vreg_seg(num_elem, load_width_bytes * 8, EMUL_pow, nf, vs3);
@@ -586,7 +606,11 @@ function process_vlxseg(
   num_elem,
   mop,
 ) = {
-  let EMUL_data_reg : int = if EMUL_data_pow <= 0 then { 1 } else { int_power(2, EMUL_data_pow) };
+  let EMUL_data_reg : int = if EMUL_data_pow <= 0 then {
+    1
+  } else {
+    int_power(2, EMUL_data_pow)
+  };
   let width_type : word_width = size_bytes(EEW_data_bytes);
   let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
   let vd_seg : vector('n, dec, bits('f * 'db * 8)) = read_vreg_seg(num_elem, EEW_data_bytes * 8, EMUL_data_pow, nf, vd);
@@ -719,7 +743,11 @@ function process_vsxseg(
   num_elem,
   mop,
 ) = {
-  let EMUL_data_reg : int = if EMUL_data_pow <= 0 then { 1 } else { int_power(2, EMUL_data_pow) };
+  let EMUL_data_reg : int = if EMUL_data_pow <= 0 then {
+    1
+  } else {
+    int_power(2, EMUL_data_pow)
+  };
   let width_type : word_width = size_bytes(EEW_data_bytes);
   let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
   let vs3_seg : vector('n, dec, bits('f * 'db * 8)) = read_vreg_seg(

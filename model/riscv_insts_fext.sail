@@ -162,7 +162,11 @@ function feq_quiet_S(v1, v2) = {
 
   let result = (v1 == v2) | (v1Is0 & v2Is0);
 
-  let fflags = if f_is_SNaN_S(v1) | f_is_SNaN_S(v2) then { nvFlag() } else { zeros() };
+  let fflags = if f_is_SNaN_S(v1) | f_is_SNaN_S(v2) then {
+    nvFlag()
+  } else {
+    zeros()
+  };
 
   (result, fflags)
 }
@@ -173,17 +177,39 @@ function flt_S(v1, v2, is_quiet) = {
   let (s2, e2, m2) = fsplit_S(v2);
 
   let result : bool = if (s1 == 0b0) & (s2 == 0b0) then {
-    if e1 == e2 then { unsigned(m1) < unsigned(m2) } else { unsigned(e1) < unsigned(e2) }
+    if e1 == e2 then {
+      unsigned(m1) < unsigned(m2)
+    } else {
+      unsigned(e1) < unsigned(e2)
+    }
   } else {
-    if (s1 == 0b0) & (s2 == 0b1) then { false } else {
-      if (s1 == 0b1) & (s2 == 0b0) then { true } else {
-        if e1 == e2 then { unsigned(m1) > unsigned(m2) } else { unsigned(e1) > unsigned(e2) }
+    if (s1 == 0b0) & (s2 == 0b1) then {
+      false
+    } else {
+      if (s1 == 0b1) & (s2 == 0b0) then {
+        true
+      } else {
+        if e1 == e2 then {
+          unsigned(m1) > unsigned(m2)
+        } else {
+          unsigned(e1) > unsigned(e2)
+        }
       }
     }
   };
 
-  let fflags = if is_quiet then { if f_is_SNaN_S(v1) | f_is_SNaN_S(v2) then { nvFlag() } else { zeros() } } else {
-    if f_is_NaN_S(v1) | f_is_NaN_S(v2) then { nvFlag() } else { zeros() }
+  let fflags = if is_quiet then {
+    if f_is_SNaN_S(v1) | f_is_SNaN_S(v2) then {
+      nvFlag()
+    } else {
+      zeros()
+    }
+  } else {
+    if f_is_NaN_S(v1) | f_is_NaN_S(v2) then {
+      nvFlag()
+    } else {
+      zeros()
+    }
   };
 
   (result, fflags)
@@ -198,19 +224,39 @@ function fle_S(v1, v2, is_quiet) = {
   let v2Is0 = f_is_neg_zero_S(v2) | f_is_pos_zero_S(v2);
 
   let result : bool = if (s1 == 0b0) & (s2 == 0b0) then {
-    if e1 == e2 then { unsigned(m1) <= unsigned(m2) } else { unsigned(e1) < unsigned(e2) }
+    if e1 == e2 then {
+      unsigned(m1) <= unsigned(m2)
+    } else {
+      unsigned(e1) < unsigned(e2)
+    }
   } else {
     if (s1 == 0b0) & (s2 == 0b1) then {
       v1Is0 & v2Is0 /* Equal in this case (+0=-0) */
     } else {
-      if (s1 == 0b1) & (s2 == 0b0) then { true } else {
-        if e1 == e2 then { unsigned(m1) >= unsigned(m2) } else { unsigned(e1) > unsigned(e2) }
+      if (s1 == 0b1) & (s2 == 0b0) then {
+        true
+      } else {
+        if e1 == e2 then {
+          unsigned(m1) >= unsigned(m2)
+        } else {
+          unsigned(e1) > unsigned(e2)
+        }
       }
     }
   };
 
-  let fflags = if is_quiet then { if f_is_SNaN_S(v1) | f_is_SNaN_S(v2) then { nvFlag() } else { zeros() } } else {
-    if f_is_NaN_S(v1) | f_is_NaN_S(v2) then { nvFlag() } else { zeros() }
+  let fflags = if is_quiet then {
+    if f_is_SNaN_S(v1) | f_is_SNaN_S(v2) then {
+      nvFlag()
+    } else {
+      zeros()
+    }
+  } else {
+    if f_is_NaN_S(v1) | f_is_NaN_S(v2) then {
+      nvFlag()
+    } else {
+      zeros()
+    }
   };
 
   (result, fflags)
@@ -1061,16 +1107,38 @@ mapping clause encdec = F_UN_TYPE_S(rs1, rd, FMV_W_X)                         if
 function clause execute F_UN_TYPE_S(rs1, rd, FCLASS_S) = {
   let rs1_val_S = F_or_X_S(rs1);
 
-  let rd_val_10b : bits(10) = if f_is_neg_inf_S(rs1_val_S) then { 0b0000000001 } else {
-    if f_is_neg_norm_S(rs1_val_S) then { 0b0000000010 } else {
-      if f_is_neg_subnorm_S(rs1_val_S) then { 0b0000000100 } else {
-        if f_is_neg_zero_S(rs1_val_S) then { 0b0000001000 } else {
-          if f_is_pos_zero_S(rs1_val_S) then { 0b0000010000 } else {
-            if f_is_pos_subnorm_S(rs1_val_S) then { 0b0000100000 } else {
-              if f_is_pos_norm_S(rs1_val_S) then { 0b0001000000 } else {
-                if f_is_pos_inf_S(rs1_val_S) then { 0b0010000000 } else {
-                  if f_is_SNaN_S(rs1_val_S) then { 0b0100000000 } else {
-                    if f_is_QNaN_S(rs1_val_S) then { 0b1000000000 } else { zeros() }
+  let rd_val_10b : bits(10) = if f_is_neg_inf_S(rs1_val_S) then {
+    0b0000000001
+  } else {
+    if f_is_neg_norm_S(rs1_val_S) then {
+      0b0000000010
+    } else {
+      if f_is_neg_subnorm_S(rs1_val_S) then {
+        0b0000000100
+      } else {
+        if f_is_neg_zero_S(rs1_val_S) then {
+          0b0000001000
+        } else {
+          if f_is_pos_zero_S(rs1_val_S) then {
+            0b0000010000
+          } else {
+            if f_is_pos_subnorm_S(rs1_val_S) then {
+              0b0000100000
+            } else {
+              if f_is_pos_norm_S(rs1_val_S) then {
+                0b0001000000
+              } else {
+                if f_is_pos_inf_S(rs1_val_S) then {
+                  0b0010000000
+                } else {
+                  if f_is_SNaN_S(rs1_val_S) then {
+                    0b0100000000
+                  } else {
+                    if f_is_QNaN_S(rs1_val_S) then {
+                      0b1000000000
+                    } else {
+                      zeros()
+                    }
                   }
                 }
               }

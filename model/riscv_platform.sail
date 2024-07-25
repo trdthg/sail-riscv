@@ -415,7 +415,9 @@ function htif_store(paddr, width, data) = {
     if
       width == 4 & paddr == plat_htif_tohost()
     then {
-      if data == (htif_tohost[31..0]) then { htif_payload_writes = htif_payload_writes + 1 } else {
+      if data == (htif_tohost[31..0]) then {
+        htif_payload_writes = htif_payload_writes + 1
+      } else {
         htif_payload_writes = 0x1
       };
       htif_tohost = vector_update_subrange(htif_tohost, 31, 0, data)
@@ -424,7 +426,9 @@ function htif_store(paddr, width, data) = {
         width == 4 & paddr == plat_htif_tohost() + 4
       then
         {
-          if (data[15..0]) == (htif_tohost[47..32]) then { htif_payload_writes = htif_payload_writes + 1 } else {
+          if (data[15..0]) == (htif_tohost[47..32]) then {
+            htif_payload_writes = htif_payload_writes + 1
+          } else {
             htif_payload_writes = 0x1
           };
           htif_cmd_write = bitone;
@@ -540,7 +544,11 @@ function tick_platform () -> unit = { htif_tick() }
 
 /* Platform-specific handling of instruction faults */
 function handle_illegal () -> unit = {
-  let info = if plat_mtval_has_illegal_inst_bits() then { Some(instbits) } else { None() };
+  let info = if plat_mtval_has_illegal_inst_bits() then {
+    Some(instbits)
+  } else {
+    None()
+  };
   let t : sync_exception = struct { trap = E_Illegal_Instr(), excinfo = info, ext = None() };
   set_next_pc(exception_handler(cur_privilege, CTL_TRAP(t), PC))
 }

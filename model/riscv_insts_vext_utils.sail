@@ -67,8 +67,16 @@ function valid_rd_mask(rd, vm) = {
  */
 val valid_reg_overlap : (regidx, regidx, int, int) -> bool
 function valid_reg_overlap(rs, rd, EMUL_pow_rs, EMUL_pow_rd) = {
-  let rs_group = if EMUL_pow_rs > 0 then { int_power(2, EMUL_pow_rs) } else { 1 };
-  let rd_group = if EMUL_pow_rd > 0 then { int_power(2, EMUL_pow_rd) } else { 1 };
+  let rs_group = if EMUL_pow_rs > 0 then {
+    int_power(2, EMUL_pow_rs)
+  } else {
+    1
+  };
+  let rd_group = if EMUL_pow_rd > 0 then {
+    int_power(2, EMUL_pow_rd)
+  } else {
+    1
+  };
   let rs_int = unsigned(rs);
   let rd_int = unsigned(rd);
   if EMUL_pow_rs < EMUL_pow_rd then {
@@ -260,7 +268,11 @@ function init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val) = {
   result : vector('n, dec, bits('m)) = undefined;
 
   /* Determine the actual number of elements when lmul < 1 */
-  let real_num_elem = if LMUL_pow >= 0 then { num_elem } else { num_elem / int_power(2, 0 - LMUL_pow) };
+  let real_num_elem = if LMUL_pow >= 0 then {
+    num_elem
+  } else {
+    num_elem / int_power(2, 0 - LMUL_pow)
+  };
   assert(num_elem >= real_num_elem);
 
   foreach (i from 0 to (num_elem - 1)) {
@@ -319,7 +331,11 @@ function init_masked_source(num_elem, LMUL_pow, vm_val) = {
   mask : vector('n, dec, bool) = undefined;
 
   /* Determine the actual number of elements when lmul < 1 */
-  let real_num_elem = if LMUL_pow >= 0 then { num_elem } else { num_elem / int_power(2, 0 - LMUL_pow) };
+  let real_num_elem = if LMUL_pow >= 0 then {
+    num_elem
+  } else {
+    num_elem / int_power(2, 0 - LMUL_pow)
+  };
   assert(num_elem >= real_num_elem);
 
   foreach (i from 0 to (num_elem - 1)) {
@@ -361,7 +377,11 @@ function init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val) = {
   result : vector('n, dec, bool) = undefined;
 
   /* Determine the actual number of elements when lmul < 1 */
-  let real_num_elem = if LMUL_pow >= 0 then { num_elem } else { num_elem / int_power(2, 0 - LMUL_pow) };
+  let real_num_elem = if LMUL_pow >= 0 then {
+    num_elem
+  } else {
+    num_elem / int_power(2, 0 - LMUL_pow)
+  };
   assert(num_elem >= real_num_elem);
 
   foreach (i from 0 to (num_elem - 1)) {
@@ -406,7 +426,11 @@ function init_masked_result_cmp(num_elem, SEW, LMUL_pow, vd_val, vm_val) = {
   result : vector('n, dec, bool) = undefined;
 
   /* Determine the actual number of elements when lmul < 1 */
-  let real_num_elem = if LMUL_pow >= 0 then { num_elem } else { num_elem / int_power(2, 0 - LMUL_pow) };
+  let real_num_elem = if LMUL_pow >= 0 then {
+    num_elem
+  } else {
+    num_elem / int_power(2, 0 - LMUL_pow)
+  };
   assert(num_elem >= real_num_elem);
 
   foreach (i from 0 to (num_elem - 1)) {
@@ -455,7 +479,11 @@ val read_vreg_seg : forall 'n 'm 'p 'q, 'n >= 0 & 'q >= 0.
   (int('n), int('m), int('p), int('q), regidx) -> vector('n, dec, bits('q * 'm))
 function read_vreg_seg(num_elem, SEW, LMUL_pow, nf, vrid) = {
   assert(sizeof('q) * sizeof('m) > 0);
-  let LMUL_reg : int = if LMUL_pow <= 0 then { 1 } else { int_power(2, LMUL_pow) };
+  let LMUL_reg : int = if LMUL_pow <= 0 then {
+    1
+  } else {
+    int_power(2, LMUL_pow)
+  };
   vreg_list : vector('q, dec, vector('n, dec, bits('m))) = undefined;
   result : vector('n, dec, bits('q * 'm)) = undefined;
   foreach (j from 0 to (nf - 1)) { vreg_list[j] = read_vreg(num_elem, SEW, LMUL_pow, vrid + to_bits(5, j * LMUL_reg)) };
@@ -689,11 +717,23 @@ function fp_min(op1, op2) = {
     64 => riscv_f64Lt_quiet(op1, op2),
   };
 
-  let result_val = if f_is_NaN(op1) & f_is_NaN(op2) then { canonical_NaN(sizeof('m)) } else {
-    if f_is_NaN(op1) then { op2 } else {
-      if f_is_NaN(op2) then { op1 } else {
-        if f_is_neg_zero(op1) & f_is_pos_zero(op2) then { op1 } else {
-          if f_is_neg_zero(op2) & f_is_pos_zero(op1) then { op2 } else { if op1_lt_op2 then { op1 } else { op2 } }
+  let result_val = if f_is_NaN(op1) & f_is_NaN(op2) then {
+    canonical_NaN(sizeof('m))
+  } else {
+    if f_is_NaN(op1) then {
+      op2
+    } else {
+      if f_is_NaN(op2) then {
+        op1
+      } else {
+        if f_is_neg_zero(op1) & f_is_pos_zero(op2) then {
+          op1
+        } else {
+          if f_is_neg_zero(op2) & f_is_pos_zero(op1) then {
+            op2
+          } else {
+            if op1_lt_op2 then { op1 } else { op2 }
+          }
         }
       }
     }
@@ -710,11 +750,23 @@ function fp_max(op1, op2) = {
     64 => riscv_f64Lt_quiet(op1, op2),
   };
 
-  let result_val = if f_is_NaN(op1) & f_is_NaN(op2) then { canonical_NaN(sizeof('m)) } else {
-    if f_is_NaN(op1) then { op2 } else {
-      if f_is_NaN(op2) then { op1 } else {
-        if f_is_neg_zero(op1) & f_is_pos_zero(op2) then { op2 } else {
-          if f_is_neg_zero(op2) & f_is_pos_zero(op1) then { op1 } else { if op1_lt_op2 then { op2 } else { op1 } }
+  let result_val = if f_is_NaN(op1) & f_is_NaN(op2) then {
+    canonical_NaN(sizeof('m))
+  } else {
+    if f_is_NaN(op1) then {
+      op2
+    } else {
+      if f_is_NaN(op2) then {
+        op1
+      } else {
+        if f_is_neg_zero(op1) & f_is_pos_zero(op2) then {
+          op2
+        } else {
+          if f_is_neg_zero(op2) & f_is_pos_zero(op1) then {
+            op1
+          } else {
+            if op1_lt_op2 then { op2 } else { op1 }
+          }
         }
       }
     }
@@ -852,16 +904,38 @@ function fp_nmulsub(rm_3b, op1, op2, opsub) = {
 
 val fp_class : forall 'm, 'm in {16, 32, 64}. bits('m) -> bits('m)
 function fp_class xf = {
-  let result_val_10b : bits(10) = if f_is_neg_inf(xf) then { 0b0000000001 } else {
-    if f_is_neg_norm(xf) then { 0b0000000010 } else {
-      if f_is_neg_subnorm(xf) then { 0b0000000100 } else {
-        if f_is_neg_zero(xf) then { 0b0000001000 } else {
-          if f_is_pos_zero(xf) then { 0b0000010000 } else {
-            if f_is_pos_subnorm(xf) then { 0b0000100000 } else {
-              if f_is_pos_norm(xf) then { 0b0001000000 } else {
-                if f_is_pos_inf(xf) then { 0b0010000000 } else {
-                  if f_is_SNaN(xf) then { 0b0100000000 } else {
-                    if f_is_QNaN(xf) then { 0b1000000000 } else { zeros() }
+  let result_val_10b : bits(10) = if f_is_neg_inf(xf) then {
+    0b0000000001
+  } else {
+    if f_is_neg_norm(xf) then {
+      0b0000000010
+    } else {
+      if f_is_neg_subnorm(xf) then {
+        0b0000000100
+      } else {
+        if f_is_neg_zero(xf) then {
+          0b0000001000
+        } else {
+          if f_is_pos_zero(xf) then {
+            0b0000010000
+          } else {
+            if f_is_pos_subnorm(xf) then {
+              0b0000100000
+            } else {
+              if f_is_pos_norm(xf) then {
+                0b0001000000
+              } else {
+                if f_is_pos_inf(xf) then {
+                  0b0010000000
+                } else {
+                  if f_is_SNaN(xf) then {
+                    0b0100000000
+                  } else {
+                    if f_is_QNaN(xf) then {
+                      0b1000000000
+                    } else {
+                      zeros()
+                    }
                   }
                 }
               }

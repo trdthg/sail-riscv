@@ -162,8 +162,14 @@ function pmpWriteCfgReg(n : range(0, 15), v : xlenbits) -> unit = {
 }
 
 function pmpWriteAddr(locked : bool, tor_locked : bool, reg : xlenbits, v : xlenbits) -> xlenbits = if sizeof(xlen) ==
-  32 then { if locked | tor_locked then { reg } else { v } } else {
-  if locked | tor_locked then { reg } else { zero_extend(v[53..0]) }
+  32 then {
+  if locked | tor_locked then { reg } else { v }
+} else {
+  if locked | tor_locked then {
+    reg
+  } else {
+    zero_extend(v[53..0])
+  }
 }
 
 function pmpWriteAddrReg(n : range(0, 63), v : xlenbits) -> unit = {

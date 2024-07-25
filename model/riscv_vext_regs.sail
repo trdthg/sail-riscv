@@ -373,7 +373,11 @@ function write_single_element(EEW, index, vrid, value) = {
   r : vregtype = zeros();
   foreach (i from (sizeof('elem_per_reg) - 1) downto 0) {
     r = r << EEW;
-    if i == real_index then { r = r | zero_extend(value) } else { r = r | zero_extend(vrid_val[i]) }
+    if i == real_index then {
+      r = r | zero_extend(value)
+    } else {
+      r = r | zero_extend(vrid_val[i])
+    }
   };
   V(real_vrid) = r
 }
@@ -387,7 +391,11 @@ function read_vmask(num_elem, vm, vrid) = {
   var result : vector('n, dec, bool) = undefined;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if vm == 0b1 then { result[i] = true } else { result[i] = bit_to_bool(vreg_val[i]) }
+    if vm == 0b1 then {
+      result[i] = true
+    } else {
+      result[i] = bit_to_bool(vreg_val[i])
+    }
   };
 
   result
@@ -402,7 +410,11 @@ function read_vmask_carry(num_elem, vm, vrid) = {
   var result : vector('n, dec, bool) = undefined;
 
   foreach (i from 0 to (num_elem - 1)) {
-    if vm == 0b1 then { result[i] = false } else { result[i] = bit_to_bool(vreg_val[i]) }
+    if vm == 0b1 then {
+      result[i] = false
+    } else {
+      result[i] = bit_to_bool(vreg_val[i])
+    }
   };
 
   result

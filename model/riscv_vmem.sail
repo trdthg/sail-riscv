@@ -199,7 +199,9 @@ function legalize_satp(
 function satp_to_asid satp_val : xlenbits -> asidbits = if sizeof(xlen) == 32 then {
   zero_extend(Mk_Satp32(satp_val)[Asid])
 } else {
-  if sizeof(xlen) == 64 then { Mk_Satp64(satp_val)[Asid] } else {
+  if sizeof(xlen) == 64 then {
+    Mk_Satp64(satp_val)[Asid]
+  } else {
     internal_error(__FILE__, __LINE__, "Unsupported xlen" ^ dec_str(sizeof(xlen)))
   }
 }
@@ -207,8 +209,12 @@ function satp_to_asid satp_val : xlenbits -> asidbits = if sizeof(xlen) == 32 th
 // Result is 64b to cover both RV32 and RV64 addrs
 // PRIVATE
 function satp_to_PT_base satp_val : xlenbits -> bits(64) = {
-  let ppn = if sizeof(xlen) == 32 then { zero_extend(64, Mk_Satp32(satp_val)[PPN]) } else {
-    if sizeof(xlen) == 64 then { zero_extend(64, Mk_Satp64(satp_val)[PPN]) } else {
+  let ppn = if sizeof(xlen) == 32 then {
+    zero_extend(64, Mk_Satp32(satp_val)[PPN])
+  } else {
+    if sizeof(xlen) == 64 then {
+      zero_extend(64, Mk_Satp64(satp_val)[PPN])
+    } else {
       internal_error(__FILE__, __LINE__, "Unsupported xlen" ^ dec_str(sizeof(xlen)))
     }
   };

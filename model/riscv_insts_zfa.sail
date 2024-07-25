@@ -332,9 +332,15 @@ function clause execute RISCV_FMINM_D(rs2, rs1, rd) = {
   let is_quiet = true;
   let (rs1_lt_rs2, fflags) = fle_D(rs1_val_D, rs2_val_D, is_quiet);
 
-  let rd_val_D = if f_is_NaN_D(rs1_val_D) | f_is_NaN_D(rs2_val_D) then { canonical_NaN_D() } else {
-    if f_is_neg_zero_D(rs1_val_D) & f_is_pos_zero_D(rs2_val_D) then { rs1_val_D } else {
-      if f_is_neg_zero_D(rs2_val_D) & f_is_pos_zero_D(rs1_val_D) then { rs2_val_D } else {
+  let rd_val_D = if f_is_NaN_D(rs1_val_D) | f_is_NaN_D(rs2_val_D) then {
+    canonical_NaN_D()
+  } else {
+    if f_is_neg_zero_D(rs1_val_D) & f_is_pos_zero_D(rs2_val_D) then {
+      rs1_val_D
+    } else {
+      if f_is_neg_zero_D(rs2_val_D) & f_is_pos_zero_D(rs1_val_D) then {
+        rs2_val_D
+      } else {
         if rs1_lt_rs2 then { rs1_val_D } else { rs2_val_D }
       }
     }
@@ -363,9 +369,15 @@ function clause execute RISCV_FMAXM_D(rs2, rs1, rd) = {
   let is_quiet = true;
   let (rs2_lt_rs1, fflags) = fle_D(rs2_val_D, rs1_val_D, is_quiet);
 
-  let rd_val_D = if f_is_NaN_D(rs1_val_D) | f_is_NaN_D(rs2_val_D) then { canonical_NaN_D() } else {
-    if f_is_neg_zero_D(rs1_val_D) & f_is_pos_zero_D(rs2_val_D) then { rs2_val_D } else {
-      if f_is_neg_zero_D(rs2_val_D) & f_is_pos_zero_D(rs1_val_D) then { rs1_val_D } else {
+  let rd_val_D = if f_is_NaN_D(rs1_val_D) | f_is_NaN_D(rs2_val_D) then {
+    canonical_NaN_D()
+  } else {
+    if f_is_neg_zero_D(rs1_val_D) & f_is_pos_zero_D(rs2_val_D) then {
+      rs2_val_D
+    } else {
+      if f_is_neg_zero_D(rs2_val_D) & f_is_pos_zero_D(rs1_val_D) then {
+        rs1_val_D
+      } else {
         if rs2_lt_rs1 then { rs1_val_D } else { rs2_val_D }
       }
     }
@@ -788,13 +800,25 @@ function fcvtmod_helper x64 = {
             let fractional = fixedpoint[51..0];
 
             /* Apply the sign bit */
-            let result = if sign == 0b1 then { ~(integer) + 1 } else { integer };
+            let result = if sign == 0b1 then {
+              ~(integer) + 1
+            } else {
+              integer
+            };
 
             /* Raise FP exception flags, honoring the precedence of nV > nX */
             let max_integer = if sign == 0b1 then { unsigned(0x80000000) } else { unsigned(0x7fffffff) };
-            let flags : bits(5) = if true_exp > 31 then { nvFlag() } else {
-              if unsigned(integer) > max_integer then { nvFlag() } else {
-                if fractional != zeros() then { nxFlag() } else { zeros() }
+            let flags : bits(5) = if true_exp > 31 then {
+              nvFlag()
+            } else {
+              if unsigned(integer) > max_integer then {
+                nvFlag()
+              } else {
+                if fractional != zeros() then {
+                  nxFlag()
+                } else {
+                  zeros()
+                }
               }
             };
 

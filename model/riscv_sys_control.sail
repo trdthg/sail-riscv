@@ -185,7 +185,9 @@ function exception_delegatee(e : ExceptionType, p : Privilege) -> Privilege = {
   } else {
     super & haveNExt()
   };
-  let deleg = if haveUsrMode() & user then { User } else {
+  let deleg = if haveUsrMode() & user then {
+    User
+  } else {
     if haveSupMode() & super then { Supervisor } else { Machine }
   };
 
@@ -198,15 +200,35 @@ function exception_delegatee(e : ExceptionType, p : Privilege) -> Privilege = {
  */
 function findPendingInterrupt ip : xlenbits -> option(InterruptType) = {
   let ip = Mk_Minterrupts(ip);
-  if (ip[MEI]) == 0b1 then { Some(I_M_External) } else {
-    if (ip[MSI]) == 0b1 then { Some(I_M_Software) } else {
-      if (ip[MTI]) == 0b1 then { Some(I_M_Timer) } else {
-        if (ip[SEI]) == 0b1 then { Some(I_S_External) } else {
-          if (ip[SSI]) == 0b1 then { Some(I_S_Software) } else {
-            if (ip[STI]) == 0b1 then { Some(I_S_Timer) } else {
-              if (ip[UEI]) == 0b1 then { Some(I_U_External) } else {
-                if (ip[USI]) == 0b1 then { Some(I_U_Software) } else {
-                  if (ip[UTI]) == 0b1 then { Some(I_U_Timer) } else { None() }
+  if (ip[MEI]) == 0b1 then {
+    Some(I_M_External)
+  } else {
+    if (ip[MSI]) == 0b1 then {
+      Some(I_M_Software)
+    } else {
+      if (ip[MTI]) == 0b1 then {
+        Some(I_M_Timer)
+      } else {
+        if (ip[SEI]) == 0b1 then {
+          Some(I_S_External)
+        } else {
+          if (ip[SSI]) == 0b1 then {
+            Some(I_S_Software)
+          } else {
+            if (ip[STI]) == 0b1 then {
+              Some(I_S_Timer)
+            } else {
+              if (ip[UEI]) == 0b1 then {
+                Some(I_U_External)
+              } else {
+                if (ip[USI]) == 0b1 then {
+                  Some(I_U_Software)
+                } else {
+                  if (ip[UTI]) == 0b1 then {
+                    Some(I_U_Timer)
+                  } else {
+                    None()
+                  }
                 }
               }
             }
@@ -235,8 +257,14 @@ function processPending(xip : Minterrupts, xie : Minterrupts, xideleg : xlenbits
   let effective_delg = xip.bits & xideleg;
 
   /* we have pending interrupts if this privilege is enabled */
-  if priv_enabled & (effective_pend != zero_extend(0b0)) then { Ints_Pending(effective_pend) } else {
-    if effective_delg != zero_extend(0b0) then { Ints_Delegated(effective_delg) } else { Ints_Empty() }
+  if priv_enabled & (effective_pend != zero_extend(0b0)) then {
+    Ints_Pending(effective_pend)
+  } else {
+    if effective_delg != zero_extend(0b0) then {
+      Ints_Delegated(effective_delg)
+    } else {
+      Ints_Empty()
+    }
   }
 }
 

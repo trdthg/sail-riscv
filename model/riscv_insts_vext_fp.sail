@@ -977,12 +977,20 @@ function clause execute FVFTYPE(funct6, vm, vs2, rs1, vd) = {
               handle_illegal();
               return RETIRE_FAIL
             };
-            if i == 0 then { rs1_val } else { vs2_val[i - 1] }
+            if i == 0 then {
+              rs1_val
+            } else {
+              vs2_val[i - 1]
+            }
           },
           VF_VSLIDE1DOWN => {
             let last_elem = get_end_element();
             assert(last_elem < num_elem);
-            if i < last_elem then { vs2_val[i + 1] } else { rs1_val }
+            if i < last_elem then {
+              vs2_val[i + 1]
+            } else {
+              rs1_val
+            }
           },
         }
     }
