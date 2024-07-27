@@ -55,9 +55,7 @@ function valid_fp_op(SEW, rm_3b) = {
  *  or the scalar result of a reduction.
  */
 val valid_rd_mask : (regidx, bits(1)) -> bool
-function valid_rd_mask(rd, vm) = {
-  vm != 0b0 | rd != 0b00000
-}
+function valid_rd_mask(rd, vm) = { vm != 0b0 | rd != 0b00000 }
 
 /* Check for valid register overlap in vector widening/narrowing instructions:
  *  In a widening instruction, the overlap is valid only in the highest-numbered part
@@ -67,27 +65,15 @@ function valid_rd_mask(rd, vm) = {
  */
 val valid_reg_overlap : (regidx, regidx, int, int) -> bool
 function valid_reg_overlap(rs, rd, EMUL_pow_rs, EMUL_pow_rd) = {
-  let rs_group = if EMUL_pow_rs > 0 then {
-    int_power(2, EMUL_pow_rs)
-  } else {
-    1
-  };
-  let rd_group = if EMUL_pow_rd > 0 then {
-    int_power(2, EMUL_pow_rd)
-  } else {
-    1
-  };
+  let rs_group = if EMUL_pow_rs > 0 then { int_power(2, EMUL_pow_rs) } else { 1 };
+  let rd_group = if EMUL_pow_rd > 0 then { int_power(2, EMUL_pow_rd) } else { 1 };
   let rs_int = unsigned(rs);
   let rd_int = unsigned(rd);
   if EMUL_pow_rs < EMUL_pow_rd then {
     (rs_int + rs_group <= rd_int) | (rs_int >= rd_int + rd_group) | ((rs_int + rs_group == rd_int + rd_group) &
       (EMUL_pow_rs >= 0))
   } else {
-    if EMUL_pow_rs > EMUL_pow_rd then {
-      (rd_int <= rs_int) | (rd_int >= rs_int + rs_group)
-    } else {
-      true
-    }
+    if EMUL_pow_rs > EMUL_pow_rd then { (rd_int <= rs_int) | (rd_int >= rs_int + rs_group) } else { true }
   }
 }
 
@@ -97,11 +83,7 @@ function valid_reg_overlap(rs, rd, EMUL_pow_rs, EMUL_pow_rd) = {
  */
 val valid_segment : (int, int) -> bool
 function valid_segment(nf, EMUL_pow) = {
-  if EMUL_pow < 0 then {
-    nf / int_power(2, 0 - EMUL_pow) <= 8
-  } else {
-    nf * int_power(2, EMUL_pow) <= 8
-  }
+  if EMUL_pow < 0 then { nf / int_power(2, 0 - EMUL_pow) <= 8 } else { nf * int_power(2, EMUL_pow) <= 8 }
 }
 
 /* ******************************************************************************* */
@@ -113,9 +95,7 @@ function illegal_normal(vd, vm) = { not(valid_vtype()) | not(valid_rd_mask(vd, v
 
 /* b. Masked check for instructions encoded with vm = 0 */
 val illegal_vd_masked : regidx -> bool
-function illegal_vd_masked vd = {
-  not(valid_vtype()) | vd == 0b00000
-}
+function illegal_vd_masked vd = { not(valid_vtype()) | vd == 0b00000 }
 
 /* c. Unmasked check for:
  *  1. instructions encoded with vm = 1
@@ -156,9 +136,7 @@ function illegal_fp_normal(vd, vm, SEW, rm_3b) = {
 
 /* h. Masked check for floating-point instructions encoded with vm = 0 */
 val illegal_fp_vd_masked : (regidx, {8, 16, 32, 64}, bits(3)) -> bool
-function illegal_fp_vd_masked(vd, SEW, rm_3b) = {
-  not(valid_vtype()) | vd == 0b00000 | not(valid_fp_op(SEW, rm_3b))
-}
+function illegal_fp_vd_masked(vd, SEW, rm_3b) = { not(valid_vtype()) | vd == 0b00000 | not(valid_fp_op(SEW, rm_3b)) }
 
 /* i. Unmasked check for floating-point instructions encoded with vm = 1 */
 val illegal_fp_vd_unmasked : ({8, 16, 32, 64}, bits(3)) -> bool
@@ -268,11 +246,7 @@ function init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val) = {
   result : vector('n, dec, bits('m)) = undefined;
 
   /* Determine the actual number of elements when lmul < 1 */
-  let real_num_elem = if LMUL_pow >= 0 then {
-    num_elem
-  } else {
-    num_elem / int_power(2, 0 - LMUL_pow)
-  };
+  let real_num_elem = if LMUL_pow >= 0 then { num_elem } else { num_elem / int_power(2, 0 - LMUL_pow) };
   assert(num_elem >= real_num_elem);
 
   foreach (i from 0 to (num_elem - 1)) {
@@ -331,11 +305,7 @@ function init_masked_source(num_elem, LMUL_pow, vm_val) = {
   mask : vector('n, dec, bool) = undefined;
 
   /* Determine the actual number of elements when lmul < 1 */
-  let real_num_elem = if LMUL_pow >= 0 then {
-    num_elem
-  } else {
-    num_elem / int_power(2, 0 - LMUL_pow)
-  };
+  let real_num_elem = if LMUL_pow >= 0 then { num_elem } else { num_elem / int_power(2, 0 - LMUL_pow) };
   assert(num_elem >= real_num_elem);
 
   foreach (i from 0 to (num_elem - 1)) {
@@ -377,11 +347,7 @@ function init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val) = {
   result : vector('n, dec, bool) = undefined;
 
   /* Determine the actual number of elements when lmul < 1 */
-  let real_num_elem = if LMUL_pow >= 0 then {
-    num_elem
-  } else {
-    num_elem / int_power(2, 0 - LMUL_pow)
-  };
+  let real_num_elem = if LMUL_pow >= 0 then { num_elem } else { num_elem / int_power(2, 0 - LMUL_pow) };
   assert(num_elem >= real_num_elem);
 
   foreach (i from 0 to (num_elem - 1)) {
@@ -426,11 +392,7 @@ function init_masked_result_cmp(num_elem, SEW, LMUL_pow, vd_val, vm_val) = {
   result : vector('n, dec, bool) = undefined;
 
   /* Determine the actual number of elements when lmul < 1 */
-  let real_num_elem = if LMUL_pow >= 0 then {
-    num_elem
-  } else {
-    num_elem / int_power(2, 0 - LMUL_pow)
-  };
+  let real_num_elem = if LMUL_pow >= 0 then { num_elem } else { num_elem / int_power(2, 0 - LMUL_pow) };
   assert(num_elem >= real_num_elem);
 
   foreach (i from 0 to (num_elem - 1)) {
@@ -479,11 +441,7 @@ val read_vreg_seg : forall 'n 'm 'p 'q, 'n >= 0 & 'q >= 0.
   (int('n), int('m), int('p), int('q), regidx) -> vector('n, dec, bits('q * 'm))
 function read_vreg_seg(num_elem, SEW, LMUL_pow, nf, vrid) = {
   assert(sizeof('q) * sizeof('m) > 0);
-  let LMUL_reg : int = if LMUL_pow <= 0 then {
-    1
-  } else {
-    int_power(2, LMUL_pow)
-  };
+  let LMUL_reg : int = if LMUL_pow <= 0 then { 1 } else { int_power(2, LMUL_pow) };
   vreg_list : vector('q, dec, vector('n, dec, bits('m))) = undefined;
   result : vector('n, dec, bits('q * 'm)) = undefined;
   foreach (j from 0 to (nf - 1)) { vreg_list[j] = read_vreg(num_elem, SEW, LMUL_pow, vrid + to_bits(5, j * LMUL_reg)) };
@@ -632,11 +590,10 @@ function get_fixed_rounding_incr(vec_elem, shift_amount) = {
     let rounding_mode = vxrm[1..0];
     match rounding_mode {
       0b00 => slice(vec_elem, shift_amount - 1, 1),
-      0b01 =>
-        bool_to_bits(
-          (slice(vec_elem, shift_amount - 1, 1) == 0b1) &
-            (slice(vec_elem, 0, shift_amount - 1) != zeros() | slice(vec_elem, shift_amount, 1) == 0b1),
-        ),
+      0b01 => bool_to_bits(
+        (slice(vec_elem, shift_amount - 1, 1) == 0b1) &
+          (slice(vec_elem, 0, shift_amount - 1) != zeros() | slice(vec_elem, shift_amount, 1) == 0b1),
+      ),
       0b10 => 0b0,
       0b11 => bool_to_bits(not(slice(vec_elem, shift_amount, 1) == 0b1) & (slice(vec_elem, 0, shift_amount) != zeros())),
     }
@@ -931,11 +888,7 @@ function fp_class xf = {
                   if f_is_SNaN(xf) then {
                     0b0100000000
                   } else {
-                    if f_is_QNaN(xf) then {
-                      0b1000000000
-                    } else {
-                      zeros()
-                    }
+                    if f_is_QNaN(xf) then { 0b1000000000 } else { zeros() }
                   }
                 }
               }
@@ -1454,12 +1407,8 @@ function recip7(v, rm_3b, sub) = {
     }
   };
 
-  if
-    sub & nr_leadingzeros > 1
-  then {
-    if
-      rm_3b == 0b001 | rm_3b == 0b010 & sign == 0b0 | rm_3b == 0b011 & sign == 0b1
-    then {
+  if sub & nr_leadingzeros > 1 then {
+    if rm_3b == 0b001 | rm_3b == 0b010 & sign == 0b0 | rm_3b == 0b011 & sign == 0b1 then {
       (true, zero_extend(64, sign @ ones(e - 1) @ 0b0 @ ones(s)))
     } else {
       (true, zero_extend(64, sign @ ones(e) @ zeros(s)))

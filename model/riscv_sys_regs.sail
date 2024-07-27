@@ -253,20 +253,14 @@ bitfield Mstatus : xlenbits = {
 register mstatus : Mstatus
 
 function effectivePrivilege(t : AccessType(ext_access_type), m : Mstatus, priv : Privilege) -> Privilege =
-  if
-    t != Execute() & m[MPRV] == 0b1
-  then {
+  if t != Execute() & m[MPRV] == 0b1 then {
     privLevel_of_bits(m[MPP])
   } else {
     priv
   }
 
 function get_mstatus_SXL m : Mstatus -> arch_xlen = {
-  if sizeof(xlen) == 32 then {
-    arch_to_bits(RV32)
-  } else {
-    m.bits[35..34]
-  }
+  if sizeof(xlen) == 32 then { arch_to_bits(RV32) } else { m.bits[35..34] }
 }
 
 function set_mstatus_SXL(m : Mstatus, a : arch_xlen) -> Mstatus = {
@@ -279,11 +273,7 @@ function set_mstatus_SXL(m : Mstatus, a : arch_xlen) -> Mstatus = {
 }
 
 function get_mstatus_UXL m : Mstatus -> arch_xlen = {
-  if sizeof(xlen) == 32 then {
-    arch_to_bits(RV32)
-  } else {
-    m.bits[33..32]
-  }
+  if sizeof(xlen) == 32 then { arch_to_bits(RV32) } else { m.bits[33..32] }
 }
 
 function set_mstatus_UXL(m : Mstatus, a : arch_xlen) -> Mstatus = {
@@ -502,11 +492,7 @@ function tvec_addr(m : Mtvec, c : Mcause) -> option(xlenbits) = {
   let base : xlenbits = m[Base] @ 0b00;
   match trapVectorMode_of_bits(m[Mode]) {
     TV_Direct => Some(base),
-    TV_Vector => if (c[IsInterrupt]) == 0b1 then {
-      Some(base + (zero_extend(c[Cause]) << 2))
-    } else {
-      Some(base)
-    },
+    TV_Vector => if (c[IsInterrupt]) == 0b1 then { Some(base + (zero_extend(c[Cause]) << 2)) } else { Some(base) },
     TV_Reserved => None(),
   }
 }

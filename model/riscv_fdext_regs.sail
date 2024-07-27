@@ -26,35 +26,19 @@ function canonical_NaN_S () -> bits(32) = 0x7fc00000
 function canonical_NaN_D () -> bits(64) = 0x7ff8000000000000
 
 val nan_box_H : bits(16) -> flenbits
-function nan_box_H val_16b = if sizeof(flen) == 32 then {
-  0xFFFF @ val_16b
-} else {
-  0xFFFFFFFFFFFF @ val_16b
-}
+function nan_box_H val_16b = if sizeof(flen) == 32 then { 0xFFFF @ val_16b } else { 0xFFFFFFFFFFFF @ val_16b }
 
 val nan_unbox_H : flenbits -> bits(16)
 function nan_unbox_H regval = if sizeof(flen) == 32 then {
-  if (regval[31..16]) == 0xFFFF then {
-    regval[15..0]
-  } else {
-    canonical_NaN_H()
-  }
+  if (regval[31..16]) == 0xFFFF then { regval[15..0] } else { canonical_NaN_H() }
 } else {
-  if (regval[63..16]) == 0xFFFFFFFFFFFF then {
-    regval[15..0]
-  } else {
-    canonical_NaN_H()
-  }
+  if (regval[63..16]) == 0xFFFFFFFFFFFF then { regval[15..0] } else { canonical_NaN_H() }
 }
 
 val nan_box_S : bits(32) -> flenbits
 function nan_box_S val_32b = {
   assert(sys_enable_fdext());
-  if sizeof(flen) == 32 then {
-    val_32b
-  } else {
-    0xFFFFFFFF @ val_32b
-  }
+  if sizeof(flen) == 32 then { val_32b } else { 0xFFFFFFFF @ val_32b }
 }
 
 val nan_unbox_S : flenbits -> bits(32)
@@ -63,11 +47,7 @@ function nan_unbox_S regval = {
   if sizeof(flen) == 32 then {
     regval
   } else {
-    if (regval[63..32]) == 0xFFFFFFFF then {
-      regval[31..0]
-    } else {
-      canonical_NaN_S()
-    }
+    if (regval[63..32]) == 0xFFFFFFFF then { regval[31..0] } else { canonical_NaN_S() }
   }
 }
 
@@ -266,22 +246,14 @@ val rF_or_X_H : regidx -> bits(16)
 function rF_or_X_H i = {
   assert(sizeof(flen) >= 16);
   assert(sys_enable_fdext() != sys_enable_zfinx());
-  if sys_enable_fdext() then {
-    F_H(i)
-  } else {
-    X(i)[15..0]
-  }
+  if sys_enable_fdext() then { F_H(i) } else { X(i)[15..0] }
 }
 
 val rF_or_X_S : regidx -> bits(32)
 function rF_or_X_S i = {
   assert(sizeof(flen) >= 32);
   assert(sys_enable_fdext() != sys_enable_zfinx());
-  if sys_enable_fdext() then {
-    F_S(i)
-  } else {
-    X(i)[31..0]
-  }
+  if sys_enable_fdext() then { F_S(i) } else { X(i)[31..0] }
 }
 
 val rF_or_X_D : regidx -> bits(64)
@@ -295,11 +267,7 @@ function rF_or_X_D i = {
       X(i)[63..0]
     } else {
       assert((i[0]) == bitzero);
-      if i == zeros() then {
-        zeros()
-      } else {
-        X(i + 1) @ X(i)
-      }
+      if i == zeros() then { zeros() } else { X(i + 1) @ X(i) }
     }
   }
 }
@@ -308,22 +276,14 @@ val wF_or_X_H : (regidx, bits(16)) -> unit
 function wF_or_X_H(i, data) = {
   assert(sizeof(flen) >= 16);
   assert(sys_enable_fdext() != sys_enable_zfinx());
-  if sys_enable_fdext() then {
-    F_H(i) = data
-  } else {
-    X(i) = sign_extend(data)
-  }
+  if sys_enable_fdext() then { F_H(i) = data } else { X(i) = sign_extend(data) }
 }
 
 val wF_or_X_S : (regidx, bits(32)) -> unit
 function wF_or_X_S(i, data) = {
   assert(sizeof(flen) >= 32);
   assert(sys_enable_fdext() != sys_enable_zfinx());
-  if sys_enable_fdext() then {
-    F_S(i) = data
-  } else {
-    X(i) = sign_extend(data)
-  }
+  if sys_enable_fdext() then { F_S(i) = data } else { X(i) = sign_extend(data) }
 }
 
 val wF_or_X_D : (regidx, bits(64)) -> unit

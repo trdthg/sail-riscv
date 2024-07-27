@@ -99,9 +99,7 @@ function readCSR csr : csreg -> xlenbits = {
         },
       },
   };
-  if get_config_print_reg() then {
-    print_reg("CSR " ^ to_str(csr) ^ " -> " ^ BitStr(res))
-  };
+  if get_config_print_reg() then { print_reg("CSR " ^ to_str(csr) ^ " -> " ^ BitStr(res)) };
   res
 }
 
@@ -314,11 +312,7 @@ function clause execute CSR(csr, rs1, rd, is_imm, op) = {
   let rs1_val : xlenbits = if is_imm then { zero_extend(rs1) } else { X(rs1) };
   let isWrite : bool = match op {
     CSRRW => true,
-    _ => if is_imm then {
-      unsigned(rs1_val) != 0
-    } else {
-      unsigned(rs1) != 0
-    },
+    _ => if is_imm then { unsigned(rs1_val) != 0 } else { unsigned(rs1) != 0 },
   };
   if not(check_CSR(csr, cur_privilege, isWrite)) then {
     handle_illegal();

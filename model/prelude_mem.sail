@@ -140,11 +140,7 @@ instantiation sail_mem_read with
 
 val read_ram : forall 'n, 0 < 'n <= max_mem_access. (read_kind, xlenbits, int('n), bool) -> (bits(8 * 'n), mem_meta)
 function read_ram(rk, addr, width, read_meta) = {
-  let meta = if read_meta then {
-    __ReadRAM_Meta(addr, width)
-  } else {
-    default_meta
-  };
+  let meta = if read_meta then { __ReadRAM_Meta(addr, width) } else { default_meta };
   let request : Mem_read_request('n, 64, xlenbits, unit, RISCV_strong_access) = struct {
     access_kind =
       match rk {

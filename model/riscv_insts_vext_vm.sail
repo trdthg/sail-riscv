@@ -49,10 +49,8 @@ function clause execute VVMTYPE(funct6, vs2, vs1, vd) = {
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
       let res : bool = match funct6 {
-        VVM_VMADC =>
-          unsigned(vs2_val[i]) + unsigned(vs1_val[i]) + unsigned(bool_to_bits(vm_val[i])) > 2 ^SEW - 1,
-        VVM_VMSBC =>
-          unsigned(vs2_val[i]) - unsigned(vs1_val[i]) - unsigned(bool_to_bits(vm_val[i])) < 0,
+        VVM_VMADC => unsigned(vs2_val[i]) + unsigned(vs1_val[i]) + unsigned(bool_to_bits(vm_val[i])) > 2 ^SEW - 1,
+        VVM_VMSBC => unsigned(vs2_val[i]) - unsigned(vs1_val[i]) - unsigned(bool_to_bits(vm_val[i])) < 0,
       };
       result[i] = res
     }
@@ -109,10 +107,8 @@ function clause execute VVMCTYPE(funct6, vs2, vs1, vd) = {
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
       let res : bool = match funct6 {
-        VVMC_VMADC =>
-          unsigned(vs2_val[i]) + unsigned(vs1_val[i]) > 2 ^SEW - 1,
-        VVMC_VMSBC =>
-          unsigned(vs2_val[i]) - unsigned(vs1_val[i]) < 0,
+        VVMC_VMADC => unsigned(vs2_val[i]) + unsigned(vs1_val[i]) > 2 ^SEW - 1,
+        VVMC_VMSBC => unsigned(vs2_val[i]) - unsigned(vs1_val[i]) < 0,
       };
       result[i] = res
     }
@@ -175,10 +171,8 @@ function clause execute VVMSTYPE(funct6, vs2, vs1, vd) = {
     if mask[i] then {
       result[i] =
         match funct6 {
-          VVMS_VADC =>
-            to_bits(SEW, unsigned(vs2_val[i]) + unsigned(vs1_val[i]) + unsigned(bool_to_bits(vm_val[i]))),
-          VVMS_VSBC =>
-            to_bits(SEW, unsigned(vs2_val[i]) - unsigned(vs1_val[i]) - unsigned(bool_to_bits(vm_val[i]))),
+          VVMS_VADC => to_bits(SEW, unsigned(vs2_val[i]) + unsigned(vs1_val[i]) + unsigned(bool_to_bits(vm_val[i]))),
+          VVMS_VSBC => to_bits(SEW, unsigned(vs2_val[i]) - unsigned(vs1_val[i]) - unsigned(bool_to_bits(vm_val[i]))),
         }
     }
   };
@@ -304,10 +298,8 @@ function clause execute VXMTYPE(funct6, vs2, rs1, vd) = {
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
       let res : bool = match funct6 {
-        VXM_VMADC =>
-          unsigned(vs2_val[i]) + unsigned(rs1_val) + unsigned(bool_to_bits(vm_val[i])) > 2 ^SEW - 1,
-        VXM_VMSBC =>
-          unsigned(vs2_val[i]) - unsigned(rs1_val) - unsigned(bool_to_bits(vm_val[i])) < 0,
+        VXM_VMADC => unsigned(vs2_val[i]) + unsigned(rs1_val) + unsigned(bool_to_bits(vm_val[i])) > 2 ^SEW - 1,
+        VXM_VMSBC => unsigned(vs2_val[i]) - unsigned(rs1_val) - unsigned(bool_to_bits(vm_val[i])) < 0,
       };
       result[i] = res
     }
@@ -364,10 +356,8 @@ function clause execute VXMCTYPE(funct6, vs2, rs1, vd) = {
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
       let res : bool = match funct6 {
-        VXMC_VMADC =>
-          unsigned(vs2_val[i]) + unsigned(rs1_val) > 2 ^SEW - 1,
-        VXMC_VMSBC =>
-          unsigned(vs2_val[i]) - unsigned(rs1_val) < 0,
+        VXMC_VMADC => unsigned(vs2_val[i]) + unsigned(rs1_val) > 2 ^SEW - 1,
+        VXMC_VMSBC => unsigned(vs2_val[i]) - unsigned(rs1_val) < 0,
       };
       result[i] = res
     }
@@ -430,10 +420,8 @@ function clause execute VXMSTYPE(funct6, vs2, rs1, vd) = {
     if mask[i] then {
       result[i] =
         match funct6 {
-          VXMS_VADC =>
-            to_bits(SEW, unsigned(vs2_val[i]) + unsigned(rs1_val) + unsigned(bool_to_bits(vm_val[i]))),
-          VXMS_VSBC =>
-            to_bits(SEW, unsigned(vs2_val[i]) - unsigned(rs1_val) - unsigned(bool_to_bits(vm_val[i]))),
+          VXMS_VADC => to_bits(SEW, unsigned(vs2_val[i]) + unsigned(rs1_val) + unsigned(bool_to_bits(vm_val[i]))),
+          VXMS_VSBC => to_bits(SEW, unsigned(vs2_val[i]) - unsigned(rs1_val) - unsigned(bool_to_bits(vm_val[i]))),
         }
     }
   };
@@ -564,8 +552,7 @@ function clause execute VIMTYPE(funct6, vs2, simm, vd) = {
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
       let res : bool = match funct6 {
-        VIM_VMADC =>
-          unsigned(vs2_val[i]) + unsigned(imm_val) + unsigned(bool_to_bits(vm_val[i])) > 2 ^SEW - 1,
+        VIM_VMADC => unsigned(vs2_val[i]) + unsigned(imm_val) + unsigned(bool_to_bits(vm_val[i])) > 2 ^SEW - 1,
       };
       result[i] = res
     }
@@ -619,10 +606,7 @@ function clause execute VIMCTYPE(funct6, vs2, simm, vd) = {
 
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
-      let res : bool = match funct6 {
-        VIMC_VMADC =>
-          unsigned(vs2_val[i]) + unsigned(imm_val) > 2 ^SEW - 1,
-      };
+      let res : bool = match funct6 { VIMC_VMADC => unsigned(vs2_val[i]) + unsigned(imm_val) > 2 ^SEW - 1,  };
       result[i] = res
     }
   };
@@ -682,8 +666,7 @@ function clause execute VIMSTYPE(funct6, vs2, simm, vd) = {
     if mask[i] then {
       result[i] =
         match funct6 {
-          VIMS_VADC =>
-            to_bits(SEW, unsigned(vs2_val[i]) + unsigned(imm_val) + unsigned(bool_to_bits(vm_val[i]))),
+          VIMS_VADC => to_bits(SEW, unsigned(vs2_val[i]) + unsigned(imm_val) + unsigned(bool_to_bits(vm_val[i]))),
         }
     }
   };

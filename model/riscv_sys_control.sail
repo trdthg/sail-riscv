@@ -37,8 +37,7 @@ function is_CSR_defined csr : csreg -> bool = match csr {
   0x343 => true, // mtval
   0x344 => true, // mip
   // pmpcfgN
-  0x3A @ idx : bits(4) =>
-    sys_pmp_count() > unsigned(idx) & (idx[0] == bitzero | sizeof(xlen) == 32),
+  0x3A @ idx : bits(4) => sys_pmp_count() > unsigned(idx) & (idx[0] == bitzero | sizeof(xlen) == 32),
   // pmpaddrN. Unfortunately the PMP index does not nicely align with the CSR index bits.
   0x3B @ idx : bits(4) => sys_pmp_count() > unsigned(0b00 @ idx),
   0x3C @ idx : bits(4) => sys_pmp_count() > unsigned(0b01 @ idx),
@@ -85,28 +84,18 @@ function check_CSR_access(csrrw, csrpr, p, isWrite) =
     /* read/write */
     (privLevel_to_bits(p) >=_u csrpr) /* privilege */
 
-function check_TVM_SATP(csr : csreg, p : Privilege) -> bool =
-  not(csr == 0x180 & p == Supervisor & mstatus[TVM] == 0b1)
+function check_TVM_SATP(csr : csreg, p : Privilege) -> bool = not(csr == 0x180 & p == Supervisor & mstatus[TVM] == 0b1)
 
 function check_Counteren(csr : csreg, p : Privilege) -> bool = match (csr, p) {
   (0xC00, Supervisor) => (mcounteren[CY]) == 0b1,
   (0xC01, Supervisor) => (mcounteren[TM]) == 0b1,
   (0xC02, Supervisor) => (mcounteren[IR]) == 0b1,
-  (0xC00, User) =>
-    mcounteren[CY] == 0b1 & (not(haveSupMode()) | scounteren[CY] == 0b1),
-  (0xC01, User) =>
-    mcounteren[TM] == 0b1 & (not(haveSupMode()) | scounteren[TM] == 0b1),
-  (0xC02, User) =>
-    mcounteren[IR] == 0b1 & (not(haveSupMode()) | scounteren[IR] == 0b1),
+  (0xC00, User) => mcounteren[CY] == 0b1 & (not(haveSupMode()) | scounteren[CY] == 0b1),
+  (0xC01, User) => mcounteren[TM] == 0b1 & (not(haveSupMode()) | scounteren[TM] == 0b1),
+  (0xC02, User) => mcounteren[IR] == 0b1 & (not(haveSupMode()) | scounteren[IR] == 0b1),
   (_, _) =>
     /* no HPM counters for now */
-    if
-      0xC03 <=_u csr & csr <=_u 0xC1F
-    then {
-      false
-    } else {
-      true
-    },
+    if 0xC03 <=_u csr & csr <=_u 0xC1F then { false } else { true },
 }
 
 /* Seed may only be accessed if we are doing a write, and access has been
@@ -129,11 +118,12 @@ function check_seed_CSR(csr : csreg, p : Privilege, isWrite : bool) -> bool = {
   }
 }
 
-function check_CSR(csr : csreg, p : Privilege, isWrite : bool) -> bool =
-  is_CSR_defined(csr) & check_CSR_access(csrAccess(csr), csrPriv(csr), p, isWrite) & check_TVM_SATP(csr, p) & check_Counteren(
-    csr,
-    p,
-  ) & check_seed_CSR(csr, p, isWrite)
+function check_CSR(csr : csreg, p : Privilege, isWrite : bool) -> bool = is_CSR_defined(csr) & check_CSR_access(
+  csrAccess(csr),
+  csrPriv(csr),
+  p,
+  isWrite,
+) & check_TVM_SATP(csr, p) & check_Counteren(csr, p) & check_seed_CSR(csr, p, isWrite)
 
 /* Reservation handling for LR/SC.
  *
@@ -180,11 +170,7 @@ function exception_delegatee(e : ExceptionType, p : Privilege) -> Privilege = {
   let super = bit_to_bool(medeleg.bits[idx]);
 
   /* if S-mode is absent, medeleg delegates to U-mode if 'N' is supported. */
-  let user = if haveSupMode() then {
-    super & haveNExt() & bit_to_bool(sedeleg.bits[idx])
-  } else {
-    super & haveNExt()
-  };
+  let user = if haveSupMode() then { super & haveNExt() & bit_to_bool(sedeleg.bits[idx]) } else { super & haveNExt() };
   let deleg = if haveUsrMode() & user then {
     User
   } else {
@@ -224,11 +210,7 @@ function findPendingInterrupt ip : xlenbits -> option(InterruptType) = {
                 if (ip[USI]) == 0b1 then {
                   Some(I_U_Software)
                 } else {
-                  if (ip[UTI]) == 0b1 then {
-                    Some(I_U_Timer)
-                  } else {
-                    None()
-                  }
+                  if (ip[UTI]) == 0b1 then { Some(I_U_Timer) } else { None() }
                 }
               }
             }
@@ -260,11 +242,7 @@ function processPending(xip : Minterrupts, xie : Minterrupts, xideleg : xlenbits
   if priv_enabled & (effective_pend != zero_extend(0b0)) then {
     Ints_Pending(effective_pend)
   } else {
-    if effective_delg != zero_extend(0b0) then {
-      Ints_Delegated(effective_delg)
-    } else {
-      Ints_Empty()
-    }
+    if effective_delg != zero_extend(0b0) then { Ints_Delegated(effective_delg) } else { Ints_Empty() }
   }
 }
 

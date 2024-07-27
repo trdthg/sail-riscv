@@ -25,8 +25,7 @@ function fsplit_H xf16 =
   (xf16[15..15], xf16[14..10], xf16[9..0])
 
 val fmake_H : (bits(1), bits(5), bits(10)) -> bits(16)
-function fmake_H(sign, exp, mant) =
-  sign @ exp @ mant
+function fmake_H(sign, exp, mant) = sign @ exp @ mant
 
 val negate_H : bits(16) -> bits(16)
 function negate_H xf16 = {
@@ -111,11 +110,7 @@ function fle_H(v1, v2, is_quiet) = {
   let v2Is0 = f_is_neg_zero_H(v2) | f_is_pos_zero_H(v2);
 
   let result : bool = if (s1 == 0b0) & (s2 == 0b0) then {
-    if e1 == e2 then {
-      unsigned(m1) <= unsigned(m2)
-    } else {
-      unsigned(e1) < unsigned(e2)
-    }
+    if e1 == e2 then { unsigned(m1) <= unsigned(m2) } else { unsigned(e1) < unsigned(e2) }
   } else {
     if (s1 == 0b0) & (s2 == 0b1) then {
       v1Is0 & v2Is0 /* Equal in this case (+0=-0) */
@@ -123,27 +118,15 @@ function fle_H(v1, v2, is_quiet) = {
       if (s1 == 0b1) & (s2 == 0b0) then {
         true
       } else {
-        if e1 == e2 then {
-          unsigned(m1) >= unsigned(m2)
-        } else {
-          unsigned(e1) > unsigned(e2)
-        }
+        if e1 == e2 then { unsigned(m1) >= unsigned(m2) } else { unsigned(e1) > unsigned(e2) }
       }
     }
   };
 
   let fflags = if is_quiet then {
-    if f_is_SNaN_H(v1) | f_is_SNaN_H(v2) then {
-      nvFlag()
-    } else {
-      zeros()
-    }
+    if f_is_SNaN_H(v1) | f_is_SNaN_H(v2) then { nvFlag() } else { zeros() }
   } else {
-    if f_is_NaN_H(v1) | f_is_NaN_H(v2) then {
-      nvFlag()
-    } else {
-      zeros()
-    }
+    if f_is_NaN_H(v1) | f_is_NaN_H(v2) then { nvFlag() } else { zeros() }
   };
 
   (result, fflags)
@@ -957,11 +940,7 @@ function clause execute F_UN_TYPE_H(rs1, rd, FCLASS_H) = {
                   if f_is_SNaN_H(rs1_val_H) then {
                     0b0100000000
                   } else {
-                    if f_is_QNaN_H(rs1_val_H) then {
-                      0b1000000000
-                    } else {
-                      zeros()
-                    }
+                    if f_is_QNaN_H(rs1_val_H) then { 0b1000000000 } else { zeros() }
                   }
                 }
               }

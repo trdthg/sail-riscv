@@ -800,11 +800,7 @@ function fcvtmod_helper x64 = {
             let fractional = fixedpoint[51..0];
 
             /* Apply the sign bit */
-            let result = if sign == 0b1 then {
-              ~(integer) + 1
-            } else {
-              integer
-            };
+            let result = if sign == 0b1 then { ~(integer) + 1 } else { integer };
 
             /* Raise FP exception flags, honoring the precedence of nV > nX */
             let max_integer = if sign == 0b1 then { unsigned(0x80000000) } else { unsigned(0x7fffffff) };
@@ -814,11 +810,7 @@ function fcvtmod_helper x64 = {
               if unsigned(integer) > max_integer then {
                 nvFlag()
               } else {
-                if fractional != zeros() then {
-                  nxFlag()
-                } else {
-                  zeros()
-                }
+                if fractional != zeros() then { nxFlag() } else { zeros() }
               }
             };
 

@@ -39,17 +39,12 @@ mapping frm_mnemonic : rounding_mode <-> string = {
 }
 
 val valid_rounding_mode : bits(3) -> bool
-function valid_rounding_mode rm =
-  rm != 0b101 & rm != 0b110
+function valid_rounding_mode rm = rm != 0b101 & rm != 0b110
 
 val select_instr_or_fcsr_rm : rounding_mode -> option(rounding_mode)
 function select_instr_or_fcsr_rm instr_rm = if instr_rm == RM_DYN then {
   let fcsr_rm = fcsr[FRM];
-  if
-    valid_rounding_mode(fcsr_rm) & fcsr_rm != encdec_rounding_mode(RM_DYN)
-  then {
-    Some(encdec_rounding_mode(fcsr_rm))
-  } else {
+  if valid_rounding_mode(fcsr_rm) & fcsr_rm != encdec_rounding_mode(RM_DYN) then { Some(encdec_rounding_mode(fcsr_rm)) } else {
     None()
   }
 } else {
@@ -72,8 +67,7 @@ function fsplit_S x32 =
   (x32[31..31], x32[30..23], x32[22..0])
 
 val fmake_S : (bits(1), bits(8), bits(23)) -> bits(32)
-function fmake_S(sign, exp, mant) =
-  sign @ exp @ mant
+function fmake_S(sign, exp, mant) = sign @ exp @ mant
 
 /* ---- Structure tests */
 val f_is_neg_inf_S : bits(32) -> bool
@@ -162,11 +156,7 @@ function feq_quiet_S(v1, v2) = {
 
   let result = (v1 == v2) | (v1Is0 & v2Is0);
 
-  let fflags = if f_is_SNaN_S(v1) | f_is_SNaN_S(v2) then {
-    nvFlag()
-  } else {
-    zeros()
-  };
+  let fflags = if f_is_SNaN_S(v1) | f_is_SNaN_S(v2) then { nvFlag() } else { zeros() };
 
   (result, fflags)
 }
@@ -177,11 +167,7 @@ function flt_S(v1, v2, is_quiet) = {
   let (s2, e2, m2) = fsplit_S(v2);
 
   let result : bool = if (s1 == 0b0) & (s2 == 0b0) then {
-    if e1 == e2 then {
-      unsigned(m1) < unsigned(m2)
-    } else {
-      unsigned(e1) < unsigned(e2)
-    }
+    if e1 == e2 then { unsigned(m1) < unsigned(m2) } else { unsigned(e1) < unsigned(e2) }
   } else {
     if (s1 == 0b0) & (s2 == 0b1) then {
       false
@@ -189,27 +175,15 @@ function flt_S(v1, v2, is_quiet) = {
       if (s1 == 0b1) & (s2 == 0b0) then {
         true
       } else {
-        if e1 == e2 then {
-          unsigned(m1) > unsigned(m2)
-        } else {
-          unsigned(e1) > unsigned(e2)
-        }
+        if e1 == e2 then { unsigned(m1) > unsigned(m2) } else { unsigned(e1) > unsigned(e2) }
       }
     }
   };
 
   let fflags = if is_quiet then {
-    if f_is_SNaN_S(v1) | f_is_SNaN_S(v2) then {
-      nvFlag()
-    } else {
-      zeros()
-    }
+    if f_is_SNaN_S(v1) | f_is_SNaN_S(v2) then { nvFlag() } else { zeros() }
   } else {
-    if f_is_NaN_S(v1) | f_is_NaN_S(v2) then {
-      nvFlag()
-    } else {
-      zeros()
-    }
+    if f_is_NaN_S(v1) | f_is_NaN_S(v2) then { nvFlag() } else { zeros() }
   };
 
   (result, fflags)
@@ -224,11 +198,7 @@ function fle_S(v1, v2, is_quiet) = {
   let v2Is0 = f_is_neg_zero_S(v2) | f_is_pos_zero_S(v2);
 
   let result : bool = if (s1 == 0b0) & (s2 == 0b0) then {
-    if e1 == e2 then {
-      unsigned(m1) <= unsigned(m2)
-    } else {
-      unsigned(e1) < unsigned(e2)
-    }
+    if e1 == e2 then { unsigned(m1) <= unsigned(m2) } else { unsigned(e1) < unsigned(e2) }
   } else {
     if (s1 == 0b0) & (s2 == 0b1) then {
       v1Is0 & v2Is0 /* Equal in this case (+0=-0) */
@@ -236,27 +206,15 @@ function fle_S(v1, v2, is_quiet) = {
       if (s1 == 0b1) & (s2 == 0b0) then {
         true
       } else {
-        if e1 == e2 then {
-          unsigned(m1) >= unsigned(m2)
-        } else {
-          unsigned(e1) > unsigned(e2)
-        }
+        if e1 == e2 then { unsigned(m1) >= unsigned(m2) } else { unsigned(e1) > unsigned(e2) }
       }
     }
   };
 
   let fflags = if is_quiet then {
-    if f_is_SNaN_S(v1) | f_is_SNaN_S(v2) then {
-      nvFlag()
-    } else {
-      zeros()
-    }
+    if f_is_SNaN_S(v1) | f_is_SNaN_S(v2) then { nvFlag() } else { zeros() }
   } else {
-    if f_is_NaN_S(v1) | f_is_NaN_S(v2) then {
-      nvFlag()
-    } else {
-      zeros()
-    }
+    if f_is_NaN_S(v1) | f_is_NaN_S(v2) then { nvFlag() } else { zeros() }
   };
 
   (result, fflags)
@@ -1134,11 +1092,7 @@ function clause execute F_UN_TYPE_S(rs1, rd, FCLASS_S) = {
                   if f_is_SNaN_S(rs1_val_S) then {
                     0b0100000000
                   } else {
-                    if f_is_QNaN_S(rs1_val_S) then {
-                      0b1000000000
-                    } else {
-                      zeros()
-                    }
+                    if f_is_QNaN_S(rs1_val_S) then { 0b1000000000 } else { zeros() }
                   }
                 }
               }

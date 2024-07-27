@@ -121,8 +121,7 @@ function flush_TLB_Entry(e : TLB_Entry, asid : option(asidbits), addr : option(b
     (None(), None()) => true,
     (None(), Some(a)) => e.vAddr == (e.vMatchMask & a),
     (Some(i), None()) => (e.asid == i) & not(e.global),
-    (Some(i), Some(a)) =>
-      (e.asid == i) & (e.vAddr == (a & e.vMatchMask)) & not(e.global),
+    (Some(i), Some(a)) => (e.asid == i) & (e.vAddr == (a & e.vMatchMask)) & not(e.global),
   }
 }
 

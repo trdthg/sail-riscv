@@ -199,9 +199,7 @@ function legalize_satp(
 function satp_to_asid satp_val : xlenbits -> asidbits = if sizeof(xlen) == 32 then {
   zero_extend(Mk_Satp32(satp_val)[Asid])
 } else {
-  if sizeof(xlen) == 64 then {
-    Mk_Satp64(satp_val)[Asid]
-  } else {
+  if sizeof(xlen) == 64 then { Mk_Satp64(satp_val)[Asid] } else {
     internal_error(__FILE__, __LINE__, "Unsupported xlen" ^ dec_str(sizeof(xlen)))
   }
 }
@@ -212,9 +210,7 @@ function satp_to_PT_base satp_val : xlenbits -> bits(64) = {
   let ppn = if sizeof(xlen) == 32 then {
     zero_extend(64, Mk_Satp32(satp_val)[PPN])
   } else {
-    if sizeof(xlen) == 64 then {
-      zero_extend(64, Mk_Satp64(satp_val)[PPN])
-    } else {
+    if sizeof(xlen) == 64 then { zero_extend(64, Mk_Satp64(satp_val)[PPN]) } else {
       internal_error(__FILE__, __LINE__, "Unsupported xlen" ^ dec_str(sizeof(xlen)))
     }
   };
@@ -266,18 +262,15 @@ function translationMode priv : Privilege -> SATPMode = {
 // for Sv32 where they are actually 32 bits. `pte_size` is used to indicate
 // the actual size in bytes that we want to write.
 function write_pte forall 'n, 'n in {4, 8}.
-(paddr : xlenbits, pte_size : int('n), pte : bits(64)) -> MemoryOpResult(bool) =
-  mem_write_value_priv(
-    paddr,
-    pte_size,
-    pte[
-      (pte_size * 8 - 1)..0
-    ],
-    Supervisor,
-    false,
-    false,
-    false,
-  )
+(paddr : xlenbits, pte_size : int('n), pte : bits(64)) -> MemoryOpResult(bool) = mem_write_value_priv(
+  paddr,
+  pte_size,
+  pte[(pte_size * 8 - 1)..0],
+  Supervisor,
+  false,
+  false,
+  false,
+)
 
 // Result of address translation
 // PUBLIC

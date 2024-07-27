@@ -33,15 +33,11 @@ function gfmul(x, y) = {
 
 /* 8-bit to 32-bit partial AES Mix Colum - forwards */
 val aes_mixcolumn_byte_fwd : bits(8) -> bits(32)
-function aes_mixcolumn_byte_fwd so = {
-  gfmul(so, 0x3) @ so @ so @ gfmul(so, 0x2)
-}
+function aes_mixcolumn_byte_fwd so = { gfmul(so, 0x3) @ so @ so @ gfmul(so, 0x2) }
 
 /* 8-bit to 32-bit partial AES Mix Colum - inverse*/
 val aes_mixcolumn_byte_inv : bits(8) -> bits(32)
-function aes_mixcolumn_byte_inv so = {
-  gfmul(so, 0xb) @ gfmul(so, 0xd) @ gfmul(so, 0x9) @ gfmul(so, 0xe)
-}
+function aes_mixcolumn_byte_inv so = { gfmul(so, 0xb) @ gfmul(so, 0xd) @ gfmul(so, 0x9) @ gfmul(so, 0xe) }
 
 /* 32-bit to 32-bit AES forward MixColumn */
 val aes_mixcolumn_fwd : bits(32) -> bits(32)

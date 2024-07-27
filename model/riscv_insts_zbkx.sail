@@ -21,14 +21,7 @@ function clause execute RISCV_XPERM8(rs2, rs1, rd) = {
   var result : xlenbits = zeros();
   foreach (i from 0 to (sizeof(xlen) - 8) by 8) {
     let index = unsigned(rs2_val[(i + 7)..i]);
-    result[(i + 7)..i] =
-      if
-        8 * index < sizeof(xlen)
-      then
-        rs1_val[
-          (8 * index + 7)..(8 * index)
-        ]
-      else zeros()
+    result[(i + 7)..i] = if 8 * index < sizeof(xlen) then rs1_val[(8 * index + 7)..(8 * index)] else zeros()
   };
   X(rd) = result;
   RETIRE_SUCCESS
@@ -49,14 +42,7 @@ function clause execute RISCV_XPERM4(rs2, rs1, rd) = {
   var result : xlenbits = zeros();
   foreach (i from 0 to (sizeof(xlen) - 4) by 4) {
     let index = unsigned(rs2_val[(i + 3)..i]);
-    result[(i + 3)..i] =
-      if
-        4 * index < sizeof(xlen)
-      then
-        rs1_val[
-          (4 * index + 3)..(4 * index)
-        ]
-      else zeros()
+    result[(i + 3)..i] = if 4 * index < sizeof(xlen) then rs1_val[(4 * index + 3)..(4 * index)] else zeros()
   };
   X(rd) = result;
   RETIRE_SUCCESS

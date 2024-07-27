@@ -267,13 +267,9 @@ function clause execute RFVVTYPE(funct6, vm, vs2, vs1, vd) = {
   let LMUL_pow = get_lmul_pow();
   let num_elem_vs = get_num_elem(LMUL_pow, SEW);
 
-  if
-    funct6 == FVV_VFWREDOSUM | funct6 == FVV_VFWREDUSUM
-  then {
+  if funct6 == FVV_VFWREDOSUM | funct6 == FVV_VFWREDUSUM then {
     process_rfvv_widen(funct6, vm, vs2, vs1, vd, num_elem_vs, SEW, LMUL_pow)
-  } else {
-    process_rfvv_single(funct6, vm, vs2, vs1, vd, num_elem_vs, SEW, LMUL_pow)
-  }
+  } else { process_rfvv_single(funct6, vm, vs2, vs1, vd, num_elem_vs, SEW, LMUL_pow) }
 }
 
 mapping rfvvtype_mnemonic : rfvvfunct6 <-> string = {

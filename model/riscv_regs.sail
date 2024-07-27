@@ -137,9 +137,7 @@ function wX(r : regno, in_v : xlenbits) -> unit = {
   };
   if r != 0 then {
     rvfi_wX(r, in_v);
-    if get_config_print_reg() then {
-      print_reg("x" ^ dec_str(r) ^ " <- " ^ RegStr(v))
-    }
+    if get_config_print_reg() then { print_reg("x" ^ dec_str(r) ^ " <- " ^ RegStr(v)) }
   }
 }
 

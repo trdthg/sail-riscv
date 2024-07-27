@@ -45,8 +45,7 @@ function pmpCheckRWX(ent, acc) = {
   match acc {
     Read(_) => (ent[R]) == 0b1,
     Write(_) => (ent[W]) == 0b1,
-    ReadWrite(_) =>
-      ent[R] == 0b1 & ent[W] == 0b1,
+    ReadWrite(_) => ent[R] == 0b1 & ent[W] == 0b1,
     Execute() => (ent[X]) == 0b1,
   }
 }
@@ -55,11 +54,7 @@ function pmpCheckRWX(ent, acc) = {
 val pmpCheckPerms : (Pmpcfg_ent, AccessType(ext_access_type), Privilege) -> bool
 function pmpCheckPerms(ent, acc, priv) = {
   match priv {
-    Machine => if pmpLocked(ent) then {
-      pmpCheckRWX(ent, acc)
-    } else {
-      true
-    },
+    Machine => if pmpLocked(ent) then { pmpCheckRWX(ent, acc) } else { true },
     _ => pmpCheckRWX(ent, acc),
   }
 }
@@ -82,18 +77,10 @@ function pmpMatchAddr(addr : xlenbits, width : xlenbits, rng : pmp_addr_range_in
       if hi <= lo /* to handle mis-configuration */  then {
         PMP_NoMatch
       } else {
-        if
-          (addr + width <= lo) | (hi <= addr)
-        then {
+        if (addr + width <= lo) | (hi <= addr) then {
           PMP_NoMatch
         } else {
-          if
-            (lo <= addr) & (addr + width <= hi)
-          then {
-            PMP_Match
-          } else {
-            PMP_PartialMatch
-          }
+          if (lo <= addr) & (addr + width <= hi) then { PMP_Match } else { PMP_PartialMatch }
         }
       }
     },
@@ -134,11 +121,7 @@ function pmpCheck forall 'n, 'n > 0.
   let width : xlenbits = to_bits(sizeof(xlen), width);
 
   foreach (i from 0 to 63) {
-    let prev_pmpaddr = if i > 0 then {
-      pmpReadAddrReg(i - 1)
-    } else {
-      zeros()
-    };
+    let prev_pmpaddr = if i > 0 then { pmpReadAddrReg(i - 1) } else { zeros() };
     match pmpMatchEntry(addr, width, acc, priv, pmpcfg_n[i], pmpReadAddrReg(i), prev_pmpaddr) {
       PMP_Success => {
         return None()
@@ -149,11 +132,7 @@ function pmpCheck forall 'n, 'n > 0.
       PMP_Continue => (),
     }
   };
-  if priv == Machine then {
-    None()
-  } else {
-    Some(accessToFault(acc))
-  }
+  if priv == Machine then { None() } else { Some(accessToFault(acc)) }
 }
 
 function init_pmp () -> unit = {

@@ -166,16 +166,7 @@ function clause execute STORECON(aq, rl, rs2, rs1, width, rd) = {
                   },
                   MemValue(_) => {
                     let rs2_val = X(rs2);
-                    match mem_write_value(
-                      addr,
-                      width_bytes,
-                      rs2_val[
-                        (width_bytes * 8 - 1)..0
-                      ],
-                      aq & rl,
-                      rl,
-                      true,
-                    ) {
+                    match mem_write_value(addr, width_bytes, rs2_val[(width_bytes * 8 - 1)..0], aq & rl, rl, true) {
                       MemValue(true) => {
                         X(rd) = zero_extend(0b0);
                         cancel_reservation();
@@ -251,9 +242,7 @@ function clause execute AMO(op, aq, rl, rs2, rs1, width, rd) = {
           },
           TR_Address(addr, _) => {
             let eares = mem_write_ea(addr, width_bytes, aq & rl, rl, true);
-            let rs2_val = X(rs2)[
-              (width_bytes * 8 - 1)..0
-            ];
+            let rs2_val = X(rs2)[(width_bytes * 8 - 1)..0];
             match eares {
               MemException(e) => {
                 handle_mem_exception(vaddr, e);
