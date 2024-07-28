@@ -76,8 +76,7 @@ function valid_reg_overlap(rs, rd, EMUL_pow_rs, EMUL_pow_rd) = {
   let rs_int = unsigned(rs);
   let rd_int = unsigned(rd);
   if EMUL_pow_rs < EMUL_pow_rd then {
-    (rs_int + rs_group <= rd_int) | (rs_int >= rd_int + rd_group) | ((rs_int + rs_group == rd_int + rd_group) &
-      (EMUL_pow_rs >= 0))
+    (rs_int + rs_group <= rd_int) | (rs_int >= rd_int + rd_group) | ((rs_int + rs_group == rd_int + rd_group) & (EMUL_pow_rs >= 0))
   } else {
     if EMUL_pow_rs > EMUL_pow_rd then { (rd_int <= rs_int) | (rd_int >= rs_int + rs_group) } else { true }
   }
@@ -275,29 +274,26 @@ function init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vm_val) = {
     } else {
       if i > end_element then {
         /* Tail elements defined by vl */
-        result[i] =
-          match tail_ag {
-            UNDISTURBED => vd_val[i],
-            AGNOSTIC => vd_val[i], /* TODO: configuration support */
-          };
+        result[i] = match tail_ag {
+          UNDISTURBED => vd_val[i],
+          AGNOSTIC => vd_val[i], /* TODO: configuration support */
+        };
         mask[i] = false
       } else {
         if i >= real_num_elem then {
           /* Tail elements defined by lmul < 1 */
-          result[i] =
-            match tail_ag {
-              UNDISTURBED => vd_val[i],
-              AGNOSTIC => vd_val[i], /* TODO: configuration support */
-            };
+          result[i] = match tail_ag {
+            UNDISTURBED => vd_val[i],
+            AGNOSTIC => vd_val[i], /* TODO: configuration support */
+          };
           mask[i] = false
         } else {
           if not(vm_val[i]) then {
             /* Inactive body elements defined by vm */
-            result[i] =
-              match mask_ag {
-                UNDISTURBED => vd_val[i],
-                AGNOSTIC => vd_val[i], /* TODO: configuration support */
-              };
+            result[i] = match mask_ag {
+              UNDISTURBED => vd_val[i],
+              AGNOSTIC => vd_val[i], /* TODO: configuration support */
+            };
             mask[i] = false
           } else {
             /* Active body elements */
@@ -433,11 +429,10 @@ function init_masked_result_cmp(num_elem, SEW, LMUL_pow, vd_val, vm_val) = {
         } else {
           if not(vm_val[i]) then {
             /* Inactive body elements defined by vm */
-            result[i] =
-              match mask_ag {
-                UNDISTURBED => vd_val[i],
-                AGNOSTIC => vd_val[i], /* TODO: configuration support */
-              };
+            result[i] = match mask_ag {
+              UNDISTURBED => vd_val[i],
+              AGNOSTIC => vd_val[i], /* TODO: configuration support */
+            };
             mask[i] = false
           } else {
             /* Active body elements */
@@ -609,8 +604,11 @@ function get_fixed_rounding_incr(vec_elem, shift_amount) = {
     match rounding_mode {
       0b00 => slice(vec_elem, shift_amount - 1, 1),
       0b01 => bool_to_bits(
-        (slice(vec_elem, shift_amount - 1, 1) == 0b1) &
-          (slice(vec_elem, 0, shift_amount - 1) != zeros() | slice(vec_elem, shift_amount, 1) == 0b1),
+        (slice(vec_elem, shift_amount - 1, 1) == 0b1) & (slice(vec_elem, 0, shift_amount - 1) != zeros() | slice(
+          vec_elem,
+          shift_amount,
+          1,
+        ) == 0b1),
       ),
       0b10 => 0b0,
       0b11 => bool_to_bits(not(slice(vec_elem, shift_amount, 1) == 0b1) & (slice(vec_elem, 0, shift_amount) != zeros())),

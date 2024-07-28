@@ -56,10 +56,8 @@ function write_kind_of_flags(aq : bool, rl : bool, con : bool) -> write_kind = m
   (true, true, false) => Write_RISCV_strong_release,
   (true, true, true) => Write_RISCV_conditional_strong_release,
   // throw an illegal instruction here?
-  (true, false, false) =>
-    throw Error_not_implemented("store.aq"),
-  (true, false, true) =>
-    throw Error_not_implemented("sc.aq"),
+  (true, false, false) => throw Error_not_implemented("store.aq"),
+  (true, false, true) => throw Error_not_implemented("sc.aq"),
 }
 
 // only used for actual memory regions, to avoid MMIO effects
@@ -78,8 +76,7 @@ function phys_mem_read forall 'n, 0 < 'n <= max_mem_access.
   let result = (match read_kind_of_flags(aq, rl, res) {
     Some(rk) => Some(read_ram(rk, paddr, width, meta)),
     None() => None(),
-  }) :
-    option((bits(8 * 'n), mem_meta));
+  }) : option((bits(8 * 'n), mem_meta));
   match (t, result) {
     (Execute(), None()) => MemException(E_Fetch_Access_Fault()),
     (Read(Data), None()) => MemException(E_Load_Access_Fault()),
@@ -174,10 +171,8 @@ function mem_read_priv_meta(typ, priv, paddr, width, aq, rl, res, meta) = {
     MemException(E_Load_Addr_Align())
   } else {
     match (aq, rl, res) {
-      (false, true, false) =>
-        throw Error_not_implemented("load.rl"),
-      (false, true, true) =>
-        throw Error_not_implemented("lr.rl"),
+      (false, true, false) => throw Error_not_implemented("load.rl"),
+      (false, true, true) => throw Error_not_implemented("lr.rl"),
       (_, _, _) => checked_mem_read(typ, priv, paddr, width, aq, rl, res, meta),
     }
   };

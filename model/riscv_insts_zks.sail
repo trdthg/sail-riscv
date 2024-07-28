@@ -73,9 +73,7 @@ function clause execute SM4KS(bs, rs2, rs1, rd) = {
   let shamt : bits(5) = bs @ 0b000; /* shamt = bs*8 */
   let sb_in : bits(8) = ((X(rs2)[31..0]) >> shamt)[7..0];
   let x : bits(32) = 0x000000 @ sm4_sbox(sb_in);
-  let y : bits(32) = x ^ ((x & 0x00000007) << 29) ^ ((x & 0x000000FE) << 7) ^ ((x & 0x00000001) << 23) ^ ((x &
-    0x000000F8) <<
-    13);
+  let y : bits(32) = x ^ ((x & 0x00000007) << 29) ^ ((x & 0x000000FE) << 7) ^ ((x & 0x00000001) << 23) ^ ((x & 0x000000F8) << 13);
   let z : bits(32) = y <<< shamt;
   let result : bits(32) = z ^ (X(rs1)[31..0]);
   X(rd) = sign_extend(result);

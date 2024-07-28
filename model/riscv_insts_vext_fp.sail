@@ -55,18 +55,17 @@ function clause execute FVVTYPE(funct6, vm, vs2, vs1, vd) = {
 
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
-      result[i] =
-        match funct6 {
-          FVV_VADD => fp_add(rm_3b, vs2_val[i], vs1_val[i]),
-          FVV_VSUB => fp_sub(rm_3b, vs2_val[i], vs1_val[i]),
-          FVV_VMIN => fp_min(vs2_val[i], vs1_val[i]),
-          FVV_VMAX => fp_max(vs2_val[i], vs1_val[i]),
-          FVV_VMUL => fp_mul(rm_3b, vs2_val[i], vs1_val[i]),
-          FVV_VDIV => fp_div(rm_3b, vs2_val[i], vs1_val[i]),
-          FVV_VSGNJ => [vs1_val[i][sizeof('m) - 1]] @ vs2_val[i][(sizeof('m) - 2)..0],
-          FVV_VSGNJN => (0b1 ^ [vs1_val[i][sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
-          FVV_VSGNJX => ([vs2_val[i][sizeof('m) - 1]] ^ [vs1_val[i][sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
-        }
+      result[i] = match funct6 {
+        FVV_VADD => fp_add(rm_3b, vs2_val[i], vs1_val[i]),
+        FVV_VSUB => fp_sub(rm_3b, vs2_val[i], vs1_val[i]),
+        FVV_VMIN => fp_min(vs2_val[i], vs1_val[i]),
+        FVV_VMAX => fp_max(vs2_val[i], vs1_val[i]),
+        FVV_VMUL => fp_mul(rm_3b, vs2_val[i], vs1_val[i]),
+        FVV_VDIV => fp_div(rm_3b, vs2_val[i], vs1_val[i]),
+        FVV_VSGNJ => [vs1_val[i][sizeof('m) - 1]] @ vs2_val[i][(sizeof('m) - 2)..0],
+        FVV_VSGNJN => (0b1 ^ [vs1_val[i][sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
+        FVV_VSGNJX => ([vs2_val[i][sizeof('m) - 1]] ^ [vs1_val[i][sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
+      }
     }
   };
 
@@ -134,17 +133,16 @@ function clause execute FVVMATYPE(funct6, vm, vs2, vs1, vd) = {
 
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
-      result[i] =
-        match funct6 {
-          FVV_VMACC => fp_muladd(rm_3b, vs1_val[i], vs2_val[i], vd_val[i]),
-          FVV_VNMACC => fp_nmulsub(rm_3b, vs1_val[i], vs2_val[i], vd_val[i]),
-          FVV_VMSAC => fp_mulsub(rm_3b, vs1_val[i], vs2_val[i], vd_val[i]),
-          FVV_VNMSAC => fp_nmuladd(rm_3b, vs1_val[i], vs2_val[i], vd_val[i]),
-          FVV_VMADD => fp_muladd(rm_3b, vs1_val[i], vd_val[i], vs2_val[i]),
-          FVV_VNMADD => fp_nmulsub(rm_3b, vs1_val[i], vd_val[i], vs2_val[i]),
-          FVV_VMSUB => fp_mulsub(rm_3b, vs1_val[i], vd_val[i], vs2_val[i]),
-          FVV_VNMSUB => fp_nmuladd(rm_3b, vs1_val[i], vd_val[i], vs2_val[i]),
-        }
+      result[i] = match funct6 {
+        FVV_VMACC => fp_muladd(rm_3b, vs1_val[i], vs2_val[i], vd_val[i]),
+        FVV_VNMACC => fp_nmulsub(rm_3b, vs1_val[i], vs2_val[i], vd_val[i]),
+        FVV_VMSAC => fp_mulsub(rm_3b, vs1_val[i], vs2_val[i], vd_val[i]),
+        FVV_VNMSAC => fp_nmuladd(rm_3b, vs1_val[i], vs2_val[i], vd_val[i]),
+        FVV_VMADD => fp_muladd(rm_3b, vs1_val[i], vd_val[i], vs2_val[i]),
+        FVV_VNMADD => fp_nmulsub(rm_3b, vs1_val[i], vd_val[i], vs2_val[i]),
+        FVV_VMSUB => fp_mulsub(rm_3b, vs1_val[i], vd_val[i], vs2_val[i]),
+        FVV_VNMSUB => fp_nmuladd(rm_3b, vs1_val[i], vd_val[i], vs2_val[i]),
+      }
     }
   };
 
@@ -210,12 +208,11 @@ function clause execute FWVVTYPE(funct6, vm, vs2, vs1, vd) = {
 
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
-      result[i] =
-        match funct6 {
-          FWVV_VADD => fp_add(rm_3b, fp_widen(vs2_val[i]), fp_widen(vs1_val[i])),
-          FWVV_VSUB => fp_sub(rm_3b, fp_widen(vs2_val[i]), fp_widen(vs1_val[i])),
-          FWVV_VMUL => fp_mul(rm_3b, fp_widen(vs2_val[i]), fp_widen(vs1_val[i])),
-        }
+      result[i] = match funct6 {
+        FWVV_VADD => fp_add(rm_3b, fp_widen(vs2_val[i]), fp_widen(vs1_val[i])),
+        FWVV_VSUB => fp_sub(rm_3b, fp_widen(vs2_val[i]), fp_widen(vs1_val[i])),
+        FWVV_VMUL => fp_mul(rm_3b, fp_widen(vs2_val[i]), fp_widen(vs1_val[i])),
+      }
     }
   };
 
@@ -278,13 +275,12 @@ function clause execute FWVVMATYPE(funct6, vm, vs1, vs2, vd) = {
 
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
-      result[i] =
-        match funct6 {
-          FWVV_VMACC => fp_muladd(rm_3b, fp_widen(vs1_val[i]), fp_widen(vs2_val[i]), vd_val[i]),
-          FWVV_VNMACC => fp_nmulsub(rm_3b, fp_widen(vs1_val[i]), fp_widen(vs2_val[i]), vd_val[i]),
-          FWVV_VMSAC => fp_mulsub(rm_3b, fp_widen(vs1_val[i]), fp_widen(vs2_val[i]), vd_val[i]),
-          FWVV_VNMSAC => fp_nmuladd(rm_3b, fp_widen(vs1_val[i]), fp_widen(vs2_val[i]), vd_val[i]),
-        }
+      result[i] = match funct6 {
+        FWVV_VMACC => fp_muladd(rm_3b, fp_widen(vs1_val[i]), fp_widen(vs2_val[i]), vd_val[i]),
+        FWVV_VNMACC => fp_nmulsub(rm_3b, fp_widen(vs1_val[i]), fp_widen(vs2_val[i]), vd_val[i]),
+        FWVV_VMSAC => fp_mulsub(rm_3b, fp_widen(vs1_val[i]), fp_widen(vs2_val[i]), vd_val[i]),
+        FWVV_VNMSAC => fp_nmuladd(rm_3b, fp_widen(vs1_val[i]), fp_widen(vs2_val[i]), vd_val[i]),
+      }
     }
   };
 
@@ -322,8 +318,9 @@ function clause execute FWVTYPE(funct6, vm, vs2, vs1, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
-    not(valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen)) then {
+  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) | not(
+    valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen),
+  ) then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -344,11 +341,10 @@ function clause execute FWVTYPE(funct6, vm, vs2, vs1, vd) = {
 
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
-      result[i] =
-        match funct6 {
-          FWV_VADD => fp_add(rm_3b, vs2_val[i], fp_widen(vs1_val[i])),
-          FWV_VSUB => fp_sub(rm_3b, vs2_val[i], fp_widen(vs1_val[i])),
-        }
+      result[i] = match funct6 {
+        FWV_VADD => fp_add(rm_3b, vs2_val[i], fp_widen(vs1_val[i])),
+        FWV_VSUB => fp_sub(rm_3b, vs2_val[i], fp_widen(vs1_val[i])),
+      }
     }
   };
 
@@ -405,63 +401,62 @@ function clause execute VFUNARY0(vm, vs2, vfunary0, vd) = {
 
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
-      result[i] =
-        match vfunary0 {
-          FV_CVT_XU_F => {
-            let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
-              16 => riscv_f16ToUi16(rm_3b, vs2_val[i]),
-              32 => riscv_f32ToUi32(rm_3b, vs2_val[i]),
-              64 => riscv_f64ToUi64(rm_3b, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-          FV_CVT_X_F => {
-            let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
-              16 => riscv_f16ToI16(rm_3b, vs2_val[i]),
-              32 => riscv_f32ToI32(rm_3b, vs2_val[i]),
-              64 => riscv_f64ToI64(rm_3b, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-          FV_CVT_F_XU => {
-            let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
-              16 => riscv_ui32ToF16(rm_3b, zero_extend(vs2_val[i])),
-              32 => riscv_ui32ToF32(rm_3b, vs2_val[i]),
-              64 => riscv_ui64ToF64(rm_3b, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-          FV_CVT_F_X => {
-            let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
-              16 => riscv_i32ToF16(rm_3b, sign_extend(vs2_val[i])),
-              32 => riscv_i32ToF32(rm_3b, vs2_val[i]),
-              64 => riscv_i64ToF64(rm_3b, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-          FV_CVT_RTZ_XU_F => {
-            let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
-              16 => riscv_f16ToUi16(0b001, vs2_val[i]),
-              32 => riscv_f32ToUi32(0b001, vs2_val[i]),
-              64 => riscv_f64ToUi64(0b001, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-          FV_CVT_RTZ_X_F => {
-            let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
-              16 => riscv_f16ToI16(0b001, vs2_val[i]),
-              32 => riscv_f32ToI32(0b001, vs2_val[i]),
-              64 => riscv_f64ToI64(0b001, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-        }
+      result[i] = match vfunary0 {
+        FV_CVT_XU_F => {
+          let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+            16 => riscv_f16ToUi16(rm_3b, vs2_val[i]),
+            32 => riscv_f32ToUi32(rm_3b, vs2_val[i]),
+            64 => riscv_f64ToUi64(rm_3b, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+        FV_CVT_X_F => {
+          let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+            16 => riscv_f16ToI16(rm_3b, vs2_val[i]),
+            32 => riscv_f32ToI32(rm_3b, vs2_val[i]),
+            64 => riscv_f64ToI64(rm_3b, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+        FV_CVT_F_XU => {
+          let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+            16 => riscv_ui32ToF16(rm_3b, zero_extend(vs2_val[i])),
+            32 => riscv_ui32ToF32(rm_3b, vs2_val[i]),
+            64 => riscv_ui64ToF64(rm_3b, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+        FV_CVT_F_X => {
+          let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+            16 => riscv_i32ToF16(rm_3b, sign_extend(vs2_val[i])),
+            32 => riscv_i32ToF32(rm_3b, vs2_val[i]),
+            64 => riscv_i64ToF64(rm_3b, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+        FV_CVT_RTZ_XU_F => {
+          let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+            16 => riscv_f16ToUi16(0b001, vs2_val[i]),
+            32 => riscv_f32ToUi32(0b001, vs2_val[i]),
+            64 => riscv_f64ToUi64(0b001, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+        FV_CVT_RTZ_X_F => {
+          let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+            16 => riscv_f16ToI16(0b001, vs2_val[i]),
+            32 => riscv_f32ToI32(0b001, vs2_val[i]),
+            64 => riscv_f64ToI64(0b001, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+      }
     }
   };
 
@@ -506,8 +501,9 @@ function clause execute VFWUNARY0(vm, vs2, vfwunary0, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
-    not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen)) then {
+  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) | not(
+    valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen),
+  ) then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -527,87 +523,86 @@ function clause execute VFWUNARY0(vm, vs2, vfwunary0, vd) = {
 
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
-      result[i] =
-        match vfwunary0 {
-          FWV_CVT_XU_F => {
-            let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
-              8 => {
-                handle_illegal();
-                return RETIRE_FAIL
-              },
-              16 => riscv_f16ToUi32(rm_3b, vs2_val[i]),
-              32 => riscv_f32ToUi64(rm_3b, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-          FWV_CVT_X_F => {
-            let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
-              8 => {
-                handle_illegal();
-                return RETIRE_FAIL
-              },
-              16 => riscv_f16ToI32(rm_3b, vs2_val[i]),
-              32 => riscv_f32ToI64(rm_3b, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-          FWV_CVT_F_XU => {
-            let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
-              8 => riscv_ui32ToF16(rm_3b, zero_extend(vs2_val[i])),
-              16 => riscv_ui32ToF32(rm_3b, zero_extend(vs2_val[i])),
-              32 => riscv_ui32ToF64(rm_3b, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-          FWV_CVT_F_X => {
-            let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
-              8 => riscv_i32ToF16(rm_3b, sign_extend(vs2_val[i])),
-              16 => riscv_i32ToF32(rm_3b, sign_extend(vs2_val[i])),
-              32 => riscv_i32ToF64(rm_3b, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-          FWV_CVT_F_F => {
-            let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
-              8 => {
-                handle_illegal();
-                return RETIRE_FAIL
-              },
-              16 => riscv_f16ToF32(rm_3b, vs2_val[i]),
-              32 => riscv_f32ToF64(rm_3b, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-          FWV_CVT_RTZ_XU_F => {
-            let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
-              8 => {
-                handle_illegal();
-                return RETIRE_FAIL
-              },
-              16 => riscv_f16ToUi32(0b001, vs2_val[i]),
-              32 => riscv_f32ToUi64(0b001, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-          FWV_CVT_RTZ_X_F => {
-            let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
-              8 => {
-                handle_illegal();
-                return RETIRE_FAIL
-              },
-              16 => riscv_f16ToI32(0b001, vs2_val[i]),
-              32 => riscv_f32ToI64(0b001, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-        }
+      result[i] = match vfwunary0 {
+        FWV_CVT_XU_F => {
+          let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
+            8 => {
+              handle_illegal();
+              return RETIRE_FAIL
+            },
+            16 => riscv_f16ToUi32(rm_3b, vs2_val[i]),
+            32 => riscv_f32ToUi64(rm_3b, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+        FWV_CVT_X_F => {
+          let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
+            8 => {
+              handle_illegal();
+              return RETIRE_FAIL
+            },
+            16 => riscv_f16ToI32(rm_3b, vs2_val[i]),
+            32 => riscv_f32ToI64(rm_3b, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+        FWV_CVT_F_XU => {
+          let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
+            8 => riscv_ui32ToF16(rm_3b, zero_extend(vs2_val[i])),
+            16 => riscv_ui32ToF32(rm_3b, zero_extend(vs2_val[i])),
+            32 => riscv_ui32ToF64(rm_3b, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+        FWV_CVT_F_X => {
+          let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
+            8 => riscv_i32ToF16(rm_3b, sign_extend(vs2_val[i])),
+            16 => riscv_i32ToF32(rm_3b, sign_extend(vs2_val[i])),
+            32 => riscv_i32ToF64(rm_3b, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+        FWV_CVT_F_F => {
+          let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
+            8 => {
+              handle_illegal();
+              return RETIRE_FAIL
+            },
+            16 => riscv_f16ToF32(rm_3b, vs2_val[i]),
+            32 => riscv_f32ToF64(rm_3b, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+        FWV_CVT_RTZ_XU_F => {
+          let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
+            8 => {
+              handle_illegal();
+              return RETIRE_FAIL
+            },
+            16 => riscv_f16ToUi32(0b001, vs2_val[i]),
+            32 => riscv_f32ToUi64(0b001, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+        FWV_CVT_RTZ_X_F => {
+          let (fflags, elem) : (bits_fflags, bits('o)) = match sizeof('m) {
+            8 => {
+              handle_illegal();
+              return RETIRE_FAIL
+            },
+            16 => riscv_f16ToI32(0b001, vs2_val[i]),
+            32 => riscv_f32ToI64(0b001, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+      }
     }
   };
 
@@ -654,8 +649,9 @@ function clause execute VFNUNARY0(vm, vs2, vfnunary0, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
-    not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow)) then {
+  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) | not(
+    valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow),
+  ) then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -675,93 +671,92 @@ function clause execute VFNUNARY0(vm, vs2, vfnunary0, vd) = {
 
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
-      result[i] =
-        match vfnunary0 {
-          FNV_CVT_XU_F => {
-            let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
-              8 => riscv_f16ToUi8(rm_3b, vs2_val[i]),
-              16 => riscv_f32ToUi16(rm_3b, vs2_val[i]),
-              32 => riscv_f64ToUi32(rm_3b, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-          FNV_CVT_X_F => {
-            let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
-              8 => riscv_f16ToI8(rm_3b, vs2_val[i]),
-              16 => riscv_f32ToI16(rm_3b, vs2_val[i]),
-              32 => riscv_f64ToI32(rm_3b, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-          FNV_CVT_F_XU => {
-            let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
-              8 => {
-                handle_illegal();
-                return RETIRE_FAIL
-              },
-              16 => riscv_ui32ToF16(rm_3b, vs2_val[i]),
-              32 => riscv_ui64ToF32(rm_3b, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-          FNV_CVT_F_X => {
-            let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
-              8 => {
-                handle_illegal();
-                return RETIRE_FAIL
-              },
-              16 => riscv_i32ToF16(rm_3b, vs2_val[i]),
-              32 => riscv_i64ToF32(rm_3b, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-          FNV_CVT_F_F => {
-            let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
-              8 => {
-                handle_illegal();
-                return RETIRE_FAIL
-              },
-              16 => riscv_f32ToF16(rm_3b, vs2_val[i]),
-              32 => riscv_f64ToF32(rm_3b, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-          FNV_CVT_ROD_F_F => {
-            let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
-              8 => {
-                handle_illegal();
-                return RETIRE_FAIL
-              },
-              16 => riscv_f32ToF16(0b110, vs2_val[i]),
-              32 => riscv_f64ToF32(0b110, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-          FNV_CVT_RTZ_XU_F => {
-            let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
-              8 => riscv_f16ToUi8(0b001, vs2_val[i]),
-              16 => riscv_f32ToUi16(0b001, vs2_val[i]),
-              32 => riscv_f64ToUi32(0b001, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-          FNV_CVT_RTZ_X_F => {
-            let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
-              8 => riscv_f16ToI8(0b001, vs2_val[i]),
-              16 => riscv_f32ToI16(0b001, vs2_val[i]),
-              32 => riscv_f64ToI32(0b001, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-        }
+      result[i] = match vfnunary0 {
+        FNV_CVT_XU_F => {
+          let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+            8 => riscv_f16ToUi8(rm_3b, vs2_val[i]),
+            16 => riscv_f32ToUi16(rm_3b, vs2_val[i]),
+            32 => riscv_f64ToUi32(rm_3b, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+        FNV_CVT_X_F => {
+          let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+            8 => riscv_f16ToI8(rm_3b, vs2_val[i]),
+            16 => riscv_f32ToI16(rm_3b, vs2_val[i]),
+            32 => riscv_f64ToI32(rm_3b, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+        FNV_CVT_F_XU => {
+          let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+            8 => {
+              handle_illegal();
+              return RETIRE_FAIL
+            },
+            16 => riscv_ui32ToF16(rm_3b, vs2_val[i]),
+            32 => riscv_ui64ToF32(rm_3b, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+        FNV_CVT_F_X => {
+          let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+            8 => {
+              handle_illegal();
+              return RETIRE_FAIL
+            },
+            16 => riscv_i32ToF16(rm_3b, vs2_val[i]),
+            32 => riscv_i64ToF32(rm_3b, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+        FNV_CVT_F_F => {
+          let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+            8 => {
+              handle_illegal();
+              return RETIRE_FAIL
+            },
+            16 => riscv_f32ToF16(rm_3b, vs2_val[i]),
+            32 => riscv_f64ToF32(rm_3b, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+        FNV_CVT_ROD_F_F => {
+          let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+            8 => {
+              handle_illegal();
+              return RETIRE_FAIL
+            },
+            16 => riscv_f32ToF16(0b110, vs2_val[i]),
+            32 => riscv_f64ToF32(0b110, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+        FNV_CVT_RTZ_XU_F => {
+          let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+            8 => riscv_f16ToUi8(0b001, vs2_val[i]),
+            16 => riscv_f32ToUi16(0b001, vs2_val[i]),
+            32 => riscv_f64ToUi32(0b001, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+        FNV_CVT_RTZ_X_F => {
+          let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+            8 => riscv_f16ToI8(0b001, vs2_val[i]),
+            16 => riscv_f32ToI16(0b001, vs2_val[i]),
+            32 => riscv_f64ToI32(0b001, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+      }
     }
   };
 
@@ -822,37 +817,36 @@ function clause execute VFUNARY1(vm, vs2, vfunary1, vd) = {
 
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
-      result[i] =
-        match vfunary1 {
-          FVV_VSQRT => {
-            let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
-              16 => riscv_f16Sqrt(rm_3b, vs2_val[i]),
-              32 => riscv_f32Sqrt(rm_3b, vs2_val[i]),
-              64 => riscv_f64Sqrt(rm_3b, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-          FVV_VRSQRT7 => {
-            let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
-              16 => riscv_f16Rsqrte7(rm_3b, vs2_val[i]),
-              32 => riscv_f32Rsqrte7(rm_3b, vs2_val[i]),
-              64 => riscv_f64Rsqrte7(rm_3b, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-          FVV_VREC7 => {
-            let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
-              16 => riscv_f16Recip7(rm_3b, vs2_val[i]),
-              32 => riscv_f32Recip7(rm_3b, vs2_val[i]),
-              64 => riscv_f64Recip7(rm_3b, vs2_val[i]),
-            };
-            accrue_fflags(fflags);
-            elem
-          },
-          FVV_VCLASS => fp_class(vs2_val[i]),
-        }
+      result[i] = match vfunary1 {
+        FVV_VSQRT => {
+          let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+            16 => riscv_f16Sqrt(rm_3b, vs2_val[i]),
+            32 => riscv_f32Sqrt(rm_3b, vs2_val[i]),
+            64 => riscv_f64Sqrt(rm_3b, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+        FVV_VRSQRT7 => {
+          let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+            16 => riscv_f16Rsqrte7(rm_3b, vs2_val[i]),
+            32 => riscv_f32Rsqrte7(rm_3b, vs2_val[i]),
+            64 => riscv_f64Rsqrte7(rm_3b, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+        FVV_VREC7 => {
+          let (fflags, elem) : (bits_fflags, bits('m)) = match sizeof('m) {
+            16 => riscv_f16Recip7(rm_3b, vs2_val[i]),
+            32 => riscv_f32Recip7(rm_3b, vs2_val[i]),
+            64 => riscv_f64Recip7(rm_3b, vs2_val[i]),
+          };
+          accrue_fflags(fflags);
+          elem
+        },
+        FVV_VCLASS => fp_class(vs2_val[i]),
+      }
     }
   };
 
@@ -953,32 +947,31 @@ function clause execute FVFTYPE(funct6, vm, vs2, rs1, vd) = {
 
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
-      result[i] =
-        match funct6 {
-          VF_VADD => fp_add(rm_3b, vs2_val[i], rs1_val),
-          VF_VSUB => fp_sub(rm_3b, vs2_val[i], rs1_val),
-          VF_VRSUB => fp_sub(rm_3b, rs1_val, vs2_val[i]),
-          VF_VMIN => fp_min(vs2_val[i], rs1_val),
-          VF_VMAX => fp_max(vs2_val[i], rs1_val),
-          VF_VMUL => fp_mul(rm_3b, vs2_val[i], rs1_val),
-          VF_VDIV => fp_div(rm_3b, vs2_val[i], rs1_val),
-          VF_VRDIV => fp_div(rm_3b, rs1_val, vs2_val[i]),
-          VF_VSGNJ => [rs1_val[sizeof('m) - 1]] @ vs2_val[i][(sizeof('m) - 2)..0],
-          VF_VSGNJN => (0b1 ^ [rs1_val[sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
-          VF_VSGNJX => ([vs2_val[i][sizeof('m) - 1]] ^ [rs1_val[sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
-          VF_VSLIDE1UP => {
-            if vs2 == vd then {
-              handle_illegal();
-              return RETIRE_FAIL
-            };
-            if i == 0 then { rs1_val } else { vs2_val[i - 1] }
-          },
-          VF_VSLIDE1DOWN => {
-            let last_elem = get_end_element();
-            assert(last_elem < num_elem);
-            if i < last_elem then { vs2_val[i + 1] } else { rs1_val }
-          },
-        }
+      result[i] = match funct6 {
+        VF_VADD => fp_add(rm_3b, vs2_val[i], rs1_val),
+        VF_VSUB => fp_sub(rm_3b, vs2_val[i], rs1_val),
+        VF_VRSUB => fp_sub(rm_3b, rs1_val, vs2_val[i]),
+        VF_VMIN => fp_min(vs2_val[i], rs1_val),
+        VF_VMAX => fp_max(vs2_val[i], rs1_val),
+        VF_VMUL => fp_mul(rm_3b, vs2_val[i], rs1_val),
+        VF_VDIV => fp_div(rm_3b, vs2_val[i], rs1_val),
+        VF_VRDIV => fp_div(rm_3b, rs1_val, vs2_val[i]),
+        VF_VSGNJ => [rs1_val[sizeof('m) - 1]] @ vs2_val[i][(sizeof('m) - 2)..0],
+        VF_VSGNJN => (0b1 ^ [rs1_val[sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
+        VF_VSGNJX => ([vs2_val[i][sizeof('m) - 1]] ^ [rs1_val[sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
+        VF_VSLIDE1UP => {
+          if vs2 == vd then {
+            handle_illegal();
+            return RETIRE_FAIL
+          };
+          if i == 0 then { rs1_val } else { vs2_val[i - 1] }
+        },
+        VF_VSLIDE1DOWN => {
+          let last_elem = get_end_element();
+          assert(last_elem < num_elem);
+          if i < last_elem then { vs2_val[i + 1] } else { rs1_val }
+        },
+      }
     }
   };
 
@@ -1050,17 +1043,16 @@ function clause execute FVFMATYPE(funct6, vm, vs2, rs1, vd) = {
 
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
-      result[i] =
-        match funct6 {
-          VF_VMACC => fp_muladd(rm_3b, rs1_val, vs2_val[i], vd_val[i]),
-          VF_VNMACC => fp_nmulsub(rm_3b, rs1_val, vs2_val[i], vd_val[i]),
-          VF_VMSAC => fp_mulsub(rm_3b, rs1_val, vs2_val[i], vd_val[i]),
-          VF_VNMSAC => fp_nmuladd(rm_3b, rs1_val, vs2_val[i], vd_val[i]),
-          VF_VMADD => fp_muladd(rm_3b, rs1_val, vd_val[i], vs2_val[i]),
-          VF_VNMADD => fp_nmulsub(rm_3b, rs1_val, vd_val[i], vs2_val[i]),
-          VF_VMSUB => fp_mulsub(rm_3b, rs1_val, vd_val[i], vs2_val[i]),
-          VF_VNMSUB => fp_nmuladd(rm_3b, rs1_val, vd_val[i], vs2_val[i]),
-        }
+      result[i] = match funct6 {
+        VF_VMACC => fp_muladd(rm_3b, rs1_val, vs2_val[i], vd_val[i]),
+        VF_VNMACC => fp_nmulsub(rm_3b, rs1_val, vs2_val[i], vd_val[i]),
+        VF_VMSAC => fp_mulsub(rm_3b, rs1_val, vs2_val[i], vd_val[i]),
+        VF_VNMSAC => fp_nmuladd(rm_3b, rs1_val, vs2_val[i], vd_val[i]),
+        VF_VMADD => fp_muladd(rm_3b, rs1_val, vd_val[i], vs2_val[i]),
+        VF_VNMADD => fp_nmulsub(rm_3b, rs1_val, vd_val[i], vs2_val[i]),
+        VF_VMSUB => fp_mulsub(rm_3b, rs1_val, vd_val[i], vs2_val[i]),
+        VF_VNMSUB => fp_nmuladd(rm_3b, rs1_val, vd_val[i], vs2_val[i]),
+      }
     }
   };
 
@@ -1103,8 +1095,9 @@ function clause execute FWVFTYPE(funct6, vm, vs2, rs1, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
-    not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen)) then {
+  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) | not(
+    valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen),
+  ) then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -1125,12 +1118,11 @@ function clause execute FWVFTYPE(funct6, vm, vs2, rs1, vd) = {
 
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
-      result[i] =
-        match funct6 {
-          FWVF_VADD => fp_add(rm_3b, fp_widen(vs2_val[i]), fp_widen(rs1_val)),
-          FWVF_VSUB => fp_sub(rm_3b, fp_widen(vs2_val[i]), fp_widen(rs1_val)),
-          FWVF_VMUL => fp_mul(rm_3b, fp_widen(vs2_val[i]), fp_widen(rs1_val)),
-        }
+      result[i] = match funct6 {
+        FWVF_VADD => fp_add(rm_3b, fp_widen(vs2_val[i]), fp_widen(rs1_val)),
+        FWVF_VSUB => fp_sub(rm_3b, fp_widen(vs2_val[i]), fp_widen(rs1_val)),
+        FWVF_VMUL => fp_mul(rm_3b, fp_widen(vs2_val[i]), fp_widen(rs1_val)),
+      }
     }
   };
 
@@ -1170,8 +1162,9 @@ function clause execute FWVFMATYPE(funct6, vm, rs1, vs2, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
-    not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen)) then {
+  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) | not(
+    valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen),
+  ) then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -1192,13 +1185,12 @@ function clause execute FWVFMATYPE(funct6, vm, rs1, vs2, vd) = {
 
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
-      result[i] =
-        match funct6 {
-          FWVF_VMACC => fp_muladd(rm_3b, fp_widen(rs1_val), fp_widen(vs2_val[i]), vd_val[i]),
-          FWVF_VNMACC => fp_nmulsub(rm_3b, fp_widen(rs1_val), fp_widen(vs2_val[i]), vd_val[i]),
-          FWVF_VMSAC => fp_mulsub(rm_3b, fp_widen(rs1_val), fp_widen(vs2_val[i]), vd_val[i]),
-          FWVF_VNMSAC => fp_nmuladd(rm_3b, fp_widen(rs1_val), fp_widen(vs2_val[i]), vd_val[i]),
-        }
+      result[i] = match funct6 {
+        FWVF_VMACC => fp_muladd(rm_3b, fp_widen(rs1_val), fp_widen(vs2_val[i]), vd_val[i]),
+        FWVF_VNMACC => fp_nmulsub(rm_3b, fp_widen(rs1_val), fp_widen(vs2_val[i]), vd_val[i]),
+        FWVF_VMSAC => fp_mulsub(rm_3b, fp_widen(rs1_val), fp_widen(vs2_val[i]), vd_val[i]),
+        FWVF_VNMSAC => fp_nmuladd(rm_3b, fp_widen(rs1_val), fp_widen(vs2_val[i]), vd_val[i]),
+      }
     }
   };
 
@@ -1257,11 +1249,10 @@ function clause execute FWFTYPE(funct6, vm, vs2, rs1, vd) = {
 
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
-      result[i] =
-        match funct6 {
-          FWF_VADD => fp_add(rm_3b, vs2_val[i], fp_widen(rs1_val)),
-          FWF_VSUB => fp_sub(rm_3b, vs2_val[i], fp_widen(rs1_val)),
-        }
+      result[i] = match funct6 {
+        FWF_VADD => fp_add(rm_3b, vs2_val[i], fp_widen(rs1_val)),
+        FWF_VSUB => fp_sub(rm_3b, vs2_val[i], fp_widen(rs1_val)),
+      }
     }
   };
 
@@ -1319,11 +1310,10 @@ function clause execute VFMERGE(vs2, rs1, vd) = {
       result[i] = vd_val[i]
     } else {
       if i > end_element | i >= real_num_elem then {
-        result[i] =
-          match tail_ag {
-            UNDISTURBED => vd_val[i],
-            AGNOSTIC => vd_val[i], /* TODO: configuration support */
-          }
+        result[i] = match tail_ag {
+          UNDISTURBED => vd_val[i],
+          AGNOSTIC => vd_val[i], /* TODO: configuration support */
+        }
       } else {
         /* the merge operates on all body elements */
         result[i] = if vm_val[i] then rs1_val else vs2_val[i]
@@ -1415,11 +1405,10 @@ function clause execute VFMVSF(rs1, vd) = {
   /* others treated as tail elements */
   let tail_ag : agtype = get_vtype_vta();
   foreach (i from 1 to (num_elem - 1)) {
-    result[i] =
-      match tail_ag {
-        UNDISTURBED => vd_val[i],
-        AGNOSTIC => vd_val[i], /* TODO: configuration support */
-      }
+    result[i] = match tail_ag {
+      UNDISTURBED => vd_val[i],
+      AGNOSTIC => vd_val[i], /* TODO: configuration support */
+    }
   };
 
   write_vreg(num_elem, SEW, 0, vd, result);

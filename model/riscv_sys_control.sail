@@ -399,12 +399,11 @@ function trap_handler(
 
       mstatus[SPIE] = mstatus[SIE];
       mstatus[SIE] = 0b0;
-      mstatus[SPP] =
-        match cur_privilege {
-          User => 0b0,
-          Supervisor => 0b1,
-          Machine => internal_error(__FILE__, __LINE__, "invalid privilege for s-mode trap"),
-        };
+      mstatus[SPP] = match cur_privilege {
+        User => 0b0,
+        Supervisor => 0b1,
+        Machine => internal_error(__FILE__, __LINE__, "invalid privilege for s-mode trap"),
+      };
       stval = tval(info);
       sepc = pc;
 
@@ -543,7 +542,8 @@ function init_sys () -> unit = {
 
   /* set to little-endian mode */
   if sizeof(xlen) == 64 then {
-    mstatus = Mk_Mstatus([mstatus.bits with 37 .. 36 = 0b00])
+    mstatus =
+      Mk_Mstatus([mstatus.bits with 37 .. 36 = 0b00])
   };
   mstatush.bits = zero_extend(0b0);
 

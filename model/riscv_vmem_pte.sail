@@ -44,12 +44,10 @@ bitfield PTE_Flags : pte_flags_bits = {
 }
 
 // PRIVATE: check if a PTE is a pointer to next level (non-leaf)
-function pte_is_ptr pte_flags : PTE_Flags -> bool = ((pte_flags[X]) == 0b0) & ((pte_flags[W]) == 0b0) & ((pte_flags[R]) ==
-  0b0)
+function pte_is_ptr pte_flags : PTE_Flags -> bool = ((pte_flags[X]) == 0b0) & ((pte_flags[W]) == 0b0) & ((pte_flags[R]) == 0b0)
 
 // PRIVATE: check if a PTE is valid
-function pte_is_invalid pte_flags : PTE_Flags -> bool = ((pte_flags[V]) == 0b0) |
-  (((pte_flags[W]) == 0b1) & ((pte_flags[R]) == 0b0))
+function pte_is_invalid pte_flags : PTE_Flags -> bool = ((pte_flags[V]) == 0b0) | (((pte_flags[W]) == 0b1) & ((pte_flags[R]) == 0b0))
 
 // ----------------
 // Check access permissions in PTE
@@ -84,8 +82,7 @@ function check_PTE_permission(
     (Execute(), User) => (pte_U == 0b1) & (pte_X == 0b1),
     (Read(_), Supervisor) => ((pte_U == 0b0) | do_sum) & ((pte_R == 0b1) | ((pte_X == 0b1) & mxr)),
     (Write(_), Supervisor) => ((pte_U == 0b0) | do_sum) & (pte_W == 0b1),
-    (ReadWrite(_, _), Supervisor) => ((pte_U == 0b0) | do_sum) & (pte_W == 0b1) & ((pte_R == 0b1) |
-      ((pte_X == 0b1) & mxr)),
+    (ReadWrite(_, _), Supervisor) => ((pte_U == 0b0) | do_sum) & (pte_W == 0b1) & ((pte_R == 0b1) | ((pte_X == 0b1) & mxr)),
     (Execute(), Supervisor) => (pte_U == 0b0) & (pte_X == 0b1),
     (_, Machine) => internal_error(__FILE__, __LINE__, "m-mode mem perm check"),
   };
@@ -98,13 +95,12 @@ function update_PTE_Bits(sv_params : SV_Params, pte : bits(64), a : AccessType(e
   let pte_flags = Mk_PTE_Flags(pte[7..0]);
 
   // Update 'dirty' bit?
-  let update_d : bool = ((pte_flags[D]) == 0b0) &
-    (match a {
-      Execute() => false,
-      Read() => false,
-      Write(_) => true,
-      ReadWrite(_, _) => true,
-    });
+  let update_d : bool = ((pte_flags[D]) == 0b0) & (match a {
+    Execute() => false,
+    Read() => false,
+    Write(_) => true,
+    ReadWrite(_, _) => true,
+  });
 
   // Update 'accessed'-bit?
   let update_a = (pte_flags[A]) == 0b0;

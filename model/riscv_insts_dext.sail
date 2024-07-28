@@ -194,9 +194,7 @@ function haveDoubleFPU () -> bool = haveDExt() | haveZdinx()
 val validDoubleRegs : forall 'n, 'n > 0. (implicit('n), vector('n, dec, regidx)) -> bool
 function validDoubleRegs(n, regs) = {
   if haveZdinx() & sizeof(xlen) == 32 then {
-    foreach (i from 0 to (n - 1)) if (regs[i][0]) == bitone then {
-      return false
-    }
+    foreach (i from 0 to (n - 1)) if (regs[i][0]) == bitone then { return false }
   };
   true
 }

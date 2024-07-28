@@ -45,8 +45,9 @@ function offset_of_va va : bits(64) -> bits(PAGESIZE_BITS) = va[(pagesize_bits -
 // bits equal to the MSB of the virtual address.
 // Virtual address widths depend on the virtual memory mode.
 // PRIVATE
-function is_valid_vAddr(struct { va_size_bits = va_size_bits, _ } : SV_Params, vAddr : bits(64)) -> bool = vAddr ==
-  sign_extend(vAddr[(va_size_bits - 1)..0])
+function is_valid_vAddr(struct { va_size_bits = va_size_bits, _ } : SV_Params, vAddr : bits(64)) -> bool = vAddr == sign_extend(
+  vAddr[(va_size_bits - 1)..0],
+)
 
 // ****************************************************************
 // Results of Page Table Walk (PTW)
@@ -413,8 +414,7 @@ function translateAddr(vAddr : xlenbits, ac : AccessType(ext_access_type)) -> TR
   let effPriv : Privilege = effectivePrivilege(ac, mstatus, cur_privilege);
   let mode : SATPMode = translationMode(effPriv);
   let (valid_va, sv_params) : (bool, SV_Params) = match mode {
-    Sbare =>
-      return TR_Address(vAddr, init_ext_ptw),
+    Sbare => return TR_Address(vAddr, init_ext_ptw),
     Sv32 => (true, sv32_params),
     Sv39 => (is_valid_vAddr(sv39_params, vAddr_64b), sv39_params),
     Sv48 => (is_valid_vAddr(sv48_params, vAddr_64b), sv48_params),

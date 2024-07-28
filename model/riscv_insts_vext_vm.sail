@@ -169,11 +169,10 @@ function clause execute VVMSTYPE(funct6, vs2, vs1, vd) = {
 
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
-      result[i] =
-        match funct6 {
-          VVMS_VADC => to_bits(SEW, unsigned(vs2_val[i]) + unsigned(vs1_val[i]) + unsigned(bool_to_bits(vm_val[i]))),
-          VVMS_VSBC => to_bits(SEW, unsigned(vs2_val[i]) - unsigned(vs1_val[i]) - unsigned(bool_to_bits(vm_val[i]))),
-        }
+      result[i] = match funct6 {
+        VVMS_VADC => to_bits(SEW, unsigned(vs2_val[i]) + unsigned(vs1_val[i]) + unsigned(bool_to_bits(vm_val[i]))),
+        VVMS_VSBC => to_bits(SEW, unsigned(vs2_val[i]) - unsigned(vs1_val[i]) - unsigned(bool_to_bits(vm_val[i]))),
+      }
     }
   };
 
@@ -418,11 +417,10 @@ function clause execute VXMSTYPE(funct6, vs2, rs1, vd) = {
 
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
-      result[i] =
-        match funct6 {
-          VXMS_VADC => to_bits(SEW, unsigned(vs2_val[i]) + unsigned(rs1_val) + unsigned(bool_to_bits(vm_val[i]))),
-          VXMS_VSBC => to_bits(SEW, unsigned(vs2_val[i]) - unsigned(rs1_val) - unsigned(bool_to_bits(vm_val[i]))),
-        }
+      result[i] = match funct6 {
+        VXMS_VADC => to_bits(SEW, unsigned(vs2_val[i]) + unsigned(rs1_val) + unsigned(bool_to_bits(vm_val[i]))),
+        VXMS_VSBC => to_bits(SEW, unsigned(vs2_val[i]) - unsigned(rs1_val) - unsigned(bool_to_bits(vm_val[i]))),
+      }
     }
   };
 
@@ -664,10 +662,9 @@ function clause execute VIMSTYPE(funct6, vs2, simm, vd) = {
 
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
-      result[i] =
-        match funct6 {
-          VIMS_VADC => to_bits(SEW, unsigned(vs2_val[i]) + unsigned(imm_val) + unsigned(bool_to_bits(vm_val[i]))),
-        }
+      result[i] = match funct6 {
+        VIMS_VADC => to_bits(SEW, unsigned(vs2_val[i]) + unsigned(imm_val) + unsigned(bool_to_bits(vm_val[i]))),
+      }
     }
   };
 

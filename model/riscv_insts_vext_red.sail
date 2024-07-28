@@ -34,9 +34,7 @@ function clause execute RIVVTYPE(funct6, vm, vs2, vs1, vd) = {
     return RETIRE_FAIL
   };
 
-  if unsigned(vl) == 0 then {
-    return RETIRE_SUCCESS
-  }; /* if vl=0, no operation is performed */
+  if unsigned(vl) == 0 then { return RETIRE_SUCCESS /* if vl=0, no operation is performed */  };
 
   let (n as 'n) = num_elem_vs;
   let (d as 'd) = num_elem_vd;
@@ -103,9 +101,7 @@ function clause execute RMVVTYPE(funct6, vm, vs2, vs1, vd) = {
     return RETIRE_FAIL
   };
 
-  if unsigned(vl) == 0 then {
-    return RETIRE_SUCCESS
-  }; /* if vl=0, no operation is performed */
+  if unsigned(vl) == 0 then { return RETIRE_SUCCESS /* if vl=0, no operation is performed */  };
 
   let (n as 'n) = num_elem_vs;
   let (d as 'd) = num_elem_vd;
@@ -119,17 +115,16 @@ function clause execute RMVVTYPE(funct6, vm, vs2, vs1, vd) = {
   sum : bits('m) = read_single_element(SEW, 0, vs1); /* vs1 regardless of LMUL setting */
   foreach (i from 0 to (num_elem_vs - 1)) {
     if mask[i] then {
-      sum =
-        match funct6 {
-          MVV_VREDSUM => sum + (vs2_val[i]),
-          MVV_VREDAND => sum & (vs2_val[i]),
-          MVV_VREDOR => sum | (vs2_val[i]),
-          MVV_VREDXOR => sum ^ (vs2_val[i]),
-          MVV_VREDMIN => to_bits(SEW, min(signed(vs2_val[i]), signed(sum))),
-          MVV_VREDMINU => to_bits(SEW, min(unsigned(vs2_val[i]), unsigned(sum))),
-          MVV_VREDMAX => to_bits(SEW, max(signed(vs2_val[i]), signed(sum))),
-          MVV_VREDMAXU => to_bits(SEW, max(unsigned(vs2_val[i]), unsigned(sum))),
-        }
+      sum = match funct6 {
+        MVV_VREDSUM => sum + (vs2_val[i]),
+        MVV_VREDAND => sum & (vs2_val[i]),
+        MVV_VREDOR => sum | (vs2_val[i]),
+        MVV_VREDXOR => sum ^ (vs2_val[i]),
+        MVV_VREDMIN => to_bits(SEW, min(signed(vs2_val[i]), signed(sum))),
+        MVV_VREDMINU => to_bits(SEW, min(unsigned(vs2_val[i]), unsigned(sum))),
+        MVV_VREDMAX => to_bits(SEW, max(signed(vs2_val[i]), signed(sum))),
+        MVV_VREDMAXU => to_bits(SEW, max(unsigned(vs2_val[i]), unsigned(sum))),
+      }
     }
   };
 
@@ -182,9 +177,7 @@ function process_rfvv_single(funct6, vm, vs2, vs1, vd, num_elem_vs, SEW, LMUL_po
   };
   assert(SEW != 8);
 
-  if unsigned(vl) == 0 then {
-    return RETIRE_SUCCESS
-  }; /* if vl=0, no operation is performed */
+  if unsigned(vl) == 0 then { return RETIRE_SUCCESS /* if vl=0, no operation is performed */  };
 
   let (n as 'n) = num_elem_vs;
   let (d as 'd) = num_elem_vd;
@@ -198,15 +191,14 @@ function process_rfvv_single(funct6, vm, vs2, vs1, vd, num_elem_vs, SEW, LMUL_po
   sum : bits('m) = read_single_element(SEW, 0, vs1); /* vs1 regardless of LMUL setting */
   foreach (i from 0 to (num_elem_vs - 1)) {
     if mask[i] then {
-      sum =
-        match funct6 {
-          /* currently ordered/unordered sum reductions do the same operations */
-          FVV_VFREDOSUM => fp_add(rm_3b, sum, vs2_val[i]),
-          FVV_VFREDUSUM => fp_add(rm_3b, sum, vs2_val[i]),
-          FVV_VFREDMAX => fp_max(sum, vs2_val[i]),
-          FVV_VFREDMIN => fp_min(sum, vs2_val[i]),
-          _ => internal_error(__FILE__, __LINE__, "Widening op unexpected"),
-        }
+      sum = match funct6 {
+        /* currently ordered/unordered sum reductions do the same operations */
+        FVV_VFREDOSUM => fp_add(rm_3b, sum, vs2_val[i]),
+        FVV_VFREDUSUM => fp_add(rm_3b, sum, vs2_val[i]),
+        FVV_VFREDMAX => fp_max(sum, vs2_val[i]),
+        FVV_VFREDMIN => fp_min(sum, vs2_val[i]),
+        _ => internal_error(__FILE__, __LINE__, "Widening op unexpected"),
+      }
     }
   };
 
@@ -232,9 +224,7 @@ function process_rfvv_widen(funct6, vm, vs2, vs1, vd, num_elem_vs, SEW, LMUL_pow
   };
   assert(SEW >= 16 & SEW_widen <= 64);
 
-  if unsigned(vl) == 0 then {
-    return RETIRE_SUCCESS
-  }; /* if vl=0, no operation is performed */
+  if unsigned(vl) == 0 then { return RETIRE_SUCCESS /* if vl=0, no operation is performed */  };
 
   let (n as 'n) = num_elem_vs;
   let (d as 'd) = num_elem_vd;

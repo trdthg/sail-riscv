@@ -147,8 +147,7 @@ val plat_insns_per_tick = pure {
 } : unit -> int
 
 // assumes a single hart, since this typically is a vector of per-hart registers.
-register mtimecmp :
-  bits(64) // memory-mapped internal clint register.
+register mtimecmp : bits(64) // memory-mapped internal clint register.
 /* CLINT memory-mapped IO */
 /* relative address map:
  *
@@ -400,8 +399,7 @@ function htif_store(paddr, width, data) = {
         /* terminal */
         if get_config_print_platform() then { print_platform("htif-term cmd: " ^ BitStr(cmd[payload])) };
         match cmd[cmd] {
-          0x00 =>
-            /* TODO: terminal input handling */ (),
+          0x00 => /* TODO: terminal input handling */ (),
           0x01 => plat_term_write(cmd[payload][7..0]),
           c => print("Unknown term cmd: " ^ BitStr(c)),
         };
@@ -425,8 +423,9 @@ $ifndef RVFI_DII
 
 /* Top-level MMIO dispatch */
 function within_mmio_readable forall 'n, 0 < 'n <= max_mem_access.
-(addr : xlenbits, width : int('n)) -> bool = within_clint(addr, width) |
-  (within_htif_readable(addr, width) & 1 <= sizeof('n))
+(addr : xlenbits, width : int('n)) -> bool = within_clint(addr, width) | (within_htif_readable(addr, width) & 1 <= sizeof(
+  'n
+))
 $else
 function within_mmio_readable forall 'n, 0 < 'n <= max_mem_access.
 (addr : xlenbits, width : int('n)) -> bool = false
@@ -434,8 +433,7 @@ $endif
 
 $ifndef RVFI_DII
 function within_mmio_writable forall 'n, 0 < 'n <= max_mem_access.
-(addr : xlenbits, width : int('n)) -> bool = within_clint(addr, width) |
-  (within_htif_writable(addr, width) & sizeof('n) <= 8)
+(addr : xlenbits, width : int('n)) -> bool = within_clint(addr, width) | (within_htif_writable(addr, width) & sizeof('n) <= 8)
 $else
 function within_mmio_writable forall 'n, 0 < 'n <= max_mem_access.
 (addr : xlenbits, width : int('n)) -> bool = false

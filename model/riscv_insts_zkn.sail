@@ -218,8 +218,9 @@ function clause execute SHA512SUM0R(rs2, rs1, rd) = {
 }
 
 function clause execute SHA512SUM1R(rs2, rs1, rd) = {
-  X(rd) =
-    sign_extend((X(rs1) << 23) ^ (X(rs1) >> 14) ^ (X(rs1) >> 18) ^ (X(rs2) >> 9) ^ (X(rs2) << 18) ^ (X(rs2) << 14));
+  X(rd) = sign_extend(
+    (X(rs1) << 23) ^ (X(rs1) >> 14) ^ (X(rs1) >> 18) ^ (X(rs2) >> 9) ^ (X(rs2) << 18) ^ (X(rs2) << 14),
+  );
   RETIRE_SUCCESS
 }
 

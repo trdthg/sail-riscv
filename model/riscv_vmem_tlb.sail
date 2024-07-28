@@ -112,8 +112,7 @@ function init_TLB () -> unit = {
 function write_TLB(index : tlb_index_range, ent : TLB_Entry) -> unit = tlb[index] = Some(ent)
 
 // PRIVATE
-function match_TLB_Entry(ent : TLB_Entry, asid : asidbits, vaddr : bits(64)) -> bool = (ent.global | (ent.asid == asid)) &
-  (ent.vAddr == (ent.vMatchMask & vaddr))
+function match_TLB_Entry(ent : TLB_Entry, asid : asidbits, vaddr : bits(64)) -> bool = (ent.global | (ent.asid == asid)) & (ent.vAddr == (ent.vMatchMask & vaddr))
 
 // PRIVATE
 function flush_TLB_Entry(e : TLB_Entry, asid : option(asidbits), addr : option(bits(64))) -> bool = {

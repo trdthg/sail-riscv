@@ -50,17 +50,16 @@ function clause execute MMTYPE(funct6, vs2, vs1, vd) = {
 
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
-      result[i] =
-        match funct6 {
-          MM_VMAND => (vs2_val[i]) & (vs1_val[i]),
-          MM_VMNAND => not((vs2_val[i]) & (vs1_val[i])),
-          MM_VMANDN => (vs2_val[i]) & not(vs1_val[i]),
-          MM_VMXOR => (vs2_val[i]) != (vs1_val[i]),
-          MM_VMOR => (vs2_val[i]) | (vs1_val[i]),
-          MM_VMNOR => not((vs2_val[i]) | (vs1_val[i])),
-          MM_VMORN => (vs2_val[i]) | not(vs1_val[i]),
-          MM_VMXNOR => (vs2_val[i]) == (vs1_val[i]),
-        }
+      result[i] = match funct6 {
+        MM_VMAND => (vs2_val[i]) & (vs1_val[i]),
+        MM_VMNAND => not((vs2_val[i]) & (vs1_val[i])),
+        MM_VMANDN => (vs2_val[i]) & not(vs1_val[i]),
+        MM_VMXOR => (vs2_val[i]) != (vs1_val[i]),
+        MM_VMOR => (vs2_val[i]) | (vs1_val[i]),
+        MM_VMNOR => not((vs2_val[i]) | (vs1_val[i])),
+        MM_VMORN => (vs2_val[i]) | not(vs1_val[i]),
+        MM_VMXNOR => (vs2_val[i]) == (vs1_val[i]),
+      }
     }
   };
 

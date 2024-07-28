@@ -179,8 +179,7 @@ mapping clause assembly = RISCV_REV8(rs1, rd)
 function clause execute RISCV_REV8(rs1, rd) = {
   let rs1_val = X(rs1);
   var result : xlenbits = zeros();
-  foreach (i from 0 to (sizeof(xlen) - 8) by 8) result[(i + 7)..i] =
-    rs1_val[(sizeof(xlen) - i - 1)..(sizeof(xlen) - i - 8)];
+  foreach (i from 0 to (sizeof(xlen) - 8) by 8) result[(i + 7)..i] = rs1_val[(sizeof(xlen) - i - 1)..(sizeof(xlen) - i - 8)];
   X(rd) = result;
   RETIRE_SUCCESS
 }
@@ -197,8 +196,7 @@ mapping clause assembly = RISCV_ORCB(rs1, rd)
 function clause execute RISCV_ORCB(rs1, rd) = {
   let rs1_val = X(rs1);
   var result : xlenbits = zeros();
-  foreach (i from 0 to (sizeof(xlen) - 8) by 8) result[(i + 7)..i] =
-    if (rs1_val[(i + 7)..i]) == zeros() then 0x00 else 0xFF;
+  foreach (i from 0 to (sizeof(xlen) - 8) by 8) result[(i + 7)..i] = if (rs1_val[(i + 7)..i]) == zeros() then 0x00 else 0xFF;
   X(rd) = result;
   RETIRE_SUCCESS
 }

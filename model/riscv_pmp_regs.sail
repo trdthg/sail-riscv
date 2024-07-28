@@ -86,20 +86,14 @@ function pmpWriteCfg(n : range(0, 63), cfg : Pmpcfg_ent, v : bits(8)) -> Pmpcfg_
   // "The R, W, and X fields form a collective WARL field for which the combinations with R=0 and W=1 are reserved."
   // In this implementation if R=0 and W=1 then R, W and X are all set to 0.
   // This is the least risky option from a security perspective.
-  let cfg = if cfg[W] == 0b1 & cfg[R] == 0b0 then {
-    [cfg with X = 0b0, W = 0b0, R = 0b0]
-  } else {
-    cfg
-  };
+  let cfg = if cfg[W] == 0b1 & cfg[R] == 0b0 then { [cfg with X = 0b0, W = 0b0, R = 0b0] } else { cfg };
 
   // "When G >= 1, the NA4 mode is not selectable."
   // In this implementation we set it to OFF if NA4 is selected.
   // This is the least risky option from a security perspective.
   let cfg = if sys_pmp_grain() >= 1 & pmpAddrMatchType_of_bits(cfg[A]) == NA4 then {
     [cfg with A = pmpAddrMatchType_to_bits(OFF)]
-  } else {
-    cfg
-  };
+  } else { cfg };
 
   cfg
 }
@@ -119,14 +113,17 @@ function pmpWriteCfgReg(n : range(0, 15), v : xlenbits) -> unit = {
   }
 }
 
-function pmpWriteAddr(locked : bool, tor_locked : bool, reg : xlenbits, v : xlenbits) -> xlenbits = if sizeof(xlen) ==
-  32 then {
+function pmpWriteAddr(locked : bool, tor_locked : bool, reg : xlenbits, v : xlenbits) -> xlenbits = if sizeof(xlen) == 32 then {
   if locked | tor_locked then { reg } else { v }
 } else {
   if locked | tor_locked then { reg } else { zero_extend(v[53..0]) }
 }
 
 function pmpWriteAddrReg(n : range(0, 63), v : xlenbits) -> unit = {
-  pmpaddr_n[n] =
-    pmpWriteAddr(pmpLocked(pmpcfg_n[n]), if n + 1 < 64 then pmpTORLocked(pmpcfg_n[n + 1]) else false, pmpaddr_n[n], v)
+  pmpaddr_n[n] = pmpWriteAddr(
+    pmpLocked(pmpcfg_n[n]),
+    if n + 1 < 64 then pmpTORLocked(pmpcfg_n[n + 1]) else false,
+    pmpaddr_n[n],
+    v,
+  )
 }
