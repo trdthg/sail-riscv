@@ -28,8 +28,7 @@
 /* S and D value structure (sign, exponent, mantissa)               */
 /* TODO: this should be a 'mapping' */
 val fsplit_D : bits(64) -> (bits(1), bits(11), bits(52))
-function fsplit_D x64 =
-  (x64[63..63], x64[62..52], x64[51..0])
+function fsplit_D x64 = (x64[63..63], x64[62..52], x64[51..0])
 
 val fmake_D : (bits(1), bits(11), bits(52)) -> bits(64)
 function fmake_D(sign, exp, mant) = sign @ exp @ mant

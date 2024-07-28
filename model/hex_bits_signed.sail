@@ -77,9 +77,7 @@ val valid_hex_bits_signed : forall 'n, 'n > 0. (int('n), string) -> bool
 val hex_bits_signed : forall 'n, 'n > 0. bits('n) <-> (int('n), string)
 
 function hex_bits_signed_forwards bv = {
-  if signed(bv) < 0 then {
-    (length(bv), concat_str("-", hex_str(unsigned(not_vec(bv) + 1))))
-  } else {
+  if signed(bv) < 0 then { (length(bv), concat_str("-", hex_str(unsigned(not_vec(bv) + 1)))) } else {
     (length(bv), hex_str(unsigned(bv)))
   }
 }

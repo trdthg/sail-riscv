@@ -63,12 +63,9 @@ function clause execute FVVTYPE(funct6, vm, vs2, vs1, vd) = {
           FVV_VMAX => fp_max(vs2_val[i], vs1_val[i]),
           FVV_VMUL => fp_mul(rm_3b, vs2_val[i], vs1_val[i]),
           FVV_VDIV => fp_div(rm_3b, vs2_val[i], vs1_val[i]),
-          FVV_VSGNJ =>
-            [vs1_val[i][sizeof('m) - 1]] @ vs2_val[i][(sizeof('m) - 2)..0],
-          FVV_VSGNJN =>
-            (0b1 ^ [vs1_val[i][sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
-          FVV_VSGNJX =>
-            ([vs2_val[i][sizeof('m) - 1]] ^ [vs1_val[i][sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
+          FVV_VSGNJ => [vs1_val[i][sizeof('m) - 1]] @ vs2_val[i][(sizeof('m) - 2)..0],
+          FVV_VSGNJN => (0b1 ^ [vs1_val[i][sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
+          FVV_VSGNJX => ([vs2_val[i][sizeof('m) - 1]] ^ [vs1_val[i][sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
         }
     }
   };
@@ -966,12 +963,9 @@ function clause execute FVFTYPE(funct6, vm, vs2, rs1, vd) = {
           VF_VMUL => fp_mul(rm_3b, vs2_val[i], rs1_val),
           VF_VDIV => fp_div(rm_3b, vs2_val[i], rs1_val),
           VF_VRDIV => fp_div(rm_3b, rs1_val, vs2_val[i]),
-          VF_VSGNJ =>
-            [rs1_val[sizeof('m) - 1]] @ vs2_val[i][(sizeof('m) - 2)..0],
-          VF_VSGNJN =>
-            (0b1 ^ [rs1_val[sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
-          VF_VSGNJX =>
-            ([vs2_val[i][sizeof('m) - 1]] ^ [rs1_val[sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
+          VF_VSGNJ => [rs1_val[sizeof('m) - 1]] @ vs2_val[i][(sizeof('m) - 2)..0],
+          VF_VSGNJN => (0b1 ^ [rs1_val[sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
+          VF_VSGNJX => ([vs2_val[i][sizeof('m) - 1]] ^ [rs1_val[sizeof('m) - 1]]) @ vs2_val[i][(sizeof('m) - 2)..0],
           VF_VSLIDE1UP => {
             if vs2 == vd then {
               handle_illegal();

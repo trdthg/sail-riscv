@@ -13,9 +13,7 @@ type pmp_addr_range_in_words = option((xlenbits, xlenbits))
 function pmpAddrRange(cfg : Pmpcfg_ent, pmpaddr : xlenbits, prev_pmpaddr : xlenbits) -> pmp_addr_range_in_words = {
   match pmpAddrMatchType_of_bits(cfg[A]) {
     OFF => None(),
-    TOR => {
-      Some((prev_pmpaddr, pmpaddr))
-    },
+    TOR => { Some((prev_pmpaddr, pmpaddr)) },
     NA4 => {
       // NA4 is not selectable when the PMP grain G >= 1. See pmpWriteCfg().
       assert(sys_pmp_grain() < 1, "NA4 cannot be selected when PMP grain G >= 1.");

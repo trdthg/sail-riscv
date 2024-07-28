@@ -415,12 +415,9 @@ function translateAddr(vAddr : xlenbits, ac : AccessType(ext_access_type)) -> TR
   let (valid_va, sv_params) : (bool, SV_Params) = match mode {
     Sbare =>
       return TR_Address(vAddr, init_ext_ptw),
-    Sv32 =>
-      (true, sv32_params),
-    Sv39 =>
-      (is_valid_vAddr(sv39_params, vAddr_64b), sv39_params),
-    Sv48 =>
-      (is_valid_vAddr(sv48_params, vAddr_64b), sv48_params),
+    Sv32 => (true, sv32_params),
+    Sv39 => (is_valid_vAddr(sv39_params, vAddr_64b), sv39_params),
+    Sv48 => (is_valid_vAddr(sv48_params, vAddr_64b), sv48_params),
   };
 
   // Sv57 => (is_valid_vAddr(sv57_params, vAddr_64b), sv57_params),    // TODO

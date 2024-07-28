@@ -63,8 +63,7 @@ function nvFlag () -> bits(5) = 0b10000
 /* S and D value structure (sign, exponent, mantissa)               */
 /* TODO: this should be a 'mapping' */
 val fsplit_S : bits(32) -> (bits(1), bits(8), bits(23))
-function fsplit_S x32 =
-  (x32[31..31], x32[30..23], x32[22..0])
+function fsplit_S x32 = (x32[31..31], x32[30..23], x32[22..0])
 
 val fmake_S : (bits(1), bits(8), bits(23)) -> bits(32)
 function fmake_S(sign, exp, mant) = sign @ exp @ mant

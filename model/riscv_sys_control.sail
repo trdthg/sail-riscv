@@ -269,13 +269,11 @@ function getPendingSet priv : Privilege -> option((xlenbits, Privilege)) = {
     match processPending(mip, mie, mideleg.bits, mIE) {
       Ints_Empty() => None(),
       Ints_Pending(p) =>
-        let r =
-          (p, Machine) in
+        let r = (p, Machine) in
         Some(r),
       Ints_Delegated(d) => if not(haveSupMode()) then {
         if uIE then {
-          let r =
-            (d, User) in
+          let r = (d, User) in
           Some(r)
         } else {
           None()
@@ -285,12 +283,10 @@ function getPendingSet priv : Privilege -> option((xlenbits, Privilege)) = {
         match processPending(Mk_Minterrupts(d), mie, sideleg.bits, sIE) {
           Ints_Empty() => None(),
           Ints_Pending(p) =>
-            let r =
-              (p, Supervisor) in
+            let r = (p, Supervisor) in
             Some(r),
           Ints_Delegated(d) => if uIE then {
-            let r =
-              (d, User) in
+            let r = (d, User) in
             Some(r)
           } else {
             None()
@@ -313,8 +309,7 @@ function dispatchInterrupt priv : Privilege -> option((InterruptType, Privilege)
     let enabled_pending = mip.bits & mie.bits;
     match findPendingInterrupt(enabled_pending) {
       Some(i) =>
-        let r =
-          (i, Machine) in
+        let r = (i, Machine) in
         Some(r),
       None() => None(),
     }
@@ -324,8 +319,7 @@ function dispatchInterrupt priv : Privilege -> option((InterruptType, Privilege)
       Some(ip, p) => match findPendingInterrupt(ip) {
         None() => None(),
         Some(i) =>
-          let r =
-            (i, p) in
+          let r = (i, p) in
           Some(r),
       },
     }
@@ -500,14 +494,12 @@ function exception_handler(cur_priv : Privilege, ctl : ctl_result, pc : xlenbits
 }
 
 function handle_mem_exception(addr : xlenbits, e : ExceptionType) -> unit = {
-  let t : sync_exception =
-    struct { trap = e, excinfo = Some(addr), ext = None() } in
+  let t : sync_exception = struct { trap = e, excinfo = Some(addr), ext = None() } in
   set_next_pc(exception_handler(cur_privilege, CTL_TRAP(t), PC))
 }
 
 function handle_exception e : ExceptionType -> unit = {
-  let t : sync_exception =
-    struct { trap = e, excinfo = None(), ext = None() } in
+  let t : sync_exception = struct { trap = e, excinfo = None(), ext = None() } in
   set_next_pc(exception_handler(cur_privilege, CTL_TRAP(t), PC))
 }
 

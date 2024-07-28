@@ -21,8 +21,7 @@
 /* improvements, and version updates.                               */
 /* **************************************************************** */
 val fsplit_H : bits(16) -> (bits(1), bits(5), bits(10))
-function fsplit_H xf16 =
-  (xf16[15..15], xf16[14..10], xf16[9..0])
+function fsplit_H xf16 = (xf16[15..15], xf16[14..10], xf16[9..0])
 
 val fmake_H : (bits(1), bits(5), bits(10)) -> bits(16)
 function fmake_H(sign, exp, mant) = sign @ exp @ mant

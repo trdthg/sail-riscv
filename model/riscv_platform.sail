@@ -90,8 +90,7 @@ function plat_htif_tohost () = to_bits(sizeof(xlen), elf_tohost())
 
 // todo: fromhost
 val phys_mem_segments : unit -> list((xlenbits, xlenbits))
-function phys_mem_segments () =
-  (plat_rom_base(), plat_rom_size()) :: (plat_ram_base(), plat_ram_size()) :: [||]
+function phys_mem_segments () = (plat_rom_base(), plat_rom_size()) :: (plat_ram_base(), plat_ram_size()) :: [||]
 
 /* Physical memory map predicates */
 function within_phys_mem forall 'n, 'n <= max_mem_access.

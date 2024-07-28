@@ -130,11 +130,7 @@ function lookup_TLB(asid : asidbits, vaddr : bits(64)) -> option((tlb_index_rang
   let index = tlb_hash(vaddr);
   match tlb[index] {
     None() => None(),
-    Some(entry) => if match_TLB_Entry(entry, asid, vaddr) then {
-      Some((index, entry))
-    } else {
-      None()
-    },
+    Some(entry) => if match_TLB_Entry(entry, asid, vaddr) then { Some((index, entry)) } else { None() },
   }
 }
 
