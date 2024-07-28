@@ -39,16 +39,15 @@ function vpn_j_of_va(sv_params : SV_Params, va : bits(64), level : PTW_Level) ->
 }
 
 // PRIVATE: Extract offset within page from VA
-function offset_of_va va : bits(64) -> bits(PAGESIZE_BITS) = va[
-  (pagesize_bits - 1)..0
-]
+function offset_of_va va : bits(64) -> bits(PAGESIZE_BITS) = va[(pagesize_bits - 1)..0]
 
 // Valid xlen-wide values containing virtual addrs must have upper
 // bits equal to the MSB of the virtual address.
 // Virtual address widths depend on the virtual memory mode.
 // PRIVATE
-function is_valid_vAddr(struct { va_size_bits = va_size_bits, _ } : SV_Params, vAddr : bits(64)) -> bool = vAddr ==
-  sign_extend(vAddr[(va_size_bits - 1)..0])
+function is_valid_vAddr(struct { va_size_bits = va_size_bits, _ } : SV_Params, vAddr : bits(64)) -> bool = vAddr == sign_extend(
+  vAddr[(va_size_bits - 1)..0],
+)
 
 // ****************************************************************
 // Results of Page Table Walk (PTW)
@@ -85,9 +84,7 @@ function pt_walk(sv_params, va, ac, priv, mxr, do_sum, pt_base, level, global, e
   // Below, 'pte_phys_addr' is XLEN bits because it's an arg to
   // 'mem_read_priv()' [riscv_mem.sail] where it's declared as xlenbits.
   // That def and this use need to be fixed together (TODO)
-  let pte_phys_addr : xlenbits = pte_addr[
-    (sizeof(xlen) - 1)..0
-  ];
+  let pte_phys_addr : xlenbits = pte_addr[(sizeof(xlen) - 1)..0];
 
   // Read this-level PTE from mem
   let mem_result = mem_read_priv(
@@ -178,9 +175,7 @@ function legalize_satp(
   if sizeof(xlen) == 32 then {
     // The slice and extend ops below are no-ops when xlen==32,
     // but appease the type-checker when xlen==64 (when this code is not executed!)
-    let o32 : bits(32) = o[
-      31..0
-    ];
+    let o32 : bits(32) = o[31..0];
     let v32 : bits(32) = v[31..0];
     let new_satp : bits(32) = legalize_satp32(a, o32, v32);
     zero_extend(new_satp)
@@ -205,9 +200,7 @@ function legalize_satp(
 function satp_to_asid satp_val : xlenbits -> asidbits = if sizeof(xlen) == 32 then {
   zero_extend(Mk_Satp32(satp_val)[Asid])
 } else {
-  if sizeof(xlen) == 64 then {
-    Mk_Satp64(satp_val)[Asid]
-  } else {
+  if sizeof(xlen) == 64 then { Mk_Satp64(satp_val)[Asid] } else {
     internal_error(__FILE__, __LINE__, "Unsupported xlen" ^ dec_str(sizeof(xlen)))
   }
 }
@@ -218,9 +211,7 @@ function satp_to_PT_base satp_val : xlenbits -> bits(64) = {
   let ppn = if sizeof(xlen) == 32 then {
     zero_extend(64, Mk_Satp32(satp_val)[PPN])
   } else {
-    if sizeof(xlen) == 64 then {
-      zero_extend(64, Mk_Satp64(satp_val)[PPN])
-    } else {
+    if sizeof(xlen) == 64 then { zero_extend(64, Mk_Satp64(satp_val)[PPN]) } else {
       internal_error(__FILE__, __LINE__, "Unsupported xlen" ^ dec_str(sizeof(xlen)))
     }
   };
@@ -234,9 +225,7 @@ function translationMode priv : Privilege -> SATPMode = {
     Sbare
   } else {
     if sizeof(xlen) == 32 then {
-      match Mk_Satp32(satp)[
-        Mode
-      ] {
+      match Mk_Satp32(satp)[Mode] {
         0b0 => Sbare,
         0b1 => Sv32,
       }
@@ -253,9 +242,7 @@ function translationMode priv : Privilege -> SATPMode = {
               None() => internal_error(__FILE__, __LINE__, "invalid RV64 translation mode in satp"),
             }
           },
-          Some(RV32) => match Mk_Satp32(satp[31..0])[
-            Mode
-          ] {
+          Some(RV32) => match Mk_Satp32(satp[31..0])[Mode] {
             // Note: satp is 64bits here
             // When xlen is 64, mstatus.SXL (for S privilege) can be RV32
             0b0 => Sbare,
@@ -279,9 +266,7 @@ function write_pte forall 'n, 'n in {4, 8}.
 (paddr : xlenbits, pte_size : int('n), pte : bits(64)) -> MemoryOpResult(bool) = mem_write_value_priv(
   paddr,
   pte_size,
-  pte[
-    (pte_size * 8 - 1)..0
-  ],
+  pte[(pte_size * 8 - 1)..0],
   Supervisor,
   false,
   false,
@@ -321,25 +306,26 @@ function translate_TLB_hit(
     PTE_Check_Failure(ext_ptw, ext_ptw_fail) => TR_Failure(ext_get_ptw_error(ext_ptw_fail), ext_ptw),
     PTE_Check_Success(ext_ptw) => match update_PTE_Bits(sv_params, pte, ac) {
       None() => TR_Address(ent.pAddr | (vAddr & ent.vAddrMask), ext_ptw),
-      Some(pte') => // See riscv_platform.sail
-      if not(plat_enable_dirty_update()) then {
-        // pte needs dirty/accessed update but that is not enabled
-        TR_Failure(PTW_PTE_Update(), ext_ptw)
-      } else {
-        // Writeback the PTE (which has new A/D bits)
-        let n_ent = {
-          ent with
-          pte = pte',
-        };
-        write_TLB(tlb_index, n_ent);
-        let pte_phys_addr = ent.pteAddr[(sizeof(xlen) - 1)..0];
+      Some(pte') =>
+        // See riscv_platform.sail
+        if not(plat_enable_dirty_update()) then {
+          // pte needs dirty/accessed update but that is not enabled
+          TR_Failure(PTW_PTE_Update(), ext_ptw)
+        } else {
+          // Writeback the PTE (which has new A/D bits)
+          let n_ent = {
+            ent with
+            pte = pte',
+          };
+          write_TLB(tlb_index, n_ent);
+          let pte_phys_addr = ent.pteAddr[(sizeof(xlen) - 1)..0];
 
-        match write_pte(pte_phys_addr, 2 ^sv_params.log_pte_size_bytes, pte') {
-          MemValue(_) => (),
-          MemException(e) => internal_error(__FILE__, __LINE__, "invalid physical address in TLB"),
-        };
-        TR_Address(ent.pAddr | (vAddr & ent.vAddrMask), ext_ptw)
-      },
+          match write_pte(pte_phys_addr, 2 ^sv_params.log_pte_size_bytes, pte') {
+            MemValue(_) => (),
+            MemException(e) => internal_error(__FILE__, __LINE__, "invalid physical address in TLB"),
+          };
+          TR_Address(ent.pAddr | (vAddr & ent.vAddrMask), ext_ptw)
+        },
     },
   }
 }
@@ -372,24 +358,23 @@ function translate_TLB_miss(
           add_to_TLB(asid, vAddr, pAddr, pte, pteAddr, level, global, sv_params.vpn_size_bits, pagesize_bits);
           TR_Address(pAddr, ext_ptw)
         },
-        Some(pte') => // See riscv_platform.sail
-        if not(plat_enable_dirty_update()) then {
-          // pte needs dirty/accessed update but that is not enabled
-          TR_Failure(PTW_PTE_Update(), ext_ptw)
-        } else {
-          // Writeback the PTE (which has new A/D bits)
-          let pte_phys_addr = pteAddr[
-            (sizeof(xlen) - 1)..0
-          ];
+        Some(pte') =>
+          // See riscv_platform.sail
+          if not(plat_enable_dirty_update()) then {
+            // pte needs dirty/accessed update but that is not enabled
+            TR_Failure(PTW_PTE_Update(), ext_ptw)
+          } else {
+            // Writeback the PTE (which has new A/D bits)
+            let pte_phys_addr = pteAddr[(sizeof(xlen) - 1)..0];
 
-          match write_pte(pte_phys_addr, 2 ^sv_params.log_pte_size_bytes, pte') {
-            MemValue(_) => {
-              add_to_TLB(asid, vAddr, pAddr, pte', pteAddr, level, global, sv_params.vpn_size_bits, pagesize_bits);
-              TR_Address(pAddr, ext_ptw)
-            },
-            MemException(e) => TR_Failure(PTW_Access(), ext_ptw),
-          }
-        },
+            match write_pte(pte_phys_addr, 2 ^sv_params.log_pte_size_bytes, pte') {
+              MemValue(_) => {
+                add_to_TLB(asid, vAddr, pAddr, pte', pteAddr, level, global, sv_params.vpn_size_bits, pagesize_bits);
+                TR_Address(pAddr, ext_ptw)
+              },
+              MemException(e) => TR_Failure(PTW_Access(), ext_ptw),
+            }
+          },
       }
     },
   }

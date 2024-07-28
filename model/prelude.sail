@@ -19,11 +19,7 @@ $include "hex_bits.sail"
 $include "hex_bits_signed.sail"
 
 val not_bit : bit -> bit
-function not_bit b = if b == bitone then {
-  bitzero
-} else {
-  bitone
-}
+function not_bit b = if b == bitone then { bitzero } else { bitone }
 
 overload ~ = {not_bool, not_vec, not_bit}
 
@@ -203,15 +199,13 @@ overload operator >> = {shift_bits_right, shiftr}
 overload operator << = {shift_bits_left, shiftl}
 
 /* Ideally these would be sail builtin */
-function shift_right_arith64(v : bits(64), shift : bits(6)) -> bits(64) = let v128 : bits(128) = sign_extend(v) in
-  (v128 >> shift)[
-    63..0
-  ]
+function shift_right_arith64(v : bits(64), shift : bits(6)) -> bits(64) =
+  let v128 : bits(128) = sign_extend(v) in
+  (v128 >> shift)[63..0]
 
-function shift_right_arith32(v : bits(32), shift : bits(5)) -> bits(32) = let v64 : bits(64) = sign_extend(v) in
-  (v64 >> shift)[
-    31..0
-  ]
+function shift_right_arith32(v : bits(32), shift : bits(5)) -> bits(32) =
+  let v64 : bits(64) = sign_extend(v) in
+  (v64 >> shift)[31..0]
 
 infix 7 >>>
 infix 7 <<<

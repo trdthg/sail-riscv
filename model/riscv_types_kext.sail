@@ -916,9 +916,7 @@ val sm4_sbox : bits(8) -> bits(8)
 function sm4_sbox x = sbox_lookup(x, sm4_sbox_table)
 
 val aes_get_column : (bits(128), nat) -> bits(32)
-function aes_get_column(state, c) = (state >> to_bits(7, 32 * c))[
-  31..0
-]
+function aes_get_column(state, c) = (state >> to_bits(7, 32 * c))[31..0]
 
 /* 64-bit to 64-bit function which applies the AES forward sbox to each byte
  * in a 64-bit word.
@@ -926,9 +924,7 @@ function aes_get_column(state, c) = (state >> to_bits(7, 32 * c))[
 val aes_apply_fwd_sbox_to_each_byte : bits(64) -> bits(64)
 function aes_apply_fwd_sbox_to_each_byte x = {
   aes_sbox_fwd(x[63..56]) @ aes_sbox_fwd(x[55..48]) @ aes_sbox_fwd(x[47..40]) @ aes_sbox_fwd(x[39..32]) @ aes_sbox_fwd(
-    x[
-      31..24
-    ],
+    x[31..24],
   ) @ aes_sbox_fwd(x[23..16]) @ aes_sbox_fwd(x[15..8]) @ aes_sbox_fwd(x[7..0])
 }
 
@@ -938,9 +934,7 @@ function aes_apply_fwd_sbox_to_each_byte x = {
 val aes_apply_inv_sbox_to_each_byte : bits(64) -> bits(64)
 function aes_apply_inv_sbox_to_each_byte x = {
   aes_sbox_inv(x[63..56]) @ aes_sbox_inv(x[55..48]) @ aes_sbox_inv(x[47..40]) @ aes_sbox_inv(x[39..32]) @ aes_sbox_inv(
-    x[
-      31..24
-    ],
+    x[31..24],
   ) @ aes_sbox_inv(x[23..16]) @ aes_sbox_inv(x[15..8]) @ aes_sbox_inv(x[7..0])
 }
 
@@ -948,9 +942,7 @@ function aes_apply_inv_sbox_to_each_byte x = {
  * AES full-round transformation functions.
  */
 val getbyte : (bits(64), int) -> bits(8)
-function getbyte(x, i) = (x >> to_bits(6, i * 8))[
-  7..0
-]
+function getbyte(x, i) = (x >> to_bits(6, i * 8))[7..0]
 
 val aes_rv64_shiftrows_fwd : (bits(64), bits(64)) -> bits(64)
 function aes_rv64_shiftrows_fwd(rs2, rs1) = {

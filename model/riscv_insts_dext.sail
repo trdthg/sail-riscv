@@ -106,11 +106,7 @@ function f_is_NaN_D x64 = {
 val negate_D : bits(64) -> bits(64)
 function negate_D x64 = {
   let (sign, exp, mant) = fsplit_D(x64);
-  let new_sign = if sign == 0b0 then {
-    0b1
-  } else {
-    0b0
-  };
+  let new_sign = if sign == 0b0 then { 0b1 } else { 0b0 };
   fmake_D(new_sign, exp, mant)
 }
 
@@ -124,11 +120,7 @@ function feq_quiet_D(v1, v2) = {
 
   let result = (v1 == v2) | (v1Is0 & v2Is0);
 
-  let fflags = if f_is_SNaN_D(v1) | f_is_SNaN_D(v2) then {
-    nvFlag()
-  } else {
-    zeros()
-  };
+  let fflags = if f_is_SNaN_D(v1) | f_is_SNaN_D(v2) then { nvFlag() } else { zeros() };
 
   (result, fflags)
 }
@@ -139,11 +131,7 @@ function flt_D(v1, v2, is_quiet) = {
   let (s2, e2, m2) = fsplit_D(v2);
 
   let result : bool = if (s1 == 0b0) & (s2 == 0b0) then {
-    if e1 == e2 then {
-      unsigned(m1) < unsigned(m2)
-    } else {
-      unsigned(e1) < unsigned(e2)
-    }
+    if e1 == e2 then { unsigned(m1) < unsigned(m2) } else { unsigned(e1) < unsigned(e2) }
   } else {
     if (s1 == 0b0) & (s2 == 0b1) then {
       false
@@ -151,27 +139,15 @@ function flt_D(v1, v2, is_quiet) = {
       if (s1 == 0b1) & (s2 == 0b0) then {
         true
       } else {
-        if e1 == e2 then {
-          unsigned(m1) > unsigned(m2)
-        } else {
-          unsigned(e1) > unsigned(e2)
-        }
+        if e1 == e2 then { unsigned(m1) > unsigned(m2) } else { unsigned(e1) > unsigned(e2) }
       }
     }
   };
 
   let fflags = if is_quiet then {
-    if f_is_SNaN_D(v1) | f_is_SNaN_D(v2) then {
-      nvFlag()
-    } else {
-      zeros()
-    }
+    if f_is_SNaN_D(v1) | f_is_SNaN_D(v2) then { nvFlag() } else { zeros() }
   } else {
-    if f_is_NaN_D(v1) | f_is_NaN_D(v2) then {
-      nvFlag()
-    } else {
-      zeros()
-    }
+    if f_is_NaN_D(v1) | f_is_NaN_D(v2) then { nvFlag() } else { zeros() }
   };
 
   (result, fflags)
@@ -186,11 +162,7 @@ function fle_D(v1, v2, is_quiet) = {
   let v2Is0 = f_is_neg_zero_D(v2) | f_is_pos_zero_D(v2);
 
   let result : bool = if (s1 == 0b0) & (s2 == 0b0) then {
-    if e1 == e2 then {
-      unsigned(m1) <= unsigned(m2)
-    } else {
-      unsigned(e1) < unsigned(e2)
-    }
+    if e1 == e2 then { unsigned(m1) <= unsigned(m2) } else { unsigned(e1) < unsigned(e2) }
   } else {
     if (s1 == 0b0) & (s2 == 0b1) then {
       v1Is0 & v2Is0
@@ -199,27 +171,15 @@ function fle_D(v1, v2, is_quiet) = {
       if (s1 == 0b1) & (s2 == 0b0) then {
         true
       } else {
-        if e1 == e2 then {
-          unsigned(m1) >= unsigned(m2)
-        } else {
-          unsigned(e1) > unsigned(e2)
-        }
+        if e1 == e2 then { unsigned(m1) >= unsigned(m2) } else { unsigned(e1) > unsigned(e2) }
       }
     }
   };
 
   let fflags = if is_quiet then {
-    if f_is_SNaN_D(v1) | f_is_SNaN_D(v2) then {
-      nvFlag()
-    } else {
-      zeros()
-    }
+    if f_is_SNaN_D(v1) | f_is_SNaN_D(v2) then { nvFlag() } else { zeros() }
   } else {
-    if f_is_NaN_D(v1) | f_is_NaN_D(v2) then {
-      nvFlag()
-    } else {
-      zeros()
-    }
+    if f_is_NaN_D(v1) | f_is_NaN_D(v2) then { nvFlag() } else { zeros() }
   };
 
   (result, fflags)
@@ -234,9 +194,7 @@ function haveDoubleFPU () -> bool = haveDExt() | haveZdinx()
 val validDoubleRegs : forall 'n, 'n > 0. (implicit('n), vector('n, dec, regidx)) -> bool
 function validDoubleRegs(n, regs) = {
   if haveZdinx() & sizeof(xlen) == 32 then {
-    foreach (i from 0 to (n - 1)) if (regs[i][0]) == bitone then {
-      return false
-    }
+    foreach (i from 0 to (n - 1)) if (regs[i][0]) == bitone then { return false }
   };
   true
 }
@@ -989,11 +947,7 @@ function clause execute F_UN_TYPE_D(rs1, rd, FCLASS_D) = {
                   if f_is_SNaN_D(rs1_val_D) then {
                     0b0100000000
                   } else {
-                    if f_is_QNaN_D(rs1_val_D) then {
-                      0b1000000000
-                    } else {
-                      zeros()
-                    }
+                    if f_is_QNaN_D(rs1_val_D) then { 0b1000000000 } else { zeros() }
                   }
                 }
               }

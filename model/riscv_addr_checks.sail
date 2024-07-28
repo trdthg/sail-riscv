@@ -54,7 +54,9 @@ function ext_data_get_addr(
   width : range(1, max_mem_access),
 ) -> (
   Ext_DataAddr_Check(ext_data_addr_error)
-) = let addr = X(base) + offset in Ext_DataAddr_OK(addr)
+) =
+  let addr = (X(base) + offset) in
+  Ext_DataAddr_OK(addr)
 
 function ext_handle_data_check_error err : ext_data_addr_error -> unit = ()
 

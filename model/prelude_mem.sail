@@ -93,15 +93,14 @@ val write_ram : forall 'n, 0 < 'n <= max_mem_access. (write_kind, xlenbits, int(
 
 function write_ram(wk, addr, width, data, meta) = {
   let request : Mem_write_request('n, 64, xlenbits, unit, RISCV_strong_access) = struct {
-    access_kind =
-      match wk {
-        Write_plain => AK_explicit(struct { variety = AV_plain, strength = AS_normal }),
-        Write_RISCV_release => AK_explicit(struct { variety = AV_plain, strength = AS_rel_or_acq }),
-        Write_RISCV_strong_release => AK_arch(struct { variety = AV_plain }),
-        Write_RISCV_conditional => AK_explicit(struct { variety = AV_exclusive, strength = AS_normal }),
-        Write_RISCV_conditional_release => AK_explicit(struct { variety = AV_exclusive, strength = AS_rel_or_acq }),
-        Write_RISCV_conditional_strong_release => AK_arch(struct { variety = AV_exclusive }),
-      },
+    access_kind = match wk {
+      Write_plain => AK_explicit(struct { variety = AV_plain, strength = AS_normal }),
+      Write_RISCV_release => AK_explicit(struct { variety = AV_plain, strength = AS_rel_or_acq }),
+      Write_RISCV_strong_release => AK_arch(struct { variety = AV_plain }),
+      Write_RISCV_conditional => AK_explicit(struct { variety = AV_exclusive, strength = AS_normal }),
+      Write_RISCV_conditional_release => AK_explicit(struct { variety = AV_exclusive, strength = AS_rel_or_acq }),
+      Write_RISCV_conditional_strong_release => AK_arch(struct { variety = AV_exclusive }),
+    },
     va = None(),
     pa = addr,
     translation = (),
@@ -134,22 +133,17 @@ instantiation sail_mem_read with
 
 val read_ram : forall 'n, 0 < 'n <= max_mem_access. (read_kind, xlenbits, int('n), bool) -> (bits(8 * 'n), mem_meta)
 function read_ram(rk, addr, width, read_meta) = {
-  let meta = if read_meta then {
-    __ReadRAM_Meta(addr, width)
-  } else {
-    default_meta
-  };
+  let meta = if read_meta then { __ReadRAM_Meta(addr, width) } else { default_meta };
   let request : Mem_read_request('n, 64, xlenbits, unit, RISCV_strong_access) = struct {
-    access_kind =
-      match rk {
-        Read_plain => AK_explicit(struct { variety = AV_plain, strength = AS_normal }),
-        Read_ifetch => AK_ifetch(),
-        Read_RISCV_acquire => AK_explicit(struct { variety = AV_plain, strength = AS_rel_or_acq }),
-        Read_RISCV_strong_acquire => AK_arch(struct { variety = AV_plain }),
-        Read_RISCV_reserved => AK_explicit(struct { variety = AV_exclusive, strength = AS_normal }),
-        Read_RISCV_reserved_acquire => AK_explicit(struct { variety = AV_exclusive, strength = AS_rel_or_acq }),
-        Read_RISCV_reserved_strong_acquire => AK_arch(struct { variety = AV_exclusive }),
-      },
+    access_kind = match rk {
+      Read_plain => AK_explicit(struct { variety = AV_plain, strength = AS_normal }),
+      Read_ifetch => AK_ifetch(),
+      Read_RISCV_acquire => AK_explicit(struct { variety = AV_plain, strength = AS_rel_or_acq }),
+      Read_RISCV_strong_acquire => AK_arch(struct { variety = AV_plain }),
+      Read_RISCV_reserved => AK_explicit(struct { variety = AV_exclusive, strength = AS_normal }),
+      Read_RISCV_reserved_acquire => AK_explicit(struct { variety = AV_exclusive, strength = AS_rel_or_acq }),
+      Read_RISCV_reserved_strong_acquire => AK_arch(struct { variety = AV_exclusive }),
+    },
     va = None(),
     pa = addr,
     translation = (),

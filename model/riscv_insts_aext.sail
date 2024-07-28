@@ -261,35 +261,17 @@ function clause execute AMO(op, aq, rl, rs2, rs1, width, rd) = {
                       AMOXOR => rs2_val ^ loaded,
                       AMOAND => rs2_val & loaded,
                       AMOOR => rs2_val | loaded,
-                      AMOMIN => if rs2_val <_s loaded then {
-                        rs2_val
-                      } else {
-                        loaded
-                      },
-                      AMOMAX => if rs2_val >_s loaded then {
-                        rs2_val
-                      } else {
-                        loaded
-                      },
-                      AMOMINU => if rs2_val <_u loaded then {
-                        rs2_val
-                      } else {
-                        loaded
-                      },
-                      AMOMAXU => if rs2_val >_u loaded then {
-                        rs2_val
-                      } else {
-                        loaded
-                      },
+                      AMOMIN => if rs2_val <_s loaded then { rs2_val } else { loaded },
+                      AMOMAX => if rs2_val >_s loaded then { rs2_val } else { loaded },
+                      AMOMINU => if rs2_val <_u loaded then { rs2_val } else { loaded },
+                      AMOMAXU => if rs2_val >_u loaded then { rs2_val } else { loaded },
                     };
                     match mem_write_value(addr, width_bytes, sign_extend(result), aq & rl, rl, true) {
                       MemValue(true) => {
                         X(rd) = sign_extend(loaded);
                         RETIRE_SUCCESS
                       },
-                      MemValue(false) => {
-                        internal_error(__FILE__, __LINE__, "AMO got false from mem_write_value")
-                      },
+                      MemValue(false) => { internal_error(__FILE__, __LINE__, "AMO got false from mem_write_value") },
                       MemException(e) => {
                         handle_mem_exception(vaddr, e);
                         RETIRE_FAIL

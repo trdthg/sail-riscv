@@ -48,23 +48,7 @@ function pmpReadCfgReg n : range(0, 15) -> xlenbits = {
     (pmpcfg_n[n * 4 + 3]).bits @ (pmpcfg_n[n * 4 + 2]).bits @ (pmpcfg_n[n * 4 + 1]).bits @ (pmpcfg_n[n * 4 + 0]).bits
   } else {
     assert(n % 2 == 0, "Unexpected pmp config reg read");
-    (pmpcfg_n[
-      n * 4 + 7
-    ]).bits @ (pmpcfg_n[
-      n * 4 + 6
-    ]).bits @ (pmpcfg_n[
-      n * 4 + 5
-    ]).bits @ (pmpcfg_n[
-      n * 4 + 4
-    ]).bits @ (pmpcfg_n[
-      n * 4 + 3
-    ]).bits @ (pmpcfg_n[
-      n * 4 + 2
-    ]).bits @ (pmpcfg_n[
-      n * 4 + 1
-    ]).bits @ (pmpcfg_n[
-      n * 4 + 0
-    ]).bits
+    (pmpcfg_n[n * 4 + 7]).bits @ (pmpcfg_n[n * 4 + 6]).bits @ (pmpcfg_n[n * 4 + 5]).bits @ (pmpcfg_n[n * 4 + 4]).bits @ (pmpcfg_n[n * 4 + 3]).bits @ (pmpcfg_n[n * 4 + 2]).bits @ (pmpcfg_n[n * 4 + 1]).bits @ (pmpcfg_n[n * 4 + 0]).bits
   }
 }
 
@@ -73,9 +57,7 @@ function pmpReadAddrReg n : range(0, 63) -> xlenbits = {
   let match_type = pmpcfg_n[n][A];
   let addr = pmpaddr_n[n];
 
-  match match_type[
-    1
-  ] {
+  match match_type[1] {
     bitone if G >= 2 => {
       // [G-2..0] read as all ones to form mask, therefore we need G-1 bits.
       let mask : xlenbits = zero_extend(ones(min(G - 1, sizeof(xlen))));
@@ -104,24 +86,14 @@ function pmpWriteCfg(n : range(0, 63), cfg : Pmpcfg_ent, v : bits(8)) -> Pmpcfg_
   // "The R, W, and X fields form a collective WARL field for which the combinations with R=0 and W=1 are reserved."
   // In this implementation if R=0 and W=1 then R, W and X are all set to 0.
   // This is the least risky option from a security perspective.
-  let cfg = if cfg[
-    W
-  ] == 0b1 & cfg[
-    R
-  ] == 0b0 then {
-    [cfg with X = 0b0, W = 0b0, R = 0b0]
-  } else {
-    cfg
-  };
+  let cfg = if cfg[W] == 0b1 & cfg[R] == 0b0 then { [cfg with X = 0b0, W = 0b0, R = 0b0] } else { cfg };
 
   // "When G >= 1, the NA4 mode is not selectable."
   // In this implementation we set it to OFF if NA4 is selected.
   // This is the least risky option from a security perspective.
   let cfg = if sys_pmp_grain() >= 1 & pmpAddrMatchType_of_bits(cfg[A]) == NA4 then {
     [cfg with A = pmpAddrMatchType_to_bits(OFF)]
-  } else {
-    cfg
-  };
+  } else { cfg };
 
   cfg
 }
@@ -141,24 +113,17 @@ function pmpWriteCfgReg(n : range(0, 15), v : xlenbits) -> unit = {
   }
 }
 
-function pmpWriteAddr(locked : bool, tor_locked : bool, reg : xlenbits, v : xlenbits) -> xlenbits = if sizeof(xlen) ==
-  32 then {
-  if locked | tor_locked then {
-    reg
-  } else {
-    v
-  }
+function pmpWriteAddr(locked : bool, tor_locked : bool, reg : xlenbits, v : xlenbits) -> xlenbits = if sizeof(xlen) == 32 then {
+  if locked | tor_locked then { reg } else { v }
 } else {
-  if locked | tor_locked then {
-    reg
-  } else {
-    zero_extend(v[53..0])
-  }
+  if locked | tor_locked then { reg } else { zero_extend(v[53..0]) }
 }
 
 function pmpWriteAddrReg(n : range(0, 63), v : xlenbits) -> unit = {
-  pmpaddr_n[
-    n
-  ] =
-    pmpWriteAddr(pmpLocked(pmpcfg_n[n]), if n + 1 < 64 then pmpTORLocked(pmpcfg_n[n + 1]) else false, pmpaddr_n[n], v)
+  pmpaddr_n[n] = pmpWriteAddr(
+    pmpLocked(pmpcfg_n[n]),
+    if n + 1 < 64 then pmpTORLocked(pmpcfg_n[n + 1]) else false,
+    pmpaddr_n[n],
+    v,
+  )
 }

@@ -59,11 +59,7 @@ function calculate_new_vl(AVL, VLMAX) = {
   if AVL <= VLMAX then {
     to_bits(sizeof(xlen), AVL)
   } else {
-    if AVL < 2 * VLMAX then {
-      to_bits(sizeof(xlen), (AVL + 1) / 2)
-    } else {
-      to_bits(sizeof(xlen), VLMAX)
-    }
+    if AVL < 2 * VLMAX then { to_bits(sizeof(xlen), (AVL + 1) / 2) } else { to_bits(sizeof(xlen), VLMAX) }
   }
 }
 

@@ -212,19 +212,9 @@ function clause execute SHIFTIOP(shamt, rs1, rd, op) = {
 
   /* the decoder guard should ensure that shamt[5] = 0 for RV32 */
   let result : xlenbits = match op {
-    RISCV_SLLI => if sizeof(xlen) == 32 then {
-      rs1_val << (shamt[4..0])
-    } else {
-      rs1_val << shamt
-    },
-    RISCV_SRLI => if sizeof(xlen) == 32 then {
-      rs1_val >> (shamt[4..0])
-    } else {
-      rs1_val >> shamt
-    },
-    RISCV_SRAI => if sizeof(xlen) == 32 then {
-      shift_right_arith32(rs1_val, shamt[4..0])
-    } else {
+    RISCV_SLLI => if sizeof(xlen) == 32 then { rs1_val << (shamt[4..0]) } else { rs1_val << shamt },
+    RISCV_SRLI => if sizeof(xlen) == 32 then { rs1_val >> (shamt[4..0]) } else { rs1_val >> shamt },
+    RISCV_SRAI => if sizeof(xlen) == 32 then { shift_right_arith32(rs1_val, shamt[4..0]) } else {
       shift_right_arith64(rs1_val, shamt)
     },
   };
@@ -265,20 +255,10 @@ function clause execute RTYPE(rs2, rs1, rd, op) = {
     RISCV_AND => rs1_val & rs2_val,
     RISCV_OR => rs1_val | rs2_val,
     RISCV_XOR => rs1_val ^ rs2_val,
-    RISCV_SLL => if sizeof(xlen) == 32 then {
-      rs1_val << (rs2_val[4..0])
-    } else {
-      rs1_val << (rs2_val[5..0])
-    },
-    RISCV_SRL => if sizeof(xlen) == 32 then {
-      rs1_val >> (rs2_val[4..0])
-    } else {
-      rs1_val >> (rs2_val[5..0])
-    },
+    RISCV_SLL => if sizeof(xlen) == 32 then { rs1_val << (rs2_val[4..0]) } else { rs1_val << (rs2_val[5..0]) },
+    RISCV_SRL => if sizeof(xlen) == 32 then { rs1_val >> (rs2_val[4..0]) } else { rs1_val >> (rs2_val[5..0]) },
     RISCV_SUB => rs1_val - rs2_val,
-    RISCV_SRA => if sizeof(xlen) == 32 then {
-      shift_right_arith32(rs1_val, rs2_val[4..0])
-    } else {
+    RISCV_SRA => if sizeof(xlen) == 32 then { shift_right_arith32(rs1_val, rs2_val[4..0]) } else {
       shift_right_arith64(rs1_val, rs2_val[5..0])
     },
   };
@@ -311,11 +291,7 @@ mapping clause encdec = LOAD(imm, rs1, rd, is_unsigned, size, false, false) if (
   <-> imm @ rs1 @ bool_bits(is_unsigned) @ size_enc(size) @ rd @ 0b0000011 if (size_bytes(size) < sizeof(xlen_bytes)) | (not(is_unsigned) & size_bytes(size) <= sizeof(xlen_bytes))
 
 val extend_value : forall 'n, 0 < 'n <= xlen. (bool, bits('n)) -> xlenbits
-function extend_value(is_unsigned, value) = if is_unsigned then {
-  zero_extend(value)
-} else {
-  sign_extend(value)
-}
+function extend_value(is_unsigned, value) = if is_unsigned then { zero_extend(value) } else { sign_extend(value) }
 
 function is_aligned(vaddr : xlenbits, width : word_width) -> bool = match width {
   BYTE => true,
@@ -325,8 +301,9 @@ function is_aligned(vaddr : xlenbits, width : word_width) -> bool = match width 
 }
 
 // Return true if the address is misaligned and we don't support misaligned access.
-function check_misaligned(vaddr : xlenbits, width : word_width) -> bool = not(plat_enable_misaligned_access()) &
-  not(is_aligned(vaddr, width))
+function check_misaligned(vaddr : xlenbits, width : word_width) -> bool = not(plat_enable_misaligned_access()) & not(
+  is_aligned(vaddr, width),
+)
 
 function clause execute LOAD(imm, rs1, rd, is_unsigned, width, aq, rl) = {
   let offset : xlenbits = sign_extend(imm);
@@ -564,11 +541,7 @@ mapping clause encdec = FENCE(pred, succ)
 
 function effective_fence_set(set : bits(4), fiom : bool) -> bits(4) = {
   // The bits are IORW. If FIOM is set then I implies R and O implies W.
-  if fiom then {
-    set[3..2] @ ((set[1..0]) | (set[3..2]))
-  } else {
-    set
-  }
+  if fiom then { set[3..2] @ ((set[1..0]) | (set[3..2])) } else { set }
 }
 
 function clause execute FENCE(pred, succ) = {
@@ -666,12 +639,11 @@ mapping clause encdec = ECALL()
 
 function clause execute ECALL() = {
   let t : sync_exception = struct {
-    trap =
-      match cur_privilege {
-        User => E_U_EnvCall(),
-        Supervisor => E_S_EnvCall(),
-        Machine => E_M_EnvCall(),
-      },
+    trap = match cur_privilege {
+      User => E_U_EnvCall(),
+      Supervisor => E_S_EnvCall(),
+      Machine => E_M_EnvCall(),
+    },
     excinfo = None() : option(xlenbits),
     ext = None(),
   };
@@ -713,9 +685,7 @@ mapping clause encdec = SRET()
 function clause execute SRET() = {
   let sret_illegal : bool = match cur_privilege {
     User => true,
-    Supervisor => not(haveSupMode()) | mstatus[
-      TSR
-    ] == 0b1,
+    Supervisor => not(haveSupMode()) | mstatus[TSR] == 0b1,
     Machine => not(haveSupMode()),
   };
   if sret_illegal then {
@@ -780,16 +750,8 @@ mapping clause encdec = SFENCE_VMA(rs1, rs2)
   <-> 0b0001001 @ rs2 @ rs1 @ 0b000 @ 0b00000 @ 0b1110011
 
 function clause execute SFENCE_VMA(rs1, rs2) = {
-  let addr : option(xlenbits) = if rs1 == 0b00000 then {
-    None()
-  } else {
-    Some(X(rs1))
-  };
-  let asid : option(xlenbits) = if rs2 == 0b00000 then {
-    None()
-  } else {
-    Some(X(rs2))
-  };
+  let addr : option(xlenbits) = if rs1 == 0b00000 then { None() } else { Some(X(rs1)) };
+  let asid : option(xlenbits) = if rs2 == 0b00000 then { None() } else { Some(X(rs2)) };
   match cur_privilege {
     User => {
       handle_illegal();

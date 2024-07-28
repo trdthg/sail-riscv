@@ -47,9 +47,7 @@ function clause execute VVMTYPE(funct6, vs2, vs1, vd) = {
   (result, mask) = init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       let res : bool = match funct6 {
         VVM_VMADC => unsigned(vs2_val[i]) + unsigned(vs1_val[i]) + unsigned(bool_to_bits(vm_val[i])) > 2 ^SEW - 1,
         VVM_VMSBC => unsigned(vs2_val[i]) - unsigned(vs1_val[i]) - unsigned(bool_to_bits(vm_val[i])) < 0,
@@ -107,9 +105,7 @@ function clause execute VVMCTYPE(funct6, vs2, vs1, vd) = {
   (result, mask) = init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       let res : bool = match funct6 {
         VVMC_VMADC => unsigned(vs2_val[i]) + unsigned(vs1_val[i]) > 2 ^SEW - 1,
         VVMC_VMSBC => unsigned(vs2_val[i]) - unsigned(vs1_val[i]) < 0,
@@ -160,9 +156,7 @@ function clause execute VVMSTYPE(funct6, vs2, vs1, vd) = {
 
   /* for bypassing normal masking in init_masked_result */
   vec_trues : vector('n, dec, bool) = undefined;
-  foreach (i from 0 to (num_elem - 1)) {
-    vec_trues[i] = true
-  };
+  foreach (i from 0 to (num_elem - 1)) { vec_trues[i] = true };
 
   let vm_val : vector('n, dec, bool) = read_vmask_carry(num_elem, 0b0, 0b00000);
   let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
@@ -174,16 +168,11 @@ function clause execute VVMSTYPE(funct6, vs2, vs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vec_trues);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
-        match funct6 {
-          VVMS_VADC => to_bits(SEW, unsigned(vs2_val[i]) + unsigned(vs1_val[i]) + unsigned(bool_to_bits(vm_val[i]))),
-          VVMS_VSBC => to_bits(SEW, unsigned(vs2_val[i]) - unsigned(vs1_val[i]) - unsigned(bool_to_bits(vm_val[i]))),
-        }
+    if mask[i] then {
+      result[i] = match funct6 {
+        VVMS_VADC => to_bits(SEW, unsigned(vs2_val[i]) + unsigned(vs1_val[i]) + unsigned(bool_to_bits(vm_val[i]))),
+        VVMS_VSBC => to_bits(SEW, unsigned(vs2_val[i]) - unsigned(vs1_val[i]) - unsigned(bool_to_bits(vm_val[i]))),
+      }
     }
   };
 
@@ -239,9 +228,7 @@ function clause execute VVCMPTYPE(funct6, vm, vs2, vs1, vd) = {
   (result, mask) = init_masked_result_cmp(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       let res : bool = match funct6 {
         VVCMP_VMSEQ => (vs2_val[i]) == (vs1_val[i]),
         VVCMP_VMSNE => (vs2_val[i]) != (vs1_val[i]),
@@ -308,9 +295,7 @@ function clause execute VXMTYPE(funct6, vs2, rs1, vd) = {
   (result, mask) = init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       let res : bool = match funct6 {
         VXM_VMADC => unsigned(vs2_val[i]) + unsigned(rs1_val) + unsigned(bool_to_bits(vm_val[i])) > 2 ^SEW - 1,
         VXM_VMSBC => unsigned(vs2_val[i]) - unsigned(rs1_val) - unsigned(bool_to_bits(vm_val[i])) < 0,
@@ -368,9 +353,7 @@ function clause execute VXMCTYPE(funct6, vs2, rs1, vd) = {
   (result, mask) = init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       let res : bool = match funct6 {
         VXMC_VMADC => unsigned(vs2_val[i]) + unsigned(rs1_val) > 2 ^SEW - 1,
         VXMC_VMSBC => unsigned(vs2_val[i]) - unsigned(rs1_val) < 0,
@@ -421,9 +404,7 @@ function clause execute VXMSTYPE(funct6, vs2, rs1, vd) = {
 
   /* for bypassing normal masking in init_masked_result */
   vec_trues : vector('n, dec, bool) = undefined;
-  foreach (i from 0 to (num_elem - 1)) {
-    vec_trues[i] = true
-  };
+  foreach (i from 0 to (num_elem - 1)) { vec_trues[i] = true };
 
   let vm_val : vector('n, dec, bool) = read_vmask_carry(num_elem, 0b0, 0b00000);
   let rs1_val : bits('m) = get_scalar(rs1, SEW);
@@ -435,16 +416,11 @@ function clause execute VXMSTYPE(funct6, vs2, rs1, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vec_trues);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
-        match funct6 {
-          VXMS_VADC => to_bits(SEW, unsigned(vs2_val[i]) + unsigned(rs1_val) + unsigned(bool_to_bits(vm_val[i]))),
-          VXMS_VSBC => to_bits(SEW, unsigned(vs2_val[i]) - unsigned(rs1_val) - unsigned(bool_to_bits(vm_val[i]))),
-        }
+    if mask[i] then {
+      result[i] = match funct6 {
+        VXMS_VADC => to_bits(SEW, unsigned(vs2_val[i]) + unsigned(rs1_val) + unsigned(bool_to_bits(vm_val[i]))),
+        VXMS_VSBC => to_bits(SEW, unsigned(vs2_val[i]) - unsigned(rs1_val) - unsigned(bool_to_bits(vm_val[i]))),
+      }
     }
   };
 
@@ -502,9 +478,7 @@ function clause execute VXCMPTYPE(funct6, vm, vs2, rs1, vd) = {
   (result, mask) = init_masked_result_cmp(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       let res : bool = match funct6 {
         VXCMP_VMSEQ => (vs2_val[i]) == rs1_val,
         VXCMP_VMSNE => (vs2_val[i]) != rs1_val,
@@ -574,9 +548,7 @@ function clause execute VIMTYPE(funct6, vs2, simm, vd) = {
   (result, mask) = init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       let res : bool = match funct6 {
         VIM_VMADC => unsigned(vs2_val[i]) + unsigned(imm_val) + unsigned(bool_to_bits(vm_val[i])) > 2 ^SEW - 1,
       };
@@ -631,9 +603,7 @@ function clause execute VIMCTYPE(funct6, vs2, simm, vd) = {
   (result, mask) = init_masked_result_carry(num_elem, SEW, LMUL_pow, vd_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       let res : bool = match funct6 { VIMC_VMADC => unsigned(vs2_val[i]) + unsigned(imm_val) > 2 ^SEW - 1,  };
       result[i] = res
     }
@@ -679,9 +649,7 @@ function clause execute VIMSTYPE(funct6, vs2, simm, vd) = {
 
   /* for bypassing normal masking in init_masked_result */
   vec_trues : vector('n, dec, bool) = undefined;
-  foreach (i from 0 to (num_elem - 1)) {
-    vec_trues[i] = true
-  };
+  foreach (i from 0 to (num_elem - 1)) { vec_trues[i] = true };
 
   let vm_val : vector('n, dec, bool) = read_vmask_carry(num_elem, 0b0, 0b00000);
   let imm_val : bits('m) = sign_extend(simm);
@@ -693,15 +661,10 @@ function clause execute VIMSTYPE(funct6, vs2, simm, vd) = {
   (result, mask) = init_masked_result(num_elem, SEW, LMUL_pow, vd_val, vec_trues);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
-      result[
-        i
-      ] =
-        match funct6 {
-          VIMS_VADC => to_bits(SEW, unsigned(vs2_val[i]) + unsigned(imm_val) + unsigned(bool_to_bits(vm_val[i]))),
-        }
+    if mask[i] then {
+      result[i] = match funct6 {
+        VIMS_VADC => to_bits(SEW, unsigned(vs2_val[i]) + unsigned(imm_val) + unsigned(bool_to_bits(vm_val[i]))),
+      }
     }
   };
 
@@ -756,9 +719,7 @@ function clause execute VICMPTYPE(funct6, vm, vs2, simm, vd) = {
   (result, mask) = init_masked_result_cmp(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       let res : bool = match funct6 {
         VICMP_VMSEQ => (vs2_val[i]) == imm_val,
         VICMP_VMSNE => (vs2_val[i]) != imm_val,
@@ -827,9 +788,7 @@ function clause execute FVVMTYPE(funct6, vm, vs2, vs1, vd) = {
   (result, mask) = init_masked_result_cmp(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       let res : bool = match funct6 {
         FVVM_VMFEQ => fp_eq(vs2_val[i], vs1_val[i]),
         FVVM_VMFNE => ~(fp_eq(vs2_val[i], vs1_val[i])),
@@ -896,9 +855,7 @@ function clause execute FVFMTYPE(funct6, vm, vs2, rs1, vd) = {
   (result, mask) = init_masked_result_cmp(num_elem, SEW, LMUL_pow, vd_val, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       let res : bool = match funct6 {
         VFM_VMFEQ => fp_eq(vs2_val[i], rs1_val),
         VFM_VMFNE => ~(fp_eq(vs2_val[i], rs1_val)),

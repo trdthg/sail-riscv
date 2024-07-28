@@ -35,13 +35,9 @@ function readCSR csr : csreg -> xlenbits = {
     (0x304, _) => mie.bits,
     (0x305, _) => get_mtvec(),
     (0x306, _) => zero_extend(mcounteren.bits),
-    (0x30A, _) => menvcfg.bits[
-      (sizeof(xlen) - 1)..0
-    ],
+    (0x30A, _) => menvcfg.bits[(sizeof(xlen) - 1)..0],
     (0x310, 32) => mstatush.bits,
-    (0x31A, 32) => menvcfg.bits[
-      63..32
-    ],
+    (0x31A, 32) => menvcfg.bits[63..32],
     (0x320, _) => zero_extend(mcountinhibit.bits),
     (0x340, _) => mscratch,
     (0x341, _) => get_xret_target(Machine) & pc_alignment_mask(),
@@ -49,27 +45,17 @@ function readCSR csr : csreg -> xlenbits = {
     (0x343, _) => mtval,
     (0x344, _) => mip.bits,
     // pmpcfgN
-    (0x3A @ idx : bits(4), _) if idx[
-      0
-    ] == bitzero | sizeof(xlen) == 32 => pmpReadCfgReg(unsigned(idx)),
+    (0x3A @ idx : bits(4), _) if idx[0] == bitzero | sizeof(xlen) == 32 => pmpReadCfgReg(unsigned(idx)),
     // pmpaddrN. Unfortunately the PMP index does not nicely align with the CSR index bits.
     (0x3B @ idx : bits(4), _) => pmpReadAddrReg(unsigned(0b00 @ idx)),
     (0x3C @ idx : bits(4), _) => pmpReadAddrReg(unsigned(0b01 @ idx)),
     (0x3D @ idx : bits(4), _) => pmpReadAddrReg(unsigned(0b10 @ idx)),
     (0x3E @ idx : bits(4), _) => pmpReadAddrReg(unsigned(0b11 @ idx)),
     /* machine mode counters */
-    (0xB00, _) => mcycle[
-      (sizeof(xlen) - 1)..0
-    ],
-    (0xB02, _) => minstret[
-      (sizeof(xlen) - 1)..0
-    ],
-    (0xB80, 32) => mcycle[
-      63..32
-    ],
-    (0xB82, 32) => minstret[
-      63..32
-    ],
+    (0xB00, _) => mcycle[(sizeof(xlen) - 1)..0],
+    (0xB02, _) => minstret[(sizeof(xlen) - 1)..0],
+    (0xB80, 32) => mcycle[63..32],
+    (0xB82, 32) => minstret[63..32],
     /* vector */
     (0x008, _) => zero_extend(vstart),
     (0x009, _) => zero_extend(vxsat),
@@ -87,9 +73,7 @@ function readCSR csr : csreg -> xlenbits = {
     (0x104, _) => lower_mie(mie, mideleg).bits,
     (0x105, _) => get_stvec(),
     (0x106, _) => zero_extend(scounteren.bits),
-    (0x10A, _) => senvcfg.bits[
-      (sizeof(xlen) - 1)..0
-    ],
+    (0x10A, _) => senvcfg.bits[(sizeof(xlen) - 1)..0],
     (0x140, _) => sscratch,
     (0x141, _) => get_xret_target(Supervisor) & pc_alignment_mask(),
     (0x142, _) => scause.bits,
@@ -97,38 +81,25 @@ function readCSR csr : csreg -> xlenbits = {
     (0x144, _) => lower_mip(mip, mideleg).bits,
     (0x180, _) => satp,
     /* user mode counters */
-    (0xC00, _) => mcycle[
-      (sizeof(xlen) - 1)..0
-    ],
-    (0xC01, _) => mtime[
-      (sizeof(xlen) - 1)..0
-    ],
-    (0xC02, _) => minstret[
-      (sizeof(xlen) - 1)..0
-    ],
-    (0xC80, 32) => mcycle[
-      63..32
-    ],
-    (0xC81, 32) => mtime[
-      63..32
-    ],
-    (0xC82, 32) => minstret[
-      63..32
-    ],
+    (0xC00, _) => mcycle[(sizeof(xlen) - 1)..0],
+    (0xC01, _) => mtime[(sizeof(xlen) - 1)..0],
+    (0xC02, _) => minstret[(sizeof(xlen) - 1)..0],
+    (0xC80, 32) => mcycle[63..32],
+    (0xC81, 32) => mtime[63..32],
+    (0xC82, 32) => minstret[63..32],
     /* user mode: Zkr */
     (0x015, _) => read_seed_csr(),
-    _ => /* check extensions */
-    match ext_read_CSR(csr) {
-      Some(res) => res,
-      None() => {
-        print_bits("unhandled read to CSR ", csr);
-        zero_extend(0x0)
+    _ =>
+      /* check extensions */
+      match ext_read_CSR(csr) {
+        Some(res) => res,
+        None() => {
+          print_bits("unhandled read to CSR ", csr);
+          zero_extend(0x0)
+        },
       },
-    },
   };
-  if get_config_print_reg() then {
-    print_reg("CSR " ^ to_str(csr) ^ " -> " ^ BitStr(res))
-  };
+  if get_config_print_reg() then { print_reg("CSR " ^ to_str(csr) ^ " -> " ^ BitStr(res)) };
   res
 }
 
@@ -155,9 +126,7 @@ function writeCSR(csr : csreg, value : xlenbits) -> unit = {
       mie = legalize_mie(mie, value);
       Some(mie.bits)
     },
-    (0x305, _) => {
-      Some(set_mtvec(value))
-    },
+    (0x305, _) => { Some(set_mtvec(value)) },
     (0x306, _) => {
       mcounteren = legalize_mcounteren(mcounteren, value);
       Some(zero_extend(mcounteren.bits))
@@ -185,9 +154,7 @@ function writeCSR(csr : csreg, value : xlenbits) -> unit = {
       mscratch = value;
       Some(mscratch)
     },
-    (0x341, _) => {
-      Some(set_xret_target(Machine, value))
-    },
+    (0x341, _) => { Some(set_xret_target(Machine, value)) },
     (0x342, _) => {
       mcause.bits = value;
       Some(mcause.bits)
@@ -201,9 +168,7 @@ function writeCSR(csr : csreg, value : xlenbits) -> unit = {
       Some(mip.bits)
     },
     // pmpcfgN
-    (0x3A @ idx : bits(4), _) if idx[
-      0
-    ] == bitzero | sizeof(xlen) == 32 => {
+    (0x3A @ idx : bits(4), _) if idx[0] == bitzero | sizeof(xlen) == 32 => {
       let idx = unsigned(idx);
       pmpWriteCfgReg(idx, value);
       Some(pmpReadCfgReg(idx))
@@ -270,9 +235,7 @@ function writeCSR(csr : csreg, value : xlenbits) -> unit = {
       mie = legalize_sie(mie, mideleg, value);
       Some(mie.bits)
     },
-    (0x105, _) => {
-      Some(set_stvec(value))
-    },
+    (0x105, _) => { Some(set_stvec(value)) },
     (0x106, _) => {
       scounteren = legalize_scounteren(scounteren, value);
       Some(zero_extend(scounteren.bits))
@@ -285,9 +248,7 @@ function writeCSR(csr : csreg, value : xlenbits) -> unit = {
       sscratch = value;
       Some(sscratch)
     },
-    (0x141, _) => {
-      Some(set_xret_target(Supervisor, value))
-    },
+    (0x141, _) => { Some(set_xret_target(Supervisor, value)) },
     (0x142, _) => {
       scause.bits = value;
       Some(scause.bits)
@@ -339,26 +300,19 @@ function writeCSR(csr : csreg, value : xlenbits) -> unit = {
     _ => ext_write_CSR(csr, value),
   };
   match res {
-    Some(v) => if get_config_print_reg() then {
-      print_reg("CSR " ^ to_str(csr) ^ " <- " ^ BitStr(v) ^ " (input: " ^ BitStr(value) ^ ")")
-    },
+    Some(v) =>
+      if get_config_print_reg() then {
+        print_reg("CSR " ^ to_str(csr) ^ " <- " ^ BitStr(v) ^ " (input: " ^ BitStr(value) ^ ")")
+      },
     None() => print_bits("unhandled write to CSR ", csr),
   }
 }
 
 function clause execute CSR(csr, rs1, rd, is_imm, op) = {
-  let rs1_val : xlenbits = if is_imm then {
-    zero_extend(rs1)
-  } else {
-    X(rs1)
-  };
+  let rs1_val : xlenbits = if is_imm then { zero_extend(rs1) } else { X(rs1) };
   let isWrite : bool = match op {
     CSRRW => true,
-    _ => if is_imm then {
-      unsigned(rs1_val) != 0
-    } else {
-      unsigned(rs1) != 0
-    },
+    _ => if is_imm then { unsigned(rs1_val) != 0 } else { unsigned(rs1) != 0 },
   };
   if not(check_CSR(csr, cur_privilege, isWrite)) then {
     handle_illegal();

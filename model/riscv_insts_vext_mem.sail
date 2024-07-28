@@ -69,11 +69,7 @@ mapping clause encdec = VLSEGTYPE(nf, vm, rs1, width, vd) if haveVExt()
 val process_vlseg : forall 'f 'b 'n 'p, (0 < 'f & 'f <= 8) & ('b in {1, 2, 4, 8}) & ('n >= 0).
   (int('f), bits(1), regidx, int('b), regidx, int('p), int('n)) -> Retired
 function process_vlseg(nf, vm, vd, load_width_bytes, rs1, EMUL_pow, num_elem) = {
-  let EMUL_reg : int = if EMUL_pow <= 0 then {
-    1
-  } else {
-    int_power(2, EMUL_pow)
-  };
+  let EMUL_reg : int = if EMUL_pow <= 0 then { 1 } else { int_power(2, EMUL_pow) };
   let width_type : word_width = size_bytes(load_width_bytes);
   let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
   let vd_seg : vector('n, dec, bits('f * 'b * 8)) = read_vreg_seg(num_elem, load_width_bytes * 8, EMUL_pow, nf, vd);
@@ -81,9 +77,7 @@ function process_vlseg(nf, vm, vd, load_width_bytes, rs1, EMUL_pow, num_elem) = 
   let (result, mask) = init_masked_result(num_elem, nf * load_width_bytes * 8, EMUL_pow, vd_seg, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       /* active segments */
       vstart = to_bits(16, i);
       foreach (j from 0 to (nf - 1)) {
@@ -158,11 +152,7 @@ mapping clause encdec = VLSEGFFTYPE(nf, vm, rs1, width, vd) if haveVExt()
 val process_vlsegff : forall 'f 'b 'n 'p, (0 < 'f & 'f <= 8) & ('b in {1, 2, 4, 8}) & ('n >= 0).
   (int('f), bits(1), regidx, int('b), regidx, int('p), int('n)) -> Retired
 function process_vlsegff(nf, vm, vd, load_width_bytes, rs1, EMUL_pow, num_elem) = {
-  let EMUL_reg : int = if EMUL_pow <= 0 then {
-    1
-  } else {
-    int_power(2, EMUL_pow)
-  };
+  let EMUL_reg : int = if EMUL_pow <= 0 then { 1 } else { int_power(2, EMUL_pow) };
   let width_type : word_width = size_bytes(load_width_bytes);
   let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
   let vd_seg : vector('n, dec, bits('f * 'b * 8)) = read_vreg_seg(num_elem, load_width_bytes * 8, EMUL_pow, nf, vd);
@@ -173,9 +163,7 @@ function process_vlsegff(nf, vm, vd, load_width_bytes, rs1, EMUL_pow, num_elem) 
   trimmed : bool = false;
   foreach (i from 0 to (num_elem - 1)) {
     if not(trimmed) then {
-      if vm_val[
-        i
-      ] then {
+      if vm_val[i] then {
         /* active segments */
         foreach (j from 0 to (nf - 1)) {
           let elem_offset = (i * nf + j) * load_width_bytes;
@@ -290,20 +278,14 @@ mapping clause encdec = VSSEGTYPE(nf, vm, rs1, width, vs3) if haveVExt()
 val process_vsseg : forall 'f 'b 'n 'p, (0 < 'f & 'f <= 8) & ('b in {1, 2, 4, 8}) & ('n >= 0).
   (int('f), bits(1), regidx, int('b), regidx, int('p), int('n)) -> Retired
 function process_vsseg(nf, vm, vs3, load_width_bytes, rs1, EMUL_pow, num_elem) = {
-  let EMUL_reg : int = if EMUL_pow <= 0 then {
-    1
-  } else {
-    int_power(2, EMUL_pow)
-  };
+  let EMUL_reg : int = if EMUL_pow <= 0 then { 1 } else { int_power(2, EMUL_pow) };
   let width_type : word_width = size_bytes(load_width_bytes);
   let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
   let vs3_seg : vector('n, dec, bits('f * 'b * 8)) = read_vreg_seg(num_elem, load_width_bytes * 8, EMUL_pow, nf, vs3);
   let mask : vector('n, dec, bool) = init_masked_source(num_elem, EMUL_pow, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if vm_val[
-      i
-    ] then {
+    if vm_val[i] then {
       /* active segments */
       vstart = to_bits(16, i);
       foreach (j from 0 to (nf - 1)) {
@@ -395,11 +377,7 @@ mapping clause encdec = VLSSEGTYPE(nf, vm, rs2, rs1, width, vd) if haveVExt()
 val process_vlsseg : forall 'f 'b 'n 'p, (0 < 'f & 'f <= 8) & ('b in {1, 2, 4, 8}) & ('n >= 0).
   (int('f), bits(1), regidx, int('b), regidx, regidx, int('p), int('n)) -> Retired
 function process_vlsseg(nf, vm, vd, load_width_bytes, rs1, rs2, EMUL_pow, num_elem) = {
-  let EMUL_reg : int = if EMUL_pow <= 0 then {
-    1
-  } else {
-    int_power(2, EMUL_pow)
-  };
+  let EMUL_reg : int = if EMUL_pow <= 0 then { 1 } else { int_power(2, EMUL_pow) };
   let width_type : word_width = size_bytes(load_width_bytes);
   let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
   let vd_seg : vector('n, dec, bits('f * 'b * 8)) = read_vreg_seg(num_elem, load_width_bytes * 8, EMUL_pow, nf, vd);
@@ -408,9 +386,7 @@ function process_vlsseg(nf, vm, vd, load_width_bytes, rs1, rs2, EMUL_pow, num_el
   let (result, mask) = init_masked_result(num_elem, nf * load_width_bytes * 8, EMUL_pow, vd_seg, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       /* active segments */
       vstart = to_bits(16, i);
       foreach (j from 0 to (nf - 1)) {
@@ -485,11 +461,7 @@ mapping clause encdec = VSSSEGTYPE(nf, vm, rs2, rs1, width, vs3) if haveVExt()
 val process_vssseg : forall 'f 'b 'n 'p, (0 < 'f & 'f <= 8) & ('b in {1, 2, 4, 8}) & ('n >= 0).
   (int('f), bits(1), regidx, int('b), regidx, regidx, int('p), int('n)) -> Retired
 function process_vssseg(nf, vm, vs3, load_width_bytes, rs1, rs2, EMUL_pow, num_elem) = {
-  let EMUL_reg : int = if EMUL_pow <= 0 then {
-    1
-  } else {
-    int_power(2, EMUL_pow)
-  };
+  let EMUL_reg : int = if EMUL_pow <= 0 then { 1 } else { int_power(2, EMUL_pow) };
   let width_type : word_width = size_bytes(load_width_bytes);
   let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
   let vs3_seg : vector('n, dec, bits('f * 'b * 8)) = read_vreg_seg(num_elem, load_width_bytes * 8, EMUL_pow, nf, vs3);
@@ -497,9 +469,7 @@ function process_vssseg(nf, vm, vs3, load_width_bytes, rs1, rs2, EMUL_pow, num_e
   let mask : vector('n, dec, bool) = init_masked_source(num_elem, EMUL_pow, vm_val);
 
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       /* active segments */
       vstart = to_bits(16, i);
       foreach (j from 0 to (nf - 1)) {
@@ -604,11 +574,7 @@ function process_vlxseg(
   num_elem,
   mop,
 ) = {
-  let EMUL_data_reg : int = if EMUL_data_pow <= 0 then {
-    1
-  } else {
-    int_power(2, EMUL_data_pow)
-  };
+  let EMUL_data_reg : int = if EMUL_data_pow <= 0 then { 1 } else { int_power(2, EMUL_data_pow) };
   let width_type : word_width = size_bytes(EEW_data_bytes);
   let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
   let vd_seg : vector('n, dec, bits('f * 'db * 8)) = read_vreg_seg(num_elem, EEW_data_bytes * 8, EMUL_data_pow, nf, vd);
@@ -618,9 +584,7 @@ function process_vlxseg(
 
   /* currently mop = 1 (unordered) or 3 (ordered) do the same operations */
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       /* active segments */
       vstart = to_bits(16, i);
       foreach (j from 0 to (nf - 1)) {
@@ -740,11 +704,7 @@ function process_vsxseg(
   num_elem,
   mop,
 ) = {
-  let EMUL_data_reg : int = if EMUL_data_pow <= 0 then {
-    1
-  } else {
-    int_power(2, EMUL_data_pow)
-  };
+  let EMUL_data_reg : int = if EMUL_data_pow <= 0 then { 1 } else { int_power(2, EMUL_data_pow) };
   let width_type : word_width = size_bytes(EEW_data_bytes);
   let vm_val : vector('n, dec, bool) = read_vmask(num_elem, vm, 0b00000);
   let vs3_seg : vector('n, dec, bits('f * 'db * 8)) = read_vreg_seg(
@@ -759,9 +719,7 @@ function process_vsxseg(
 
   /* currently mop = 1 (unordered) or 3 (ordered) do the same operations */
   foreach (i from 0 to (num_elem - 1)) {
-    if mask[
-      i
-    ] then {
+    if mask[i] then {
       /* active segments */
       vstart = to_bits(16, i);
       foreach (j from 0 to (nf - 1)) {
@@ -882,9 +840,7 @@ val process_vlre : forall 'f 'b 'n, ('f in {1, 2, 4, 8}) & ('b in {1, 2, 4, 8}) 
 function process_vlre(nf, vd, load_width_bytes, rs1, elem_per_reg) = {
   let width_type : word_width = size_bytes(load_width_bytes);
   let start_element = get_start_element();
-  if start_element >= nf * elem_per_reg then {
-    return RETIRE_SUCCESS
-  }; /* no elements are written if vstart >= evl */
+  if start_element >= nf * elem_per_reg then { return RETIRE_SUCCESS /* no elements are written if vstart >= evl */  };
   let elem_to_align : int = start_element % elem_per_reg;
   cur_field : int = start_element / elem_per_reg;
   cur_elem : int = start_element;
@@ -992,9 +948,7 @@ val process_vsre : forall 'f 'b 'n, ('f in {1, 2, 4, 8}) & ('b in {1, 2, 4, 8}) 
 function process_vsre(nf, load_width_bytes, rs1, vs3, elem_per_reg) = {
   let width_type : word_width = BYTE;
   let start_element = get_start_element();
-  if start_element >= nf * elem_per_reg then {
-    return RETIRE_SUCCESS
-  }; /* no elements are written if vstart >= evl */
+  if start_element >= nf * elem_per_reg then { return RETIRE_SUCCESS /* no elements are written if vstart >= evl */  };
   let elem_to_align : int = start_element % elem_per_reg;
   cur_field : int = start_element / elem_per_reg;
   cur_elem : int = start_element;
@@ -1076,9 +1030,7 @@ function process_vsre(nf, load_width_bytes, rs1, vs3, elem_per_reg) = {
                   let res : MemoryOpResult(bool) = mem_write_value(
                     paddr,
                     load_width_bytes,
-                    vs3_val[
-                      i
-                    ],
+                    vs3_val[i],
                     false,
                     false,
                     false,

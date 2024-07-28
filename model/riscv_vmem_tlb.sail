@@ -105,17 +105,14 @@ function tlb_hash vaddr : bits(64) -> tlb_index_range = unsigned(vaddr[17..12])
 
 // PUBLIC: invoked in init_vmem() [riscv_vmem.sail]
 function init_TLB () -> unit = {
-  foreach (i from 0 to (length(tlb) - 1)) {
-    tlb[i] = None()
-  }
+  foreach (i from 0 to (length(tlb) - 1)) { tlb[i] = None() }
 }
 
 // PUBLIC: invoked in translate_TLB_hit() [riscv_vmem.sail]
 function write_TLB(index : tlb_index_range, ent : TLB_Entry) -> unit = tlb[index] = Some(ent)
 
 // PRIVATE
-function match_TLB_Entry(ent : TLB_Entry, asid : asidbits, vaddr : bits(64)) -> bool = (ent.global | (ent.asid == asid)) &
-  (ent.vAddr == (ent.vMatchMask & vaddr))
+function match_TLB_Entry(ent : TLB_Entry, asid : asidbits, vaddr : bits(64)) -> bool = (ent.global | (ent.asid == asid)) & (ent.vAddr == (ent.vMatchMask & vaddr))
 
 // PRIVATE
 function flush_TLB_Entry(e : TLB_Entry, asid : option(asidbits), addr : option(bits(64))) -> bool = {
@@ -130,15 +127,9 @@ function flush_TLB_Entry(e : TLB_Entry, asid : option(asidbits), addr : option(b
 // PUBLIC: invoked in translate() [riscv_vmem.sail]
 function lookup_TLB(asid : asidbits, vaddr : bits(64)) -> option((tlb_index_range, TLB_Entry)) = {
   let index = tlb_hash(vaddr);
-  match tlb[
-    index
-  ] {
+  match tlb[index] {
     None() => None(),
-    Some(entry) => if match_TLB_Entry(entry, asid, vaddr) then {
-      Some((index, entry))
-    } else {
-      None()
-    },
+    Some(entry) => if match_TLB_Entry(entry, asid, vaddr) then { Some((index, entry)) } else { None() },
   }
 }
 
@@ -193,12 +184,9 @@ function flush_TLB(asid_xlen : option(xlenbits), addr_xlen : option(xlenbits)) -
     Some(a) => Some(zero_extend(a)),
   };
   foreach (i from 0 to (length(tlb) - 1)) {
-    match tlb[
-      i
-    ] {
-      Some(e) => if flush_TLB_Entry(e, asid, addr_64b) then {
-        tlb[i] = None()
-      },
+    match tlb[i] {
+      Some(e) =>
+        if flush_TLB_Entry(e, asid, addr_64b) then { tlb[i] = None() },
       None() => (),
     }
   }
