@@ -478,7 +478,9 @@ function init_platform () -> unit = {
   htif_payload_writes = zero_extend(0b0)
 }
 
-function tick_platform () -> unit = { htif_tick() }
+function tick_platform () -> unit = {
+  htif_tick()
+}
 
 /* Platform-specific handling of instruction faults */
 function handle_illegal () -> unit = {

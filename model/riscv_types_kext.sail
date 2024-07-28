@@ -18,7 +18,9 @@
  */
 /* Auxiliary function for performing GF multiplicaiton */
 val xt2 : bits(8) -> bits(8)
-function xt2 x = { (x << 1) ^ (if bit_to_bool(x[7]) then 0x1b else 0x00) }
+function xt2 x = {
+  (x << 1) ^ (if bit_to_bool(x[7]) then 0x1b else 0x00)
+}
 
 val xt3 : bits(8) -> bits(8)
 function xt3 x = x ^ xt2(x)
@@ -33,11 +35,15 @@ function gfmul(x, y) = {
 
 /* 8-bit to 32-bit partial AES Mix Colum - forwards */
 val aes_mixcolumn_byte_fwd : bits(8) -> bits(32)
-function aes_mixcolumn_byte_fwd so = { gfmul(so, 0x3) @ so @ so @ gfmul(so, 0x2) }
+function aes_mixcolumn_byte_fwd so = {
+  gfmul(so, 0x3) @ so @ so @ gfmul(so, 0x2)
+}
 
 /* 8-bit to 32-bit partial AES Mix Colum - inverse*/
 val aes_mixcolumn_byte_inv : bits(8) -> bits(32)
-function aes_mixcolumn_byte_inv so = { gfmul(so, 0xb) @ gfmul(so, 0xd) @ gfmul(so, 0x9) @ gfmul(so, 0xe) }
+function aes_mixcolumn_byte_inv so = {
+  gfmul(so, 0xb) @ gfmul(so, 0xd) @ gfmul(so, 0x9) @ gfmul(so, 0xe)
+}
 
 /* 32-bit to 32-bit AES forward MixColumn */
 val aes_mixcolumn_fwd : bits(32) -> bits(32)
@@ -877,7 +883,9 @@ let aes_sbox_inv_table : vector(256, bits(8)) =
  * start at index 255, and go down to 0.
  */
 val sbox_lookup : (bits(8), vector(256, bits(8))) -> bits(8)
-function sbox_lookup(x, table) = { table[255 - unsigned(x)] }
+function sbox_lookup(x, table) = {
+  table[255 - unsigned(x)]
+}
 
 /* Easy function to perform a forward AES SBox operation on 1 byte. */
 val aes_sbox_fwd : bits(8) -> bits(8)

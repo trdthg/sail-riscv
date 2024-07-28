@@ -26,4 +26,6 @@ function set_next_pc pc = {
 }
 
 val tick_pc : unit -> unit
-function tick_pc () = { PC = nextPC }
+function tick_pc () = {
+  PC = nextPC
+}

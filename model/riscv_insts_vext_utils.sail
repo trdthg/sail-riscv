@@ -30,11 +30,15 @@ function valid_eew_emul(EEW, EMUL_pow) = {
  *  2. vset{i}vl{i} and whole-register loads, stores, and moves do not depend upon vtype.
  */
 val valid_vtype : unit -> bool
-function valid_vtype () = { (vtype[vill]) == 0b0 }
+function valid_vtype () = {
+  (vtype[vill]) == 0b0
+}
 
 /* Check for vstart value */
 val assert_vstart : int -> bool
-function assert_vstart i = { unsigned(vstart) == i }
+function assert_vstart i = {
+  unsigned(vstart) == i
+}
 
 /* Check for valid floating-point operation types
  *  1. Valid element width of floating-point numbers
@@ -55,7 +59,9 @@ function valid_fp_op(SEW, rm_3b) = {
  *  or the scalar result of a reduction.
  */
 val valid_rd_mask : (regidx, bits(1)) -> bool
-function valid_rd_mask(rd, vm) = { vm != 0b0 | rd != 0b00000 }
+function valid_rd_mask(rd, vm) = {
+  vm != 0b0 | rd != 0b00000
+}
 
 /* Check for valid register overlap in vector widening/narrowing instructions:
  *  In a widening instruction, the overlap is valid only in the highest-numbered part
@@ -91,11 +97,15 @@ function valid_segment(nf, EMUL_pow) = {
 /* ******************************************************************************* */
 /* a. Normal check including vtype.vill field and vd/v0 overlap if vm = 0 */
 val illegal_normal : (regidx, bits(1)) -> bool
-function illegal_normal(vd, vm) = { not(valid_vtype()) | not(valid_rd_mask(vd, vm)) }
+function illegal_normal(vd, vm) = {
+  not(valid_vtype()) | not(valid_rd_mask(vd, vm))
+}
 
 /* b. Masked check for instructions encoded with vm = 0 */
 val illegal_vd_masked : regidx -> bool
-function illegal_vd_masked vd = { not(valid_vtype()) | vd == 0b00000 }
+function illegal_vd_masked vd = {
+  not(valid_vtype()) | vd == 0b00000
+}
 
 /* c. Unmasked check for:
  *  1. instructions encoded with vm = 1
@@ -104,7 +114,9 @@ function illegal_vd_masked vd = { not(valid_vtype()) | vd == 0b00000 }
  *     vmadc.vvm/vxm/vim, vmsbc.vvm/vxm, mask logical, integer compare, vlm.v, vsm.v
  */
 val illegal_vd_unmasked : unit -> bool
-function illegal_vd_unmasked () = { not(valid_vtype()) }
+function illegal_vd_unmasked () = {
+  not(valid_vtype())
+}
 
 /* d. Variable width check for:
  *  1. integer/fixed-point widening/narrowing instructions
@@ -120,7 +132,9 @@ function illegal_variable_width(vd, vm, SEW_new, LMUL_pow_new) = {
  *  Vector reduction operations raise an illegal instruction exception if vstart is non-zero.
  */
 val illegal_reduction : unit -> bool
-function illegal_reduction () = { not(valid_vtype()) | not(assert_vstart(0)) }
+function illegal_reduction () = {
+  not(valid_vtype()) | not(assert_vstart(0))
+}
 
 /* f. Variable width check for widening reduction instructions */
 val illegal_reduction_widen : (int, int) -> bool
@@ -136,11 +150,15 @@ function illegal_fp_normal(vd, vm, SEW, rm_3b) = {
 
 /* h. Masked check for floating-point instructions encoded with vm = 0 */
 val illegal_fp_vd_masked : (regidx, {8, 16, 32, 64}, bits(3)) -> bool
-function illegal_fp_vd_masked(vd, SEW, rm_3b) = { not(valid_vtype()) | vd == 0b00000 | not(valid_fp_op(SEW, rm_3b)) }
+function illegal_fp_vd_masked(vd, SEW, rm_3b) = {
+  not(valid_vtype()) | vd == 0b00000 | not(valid_fp_op(SEW, rm_3b))
+}
 
 /* i. Unmasked check for floating-point instructions encoded with vm = 1 */
 val illegal_fp_vd_unmasked : ({8, 16, 32, 64}, bits(3)) -> bool
-function illegal_fp_vd_unmasked(SEW, rm_3b) = { not(valid_vtype()) | not(valid_fp_op(SEW, rm_3b)) }
+function illegal_fp_vd_unmasked(SEW, rm_3b) = {
+  not(valid_vtype()) | not(valid_fp_op(SEW, rm_3b))
+}
 
 /* j. Variable width check for floating-point widening/narrowing instructions */
 val illegal_fp_variable_width : (regidx, bits(1), {8, 16, 32, 64}, bits(3), int, int) -> bool

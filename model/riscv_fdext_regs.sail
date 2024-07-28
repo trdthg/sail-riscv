@@ -192,7 +192,9 @@ function wF(r : regno, in_v : flenbits) -> unit = {
 
 function rF_bits i : regidx -> flenbits = rF(unsigned(i))
 
-function wF_bits(i : regidx, data : flenbits) -> unit = { wF(unsigned(i)) = data }
+function wF_bits(i : regidx, data : flenbits) -> unit = {
+  wF(unsigned(i)) = data
+}
 
 overload F = {rF_bits, wF_bits, rF, wF}
 

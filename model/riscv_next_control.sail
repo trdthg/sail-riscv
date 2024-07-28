@@ -34,12 +34,16 @@ function clause ext_write_CSR(0x004, value) = {
   mie = lift_sie(mie, mideleg, sie);
   Some(mie.bits)
 }
-function clause ext_write_CSR(0x005, value) = { Some(set_utvec(value)) }
+function clause ext_write_CSR(0x005, value) = {
+  Some(set_utvec(value))
+}
 function clause ext_write_CSR(0x040, value) = {
   uscratch = value;
   Some(uscratch)
 }
-function clause ext_write_CSR(0x041, value) = { Some(set_xret_target(User, value)) }
+function clause ext_write_CSR(0x041, value) = {
+  Some(set_xret_target(User, value))
+}
 function clause ext_write_CSR(0x042, value) = {
   ucause.bits = value;
   Some(ucause.bits)

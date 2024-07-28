@@ -176,7 +176,9 @@ function wV(r : regno, in_v : vregtype) -> unit = {
 
 function rV_bits i : regidx -> vregtype = rV(unsigned(i))
 
-function wV_bits(i : regidx, data : vregtype) -> unit = { wV(unsigned(i)) = data }
+function wV_bits(i : regidx, data : vregtype) -> unit = {
+  wV(unsigned(i)) = data
+}
 
 overload V = {rV_bits, wV_bits, rV, wV}
 
