@@ -149,9 +149,7 @@ function clause execute VFIRST_M(vm, vs2, rd) = {
 
   index : int = -1;
   foreach (i from 0 to (num_elem - 1)) {
-    if index == -1 then {
-      if (mask[i]) & (vs2_val[i]) then { index = i }
-    }
+    if index == -1 then { if (mask[i]) & (vs2_val[i]) then { index = i } }
   };
 
   X(rd) = to_bits(sizeof(xlen), index);
@@ -281,7 +279,9 @@ function clause execute VMSOF_M(vm, vs2, vd) = {
       if (vs2_val[i]) & not(found_elem) then {
         result[i] = true;
         found_elem = true
-      } else { result[i] = false }
+      } else {
+        result[i] = false
+      }
     }
   };
 

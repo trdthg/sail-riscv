@@ -17,7 +17,9 @@ function clause execute URET() = {
   if not(haveUsrMode()) | not(sys_enable_next()) then {
     handle_illegal()
   } else {
-    if not(ext_check_xret_priv(User)) then { ext_fail_xret_priv() } else {
+    if not(ext_check_xret_priv(User)) then {
+      ext_fail_xret_priv()
+    } else {
       set_next_pc(exception_handler(cur_privilege, CTL_URET(), PC))
     }
   };

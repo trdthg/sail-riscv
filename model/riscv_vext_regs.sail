@@ -283,11 +283,11 @@ function read_vreg(num_elem, SEW, LMUL_pow, vrid) = {
   let LMUL_pow_reg = if LMUL_pow < 0 then { 0 } else { LMUL_pow };
 
   /* Check for valid vrid */
-  if unsigned(vrid) + 2 ^LMUL_pow_reg > 32 then {
+  if unsigned(vrid) + 2 ^ LMUL_pow_reg > 32 then {
     /* vrid would read past largest vreg (v31) */
     assert(false, "invalid register group: vrid overflow the largest number")
   } else {
-    if unsigned(vrid) % 2 ^LMUL_pow_reg != 0 then {
+    if unsigned(vrid) % 2 ^ LMUL_pow_reg != 0 then {
       /* vrid must be a multiple of emul */
       assert(false, "invalid register group: vrid is not a multiple of EMUL")
     } else {
@@ -296,7 +296,7 @@ function read_vreg(num_elem, SEW, LMUL_pow, vrid) = {
       } else {
         let (num_elem_single as 'num_elem_single) : int = VLEN / SEW;
         assert(sizeof('num_elem_single) >= 0);
-        foreach (i_lmul from 0 to (2 ^LMUL_pow_reg - 1)) {
+        foreach (i_lmul from 0 to (2 ^ LMUL_pow_reg - 1)) {
           let r_start_i : int = i_lmul * sizeof('num_elem_single);
           let r_end_i : int = r_start_i + sizeof('num_elem_single) - 1;
           let vrid_lmul : regidx = vrid + to_bits(5, i_lmul);
@@ -341,7 +341,7 @@ function write_vreg(num_elem, SEW, LMUL_pow, vrid, vec) = {
 
   let (num_elem_single as 'num_elem_single) : int = VLEN / SEW;
   assert(sizeof('num_elem_single) >= 0);
-  foreach (i_lmul from 0 to (2 ^LMUL_pow_reg - 1)) {
+  foreach (i_lmul from 0 to (2 ^ LMUL_pow_reg - 1)) {
     var single_vec : vector('num_elem_single, dec, bits('m)) = undefined;
     let vrid_lmul : regidx = vrid + to_bits(5, i_lmul);
     let r_start_i : int = i_lmul * sizeof('num_elem_single);
@@ -413,7 +413,9 @@ function write_vmask(num_elem, vrid, v) = {
   let vreg_val : vregtype = V(vrid);
   var result : vregtype = undefined;
 
-  foreach (i from 0 to (num_elem - 1)) { result[i] = bool_to_bit(v[i]) };
+  foreach (i from 0 to (num_elem - 1)) {
+    result[i] = bool_to_bit(v[i])
+  };
   foreach (i from num_elem to (VLEN - 1)) {
     /* Mask tail is always agnostic */
     result[i] = vreg_val[i] /* TODO: configuration support */

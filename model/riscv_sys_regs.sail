@@ -127,24 +127,14 @@ function legalize_misa(m : Misa, v : xlenbits) -> Misa = {
   let v = Mk_Misa(v);
 
   /* Suppress updates to MISA if MISA is not writable or if by disabling C next PC would become misaligned or an extension vetoes */
-  if
-    not(sys_enable_writable_misa()) | (v[C] == 0b0 & (nextPC[1] == bitone | ext_veto_disable_C()))
-  then {
+  if not(sys_enable_writable_misa()) | (v[C] == 0b0 & (nextPC[1] == bitone | ext_veto_disable_C())) then {
     m
   } else {
     /* Suppress enabling C if C was disabled at boot (i.e. not supported) */
-    let m = if not(sys_enable_rvc()) then {
-      m
-    } else {
-      [m with C = v[C]]
-    };
+    let m = if not(sys_enable_rvc()) then { m } else { [m with C = v[C]] };
 
     /* Suppress updates to misa.{f,d} if disabled at boot */
-    if not(sys_enable_fdext()) then {
-      m
-    } else {
-      [m with F = v[F], D = (v[D]) & (v[F])]
-    }
+    if not(sys_enable_fdext()) then { m } else { [m with F = v[F], D = (v[D]) & (v[F])] }
   }
 }
 
@@ -253,11 +243,7 @@ bitfield Mstatus : xlenbits = {
 register mstatus : Mstatus
 
 function effectivePrivilege(t : AccessType(ext_access_type), m : Mstatus, priv : Privilege) -> Privilege =
-  if t != Execute() & m[MPRV] == 0b1 then {
-    privLevel_of_bits(m[MPP])
-  } else {
-    priv
-  }
+  if t != Execute() & m[MPRV] == 0b1 then { privLevel_of_bits(m[MPP]) } else { priv }
 
 function get_mstatus_SXL m : Mstatus -> arch_xlen = {
   if sizeof(xlen) == 32 then { arch_to_bits(RV32) } else { m.bits[35..34] }
@@ -294,25 +280,17 @@ function legalize_mstatus(o : Mstatus, v : xlenbits) -> Mstatus = {
   let m : Mstatus = Mk_Mstatus(zero_extend(v[22..7] @ 0b0 @ v[5..3] @ 0b0 @ v[1..0]));
 
   /* Legalize MPP */
-  let m = [m with
-    MPP = if have_privLevel(m[MPP]) then m[MPP] else privLevel_to_bits(lowest_supported_privLevel())
-  ];
+  let m = [m with MPP = if have_privLevel(m[MPP]) then m[MPP] else privLevel_to_bits(lowest_supported_privLevel())];
 
   /* We don't have any extension context yet. */
-  let m = [m with
-    XS = extStatus_to_bits(Off)
-  ];
+  let m = [m with XS = extStatus_to_bits(Off)];
 
   /* FS is WARL, and making FS writable can support the M-mode emulation of an FPU
    * to support code running in S/U-modes.  Spike does this, and for now, we match it,
    * but only if Zfinx isn't enabled.
    * FIXME: This should be made a platform parameter.
    */
-  let m = if sys_enable_zfinx() then {
-    [m with FS = extStatus_to_bits(Off)]
-  } else {
-    m
-  };
+  let m = if sys_enable_zfinx() then { [m with FS = extStatus_to_bits(Off)] } else { m };
   let dirty = extStatus_of_bits(m[FS]) == Dirty | extStatus_of_bits(m[XS]) == Dirty | extStatus_of_bits(m[VS]) == Dirty;
   let m = [m with SD = bool_to_bits(dirty)];
 
@@ -321,20 +299,17 @@ function legalize_mstatus(o : Mstatus, v : xlenbits) -> Mstatus = {
   let m = set_mstatus_UXL(m, get_mstatus_UXL(o));
 
   /* We don't currently support changing MBE and SBE. */
-  let m = if sizeof(xlen) == 64 then {
-    Mk_Mstatus([m.bits with 37 .. 36 = 0b00])
-  } else {
-    m
-  };
+  let m = if sizeof(xlen) == 64 then { Mk_Mstatus([m.bits with 37..36 = 0b00]) } else { m };
 
   /* Hardwired to zero in the absence of 'U' or 'N'. */
-  let m = if not(haveNExt()) then {
-    let m = [m with UPIE = 0b0];
-    let m = [m with UIE = 0b0];
-    m
-  } else {
-    m
-  };
+  let m =
+    if not(haveNExt()) then {
+      let m = [m with UPIE = 0b0];
+      let m = [m with UIE = 0b0];
+      m
+    } else {
+      m
+    };
 
   if not(haveUsrMode()) then {
     let m = [m with MPRV = 0b0];
@@ -357,12 +332,13 @@ function cur_Architecture () -> Architecture = {
   }
 }
 
-function in32BitMode () -> bool = { cur_Architecture() == RV32 }
+function in32BitMode () -> bool = {
+  cur_Architecture() == RV32
+}
 
 /* F and D extensions have to enabled both via misa.{FD} as well as mstatus.FS */
 function haveFExt () -> bool = ((misa[F]) == 0b1) & ((mstatus[FS]) != 0b00)
-function haveDExt () -> bool =
-  ((misa[D]) == 0b1) & ((mstatus[FS]) != 0b00) & sizeof(flen) >= 64
+function haveDExt () -> bool = ((misa[D]) == 0b1) & ((mstatus[FS]) != 0b00) & sizeof(flen) >= 64
 
 /* Zfh (half-precision) extension depends on misa.F and mstatus.FS */
 function haveZfh () -> bool = ((misa[F]) == 0b1) & ((mstatus[FS]) != 0b00)
@@ -378,8 +354,7 @@ function haveZcb () -> bool = sys_enable_zcb()
 /* Zhinx, Zfinx and Zdinx extensions (TODO: gate FCSR access on [mhs]stateen0 bit 1 when implemented) */
 function haveZhinx () -> bool = sys_enable_zfinx()
 function haveZfinx () -> bool = sys_enable_zfinx()
-function haveZdinx () -> bool =
-  sys_enable_zfinx() & sizeof(flen) >= 64
+function haveZdinx () -> bool = sys_enable_zfinx() & sizeof(flen) >= 64
 
 /* interrupt processing state */
 bitfield Minterrupts : xlenbits = {
@@ -395,23 +370,16 @@ bitfield Minterrupts : xlenbits = {
   SSI : 1,
   USI : 0,
 }
-register mip :
-  Minterrupts /* Pending */
-register mie :
-  Minterrupts /* Enabled */
-register mideleg :
-  Minterrupts /* Delegation to S-mode */
+register mip : Minterrupts /* Pending */
+register mie : Minterrupts /* Enabled */
+register mideleg : Minterrupts /* Delegation to S-mode */
 
 function legalize_mip(o : Minterrupts, v : xlenbits) -> Minterrupts = {
   /* The only writable bits are the S-mode bits, and with the 'N'
    * extension, the U-mode bits. */
   let v = Mk_Minterrupts(v);
   let m = [o with SEI = v[SEI], STI = v[STI], SSI = v[SSI]];
-  if haveUsrMode() & haveNExt() then {
-    [m with UEI = v[UEI], UTI = v[UTI], USI = v[USI]]
-  } else {
-    m
-  }
+  if haveUsrMode() & haveNExt() then { [m with UEI = v[UEI], UTI = v[UTI], USI = v[USI]] } else { m }
 }
 
 function legalize_mie(o : Minterrupts, v : xlenbits) -> Minterrupts = {
@@ -419,11 +387,7 @@ function legalize_mie(o : Minterrupts, v : xlenbits) -> Minterrupts = {
   let m = [o with MEI = v[MEI], MTI = v[MTI], MSI = v[MSI], SEI = v[SEI], STI = v[STI], SSI = v[SSI]];
 
   /* The U-mode bits will be modified if we have the 'N' extension. */
-  if haveUsrMode() & haveNExt() then {
-    [m with UEI = v[UEI], UTI = v[UTI], USI = v[USI]]
-  } else {
-    m
-  }
+  if haveUsrMode() & haveNExt() then { [m with UEI = v[UEI], UTI = v[UTI], USI = v[USI]] } else { m }
 }
 
 function legalize_mideleg(o : Minterrupts, v : xlenbits) -> Minterrupts = {
@@ -451,8 +415,7 @@ bitfield Medeleg : xlenbits = {
   Fetch_Access_Fault: 1,
   Fetch_Addr_Align  : 0
 }
-register medeleg :
-  Medeleg /* Delegation to S-mode */
+register medeleg : Medeleg /* Delegation to S-mode */
 
 function legalize_medeleg(o : Medeleg, v : xlenbits) -> Medeleg = {
   /* M-EnvCalls delegation is not supported */
@@ -466,18 +429,14 @@ bitfield Mtvec : xlenbits = {
   Base : xlen - 1 .. 2,
   Mode : 1 .. 0
 }
-register mtvec :
-  Mtvec /* Trap Vector */
+register mtvec : Mtvec /* Trap Vector */
 
 function legalize_tvec(o : Mtvec, v : xlenbits) -> Mtvec = {
   let v = Mk_Mtvec(v);
   match trapVectorMode_of_bits(v[Mode]) {
     TV_Direct => v,
     TV_Vector => v,
-    _ =>
-      [v with
-        Mode = o[Mode]
-      ],
+    _ => [v with Mode = o[Mode]],
   }
 }
 
@@ -506,9 +465,7 @@ register mepc : xlenbits
 function legalize_xepc v : xlenbits -> xlenbits =
   /* allow writing xepc[1] only if misa.C is enabled or could be enabled
      XXX specification says this legalization should be done on read */
-  if
-    (sys_enable_writable_misa() & sys_enable_rvc()) | misa[C] == 0b1
-  then {
+  if (sys_enable_writable_misa() & sys_enable_rvc()) | misa[C] == 0b1 then {
     [v with 0 = bitzero]
   } else {
     v & sign_extend(0b100)
@@ -641,21 +598,15 @@ function lift_sstatus(m : Mstatus, s : Sstatus) -> Mstatus = {
   let m = [m with MXR = s[MXR]];
   let m = [m with SUM = s[SUM]];
 
-  let m = [m with
-    XS = s[XS]
-  ];
+  let m = [m with XS = s[XS]];
 
   // See comment for mstatus.FS.
-  let m = [m with
-    FS = s[FS]
-  ];
+  let m = [m with FS = s[FS]];
   let m = [m with VS = s[VS]];
   let dirty = extStatus_of_bits(m[FS]) == Dirty | extStatus_of_bits(m[XS]) == Dirty | extStatus_of_bits(m[VS]) == Dirty;
   let m = [m with SD = bool_to_bits(dirty)];
 
-  let m = [m with
-    SPP = s[SPP]
-  ];
+  let m = [m with SPP = s[SPP]];
   let m = [m with SPIE = s[SPIE]];
   let m = [m with UPIE = s[UPIE]];
   let m = [m with SIE = s[SIE]];
@@ -680,7 +631,9 @@ bitfield Sedeleg : xlenbits = {
 }
 register sedeleg : Sedeleg
 
-function legalize_sedeleg(s : Sedeleg, v : xlenbits) -> Sedeleg = { Mk_Sedeleg(zero_extend(v[8..0])) }
+function legalize_sedeleg(s : Sedeleg, v : xlenbits) -> Sedeleg = {
+  Mk_Sedeleg(zero_extend(v[8..0]))
+}
 
 bitfield Sinterrupts : xlenbits = {
   SEI : 9,  /* external interrupts */
@@ -700,9 +653,7 @@ function lower_mip(m : Minterrupts, d : Minterrupts) -> Sinterrupts = {
   let s = [s with STI = (m[STI]) & (d[STI])];
   let s = [s with SSI = (m[SSI]) & (d[SSI])];
 
-  let s = [s with
-    UEI = (m[UEI]) & (d[UEI])
-  ];
+  let s = [s with UEI = (m[UEI]) & (d[UEI])];
   let s = [s with UTI = (m[UTI]) & (d[UTI])];
   let s = [s with USI = (m[USI]) & (d[USI])];
   s
@@ -723,22 +674,10 @@ function lower_mie(m : Minterrupts, d : Minterrupts) -> Sinterrupts = {
 /* Returns the new value of mip from the previous mip (o) and the written sip (s) as delegated by mideleg (d). */
 function lift_sip(o : Minterrupts, d : Minterrupts, s : Sinterrupts) -> Minterrupts = {
   let m : Minterrupts = o;
-  let m = if (d[SSI]) == 0b1 then {
-    [m with SSI = s[SSI]]
-  } else {
-    m
-  };
+  let m = if (d[SSI]) == 0b1 then { [m with SSI = s[SSI]] } else { m };
   if haveNExt() then {
-    let m = if (d[UEI]) == 0b1 then {
-      [m with UEI = s[UEI]]
-    } else {
-      m
-    };
-    let m = if (d[USI]) == 0b1 then {
-      [m with USI = s[USI]]
-    } else {
-      m
-    };
+    let m = if (d[UEI]) == 0b1 then { [m with UEI = s[UEI]] } else { m };
+    let m = if (d[USI]) == 0b1 then { [m with USI = s[USI]] } else { m };
     m
   } else {
     m
@@ -752,37 +691,13 @@ function legalize_sip(m : Minterrupts, d : Minterrupts, v : xlenbits) -> Minterr
 /* Returns the new value of mie from the previous mie (o) and the written sie (s) as delegated by mideleg (d). */
 function lift_sie(o : Minterrupts, d : Minterrupts, s : Sinterrupts) -> Minterrupts = {
   let m : Minterrupts = o;
-  let m = if (d[SEI]) == 0b1 then {
-    [m with SEI = s[SEI]]
-  } else {
-    m
-  };
-  let m = if (d[STI]) == 0b1 then {
-    [m with STI = s[STI]]
-  } else {
-    m
-  };
-  let m = if (d[SSI]) == 0b1 then {
-    [m with SSI = s[SSI]]
-  } else {
-    m
-  };
+  let m = if (d[SEI]) == 0b1 then { [m with SEI = s[SEI]] } else { m };
+  let m = if (d[STI]) == 0b1 then { [m with STI = s[STI]] } else { m };
+  let m = if (d[SSI]) == 0b1 then { [m with SSI = s[SSI]] } else { m };
   if haveNExt() then {
-    let m = if (d[UEI]) == 0b1 then {
-      [m with UEI = s[UEI]]
-    } else {
-      m
-    };
-    let m = if (d[UTI]) == 0b1 then {
-      [m with UTI = s[UTI]]
-    } else {
-      m
-    };
-    let m = if (d[USI]) == 0b1 then {
-      [m with USI = s[USI]]
-    } else {
-      m
-    };
+    let m = if (d[UEI]) == 0b1 then { [m with UEI = s[UEI]] } else { m };
+    let m = if (d[UTI]) == 0b1 then { [m with UTI = s[UTI]] } else { m };
+    let m = if (d[USI]) == 0b1 then { [m with USI = s[USI]] } else { m };
     m
   } else {
     m
@@ -951,8 +866,7 @@ function is_fiom_active () -> bool = {
 }
 
 /* vector csrs */
-register vstart :
-  bits(16) /* use the largest possible length of vstart */
+register vstart : bits(16) /* use the largest possible length of vstart */
 register vxsat : bits(1)
 register vxrm : bits(2)
 register vl : xlenbits

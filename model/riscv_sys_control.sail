@@ -118,12 +118,11 @@ function check_seed_CSR(csr : csreg, p : Privilege, isWrite : bool) -> bool = {
   }
 }
 
-function check_CSR(csr : csreg, p : Privilege, isWrite : bool) -> bool = is_CSR_defined(csr) & check_CSR_access(
-  csrAccess(csr),
-  csrPriv(csr),
-  p,
-  isWrite,
-) & check_TVM_SATP(csr, p) & check_Counteren(csr, p) & check_seed_CSR(csr, p, isWrite)
+function check_CSR(csr : csreg, p : Privilege, isWrite : bool) -> bool = is_CSR_defined(csr)
+  & check_CSR_access(csrAccess(csr), csrPriv(csr), p, isWrite)
+  & check_TVM_SATP(csr, p)
+  & check_Counteren(csr, p)
+  & check_seed_CSR(csr, p, isWrite)
 
 /* Reservation handling for LR/SC.
  *
@@ -171,11 +170,12 @@ function exception_delegatee(e : ExceptionType, p : Privilege) -> Privilege = {
 
   /* if S-mode is absent, medeleg delegates to U-mode if 'N' is supported. */
   let user = if haveSupMode() then { super & haveNExt() & bit_to_bool(sedeleg.bits[idx]) } else { super & haveNExt() };
-  let deleg = if haveUsrMode() & user then {
-    User
-  } else {
-    if haveSupMode() & super then { Supervisor } else { Machine }
-  };
+  let deleg =
+    if haveUsrMode() & user then {
+      User
+    } else {
+      if haveSupMode() & super then { Supervisor } else { Machine }
+    };
 
   /* We cannot transition to a less-privileged mode. */
   if privLevel_to_bits(deleg) <_u privLevel_to_bits(p) then { p } else { deleg }
@@ -366,9 +366,13 @@ function trap_handler(
   rvfi_trap();
   if get_config_print_platform() then {
     print_platform(
-      "handling " ^ (if intr then "int#" else "exc#") ^ BitStr(c) ^ " at priv " ^ to_str(del_priv) ^ " with tval " ^ BitStr(
-        tval(info),
-      ),
+      "handling "
+        ^ (if intr then "int#" else "exc#")
+        ^ BitStr(c)
+        ^ " at priv "
+        ^ to_str(del_priv)
+        ^ " with tval "
+        ^ BitStr(tval(info)),
     )
   };
 
@@ -530,7 +534,8 @@ function init_sys () -> unit = {
   /* We currently support both F and D */
   misa[F] = bool_to_bits(sys_enable_fdext()); /* single-precision */
   misa[D] =
-    if sizeof(flen) >= 64 then
+    if sizeof(flen) >= 64
+    then
       bool_to_bits(sys_enable_fdext()) /* double-precision */
 
     else 0b0;
@@ -541,10 +546,7 @@ function init_sys () -> unit = {
   mstatus[MPP] = privLevel_to_bits(lowest_supported_privLevel());
 
   /* set to little-endian mode */
-  if sizeof(xlen) == 64 then {
-    mstatus =
-      Mk_Mstatus([mstatus.bits with 37 .. 36 = 0b00])
-  };
+  if sizeof(xlen) == 64 then { mstatus = Mk_Mstatus([mstatus.bits with 37..36 = 0b00]) };
   mstatush.bits = zero_extend(0b0);
 
   mip.bits = zero_extend(0b0);
@@ -571,7 +573,7 @@ function init_sys () -> unit = {
   /* initialize vector csrs */
   elen = 0b1; /* ELEN=64 as the common case */
   vlen = 0b0100; /* VLEN=512 as a default value */
-  vlenb = to_bits(sizeof(xlen), 2 ^(get_vlen_pow() - 3)); /* vlenb holds the constant value VLEN/8 */
+  vlenb = to_bits(sizeof(xlen), 2 ^ (get_vlen_pow() - 3)); /* vlenb holds the constant value VLEN/8 */
 
   /* VLEN value needs to be manually changed currently.
    * See riscv_vlen.sail for details.

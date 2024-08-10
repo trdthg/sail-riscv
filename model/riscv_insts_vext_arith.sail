@@ -83,7 +83,9 @@ function clause execute VVTYPE(funct6, vm, vs2, vs1, vd) = {
           sign_extend(sizeof('m) + 1, vs2_val[i]) + sign_extend(sizeof('m) + 1, vs1_val[i]),
         ),
         VV_VSSUBU => {
-          if unsigned(vs2_val[i]) < unsigned(vs1_val[i]) then { zeros() } else {
+          if unsigned(vs2_val[i]) < unsigned(vs1_val[i]) then {
+            zeros()
+          } else {
             unsigned_saturation(
               sizeof('m),
               zero_extend(sizeof('m) + 1, vs2_val[i]) - zero_extend(sizeof('m) + 1, vs1_val[i]),
@@ -206,9 +208,9 @@ function clause execute NVSTYPE(funct6, vm, vs2, vs1, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) | not(
-    valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow),
-  ) then {
+  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
+    not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
+  then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -276,9 +278,9 @@ function clause execute NVTYPE(funct6, vm, vs2, vs1, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) | not(
-    valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow),
-  ) then {
+  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
+    not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
+  then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -340,11 +342,12 @@ function clause execute MASKTYPEV(vs2, vs1, vd) = {
   let SEW = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW); /* max(VLMAX,VLEN/SEW)) */
-  let real_num_elem = if LMUL_pow >= 0 then {
-    num_elem /* VLMAX */
-  } else {
-    num_elem / (0 - LMUL_pow)
-  };
+  let real_num_elem =
+    if LMUL_pow >= 0 then {
+      num_elem /* VLMAX */
+    } else {
+      num_elem / (0 - LMUL_pow)
+    };
 
   if illegal_vd_masked(vd) then {
     handle_illegal();
@@ -493,7 +496,9 @@ function clause execute VXTYPE(funct6, vm, vs2, rs1, vd) = {
           sign_extend(sizeof('m) + 1, vs2_val[i]) + sign_extend(sizeof('m) + 1, rs1_val),
         ),
         VX_VSSUBU => {
-          if unsigned(vs2_val[i]) < unsigned(rs1_val) then { zeros() } else {
+          if unsigned(vs2_val[i]) < unsigned(rs1_val) then {
+            zeros()
+          } else {
             unsigned_saturation(
               sizeof('m),
               zero_extend(sizeof('m) + 1, vs2_val[i]) - zero_extend(sizeof('m) + 1, rs1_val),
@@ -592,9 +597,9 @@ function clause execute NXSTYPE(funct6, vm, vs2, rs1, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) | not(
-    valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow),
-  ) then {
+  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
+    not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
+  then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -662,9 +667,9 @@ function clause execute NXTYPE(funct6, vm, vs2, rs1, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) | not(
-    valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow),
-  ) then {
+  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
+    not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
+  then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -805,11 +810,12 @@ function clause execute MASKTYPEX(vs2, rs1, vd) = {
   let SEW = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW); /* max(VLMAX,VLEN/SEW)) */
-  let real_num_elem = if LMUL_pow >= 0 then {
-    num_elem /* VLMAX */
-  } else {
-    num_elem / (0 - LMUL_pow)
-  };
+  let real_num_elem =
+    if LMUL_pow >= 0 then {
+      num_elem /* VLMAX */
+    } else {
+      num_elem / (0 - LMUL_pow)
+    };
 
   if illegal_vd_masked(vd) then {
     handle_illegal();
@@ -1018,9 +1024,9 @@ function clause execute NISTYPE(funct6, vm, vs2, simm, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) | not(
-    valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow),
-  ) then {
+  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
+    not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
+  then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -1088,9 +1094,9 @@ function clause execute NITYPE(funct6, vm, vs2, simm, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) | not(
-    valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow),
-  ) then {
+  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
+    not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
+  then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -1231,11 +1237,12 @@ function clause execute MASKTYPEI(vs2, simm, vd) = {
   let SEW = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW); /* max(VLMAX,VLEN/SEW)) */
-  let real_num_elem = if LMUL_pow >= 0 then {
-    num_elem /* VLMAX */
-  } else {
-    num_elem / (0 - LMUL_pow)
-  };
+  let real_num_elem =
+    if LMUL_pow >= 0 then {
+      num_elem /* VLMAX */
+    } else {
+      num_elem / (0 - LMUL_pow)
+    };
 
   if illegal_vd_masked(vd) then {
     handle_illegal();
@@ -1342,7 +1349,9 @@ function clause execute VMVRTYPE(vs2, simm, vd) = {
   let vd_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, EMUL_pow, vd);
   result : vector('n, dec, bits('m)) = undefined;
 
-  foreach (i from 0 to (num_elem - 1)) { result[i] = if i < start_element then vd_val[i] else vs2_val[i] };
+  foreach (i from 0 to (num_elem - 1)) {
+    result[i] = if i < start_element then vd_val[i] else vs2_val[i]
+  };
 
   write_vreg(num_elem, SEW, EMUL_pow, vd, result);
   vstart = zeros();
@@ -1430,34 +1439,46 @@ function clause execute MVVTYPE(funct6, vm, vs2, vs1, vd) = {
         MVV_VMULHU => get_slice_int(SEW, unsigned(vs2_val[i]) * unsigned(vs1_val[i]), SEW),
         MVV_VMULHSU => get_slice_int(SEW, signed(vs2_val[i]) * unsigned(vs1_val[i]), SEW),
         MVV_VDIVU => {
-          let q : int = if unsigned(vs1_val[i]) == 0 then { -1 } else {
-            quot_round_zero(unsigned(vs2_val[i]), unsigned(vs1_val[i]))
-          };
+          let q : int =
+            if unsigned(vs1_val[i]) == 0 then {
+              -1
+            } else {
+              quot_round_zero(unsigned(vs2_val[i]), unsigned(vs1_val[i]))
+            };
           to_bits(SEW, q)
         },
         MVV_VDIV => {
-          let elem_max : int = 2 ^(SEW - 1) - 1;
-          let elem_min : int = 0 - 2 ^(SEW - 1);
-          let q : int = if signed(vs1_val[i]) == 0 then { -1 } else {
-            quot_round_zero(signed(vs2_val[i]), signed(vs1_val[i]))
-          };
+          let elem_max : int = 2 ^ (SEW - 1) - 1;
+          let elem_min : int = 0 - 2 ^ (SEW - 1);
+          let q : int =
+            if signed(vs1_val[i]) == 0 then {
+              -1
+            } else {
+              quot_round_zero(signed(vs2_val[i]), signed(vs1_val[i]))
+            };
 
           /* check for signed overflow */
           let q' : int = if q > elem_max then { elem_min } else { q };
           to_bits(SEW, q')
         },
         MVV_VREMU => {
-          let r : int = if unsigned(vs1_val[i]) == 0 then { unsigned(vs2_val[i]) } else {
-            rem_round_zero(unsigned(vs2_val[i]), unsigned(vs1_val[i]))
-          };
+          let r : int =
+            if unsigned(vs1_val[i]) == 0 then {
+              unsigned(vs2_val[i])
+            } else {
+              rem_round_zero(unsigned(vs2_val[i]), unsigned(vs1_val[i]))
+            };
 
           /* signed overflow case returns zero naturally as required due to -1 divisor */
           to_bits(SEW, r)
         },
         MVV_VREM => {
-          let r : int = if signed(vs1_val[i]) == 0 then { signed(vs2_val[i]) } else {
-            rem_round_zero(signed(vs2_val[i]), signed(vs1_val[i]))
-          };
+          let r : int =
+            if signed(vs1_val[i]) == 0 then {
+              signed(vs2_val[i])
+            } else {
+              rem_round_zero(signed(vs2_val[i]), signed(vs1_val[i]))
+            };
 
           /* signed overflow case returns zero naturally as required due to -1 divisor */
           to_bits(SEW, r)
@@ -1573,9 +1594,10 @@ function clause execute WVVTYPE(funct6, vm, vs2, vs1, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) | not(
-    valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen),
-  ) | not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen)) then {
+  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen)
+    | not(valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen))
+    | not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen))
+  then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -1645,9 +1667,9 @@ function clause execute WVTYPE(funct6, vm, vs2, vs1, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) | not(
-    valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen),
-  ) then {
+  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
+    not(valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen))
+  then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -1711,9 +1733,10 @@ function clause execute WMVVTYPE(funct6, vm, vs2, vs1, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) | not(
-    valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen),
-  ) | not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen)) then {
+  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen)
+    | not(valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen))
+    | not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen))
+  then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -1833,9 +1856,9 @@ function clause execute VEXT4TYPE(funct6, vm, vs2, vd) = {
   let SEW_quart = SEW / 4;
   let LMUL_pow_quart = LMUL_pow - 2;
 
-  if illegal_variable_width(vd, vm, SEW_quart, LMUL_pow_quart) | not(
-    valid_reg_overlap(vs2, vd, LMUL_pow_quart, LMUL_pow),
-  ) then {
+  if illegal_variable_width(vd, vm, SEW_quart, LMUL_pow_quart) |
+    not(valid_reg_overlap(vs2, vd, LMUL_pow_quart, LMUL_pow))
+  then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -1894,9 +1917,9 @@ function clause execute VEXT8TYPE(funct6, vm, vs2, vd) = {
   let SEW_eighth = SEW / 8;
   let LMUL_pow_eighth = LMUL_pow - 3;
 
-  if illegal_variable_width(vd, vm, SEW_eighth, LMUL_pow_eighth) | not(
-    valid_reg_overlap(vs2, vd, LMUL_pow_eighth, LMUL_pow),
-  ) then {
+  if illegal_variable_width(vd, vm, SEW_eighth, LMUL_pow_eighth) |
+    not(valid_reg_overlap(vs2, vd, LMUL_pow_eighth, LMUL_pow))
+  then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -1956,8 +1979,10 @@ function clause execute VMVXS(vs2, rd) = {
   let (m as 'm) = SEW;
 
   let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, 0, vs2);
-  X(rd) = if sizeof(xlen) < SEW then slice(vs2_val[0], 0, sizeof(xlen)) else
-    if sizeof(xlen) > SEW then sign_extend(vs2_val[0]) else vs2_val[0];
+  X(rd) =
+    if sizeof(xlen) < SEW
+    then slice(vs2_val[0], 0, sizeof(xlen))
+    else if sizeof(xlen) > SEW then sign_extend(vs2_val[0]) else vs2_val[0];
   vstart = zeros();
 
   RETIRE_SUCCESS
@@ -2111,34 +2136,46 @@ function clause execute MVXTYPE(funct6, vm, vs2, rs1, vd) = {
         MVX_VMULHU => get_slice_int(SEW, unsigned(vs2_val[i]) * unsigned(rs1_val), SEW),
         MVX_VMULHSU => get_slice_int(SEW, signed(vs2_val[i]) * unsigned(rs1_val), SEW),
         MVX_VDIVU => {
-          let q : int = if unsigned(rs1_val) == 0 then { -1 } else {
-            quot_round_zero(unsigned(vs2_val[i]), unsigned(rs1_val))
-          };
+          let q : int =
+            if unsigned(rs1_val) == 0 then {
+              -1
+            } else {
+              quot_round_zero(unsigned(vs2_val[i]), unsigned(rs1_val))
+            };
           to_bits(SEW, q)
         },
         MVX_VDIV => {
-          let elem_max : int = 2 ^(SEW - 1) - 1;
-          let elem_min : int = 0 - 2 ^(SEW - 1);
-          let q : int = if signed(rs1_val) == 0 then { -1 } else {
-            quot_round_zero(signed(vs2_val[i]), signed(rs1_val))
-          };
+          let elem_max : int = 2 ^ (SEW - 1) - 1;
+          let elem_min : int = 0 - 2 ^ (SEW - 1);
+          let q : int =
+            if signed(rs1_val) == 0 then {
+              -1
+            } else {
+              quot_round_zero(signed(vs2_val[i]), signed(rs1_val))
+            };
 
           /* check for signed overflow */
           let q' : int = if q > elem_max then { elem_min } else { q };
           to_bits(SEW, q')
         },
         MVX_VREMU => {
-          let r : int = if unsigned(rs1_val) == 0 then { unsigned(vs2_val[i]) } else {
-            rem_round_zero(unsigned(vs2_val[i]), unsigned(rs1_val))
-          };
+          let r : int =
+            if unsigned(rs1_val) == 0 then {
+              unsigned(vs2_val[i])
+            } else {
+              rem_round_zero(unsigned(vs2_val[i]), unsigned(rs1_val))
+            };
 
           /* signed overflow case returns zero naturally as required due to -1 divisor */
           to_bits(SEW, r)
         },
         MVX_VREM => {
-          let r : int = if signed(rs1_val) == 0 then { signed(vs2_val[i]) } else {
-            rem_round_zero(signed(vs2_val[i]), signed(rs1_val))
-          };
+          let r : int =
+            if signed(rs1_val) == 0 then {
+              signed(vs2_val[i])
+            } else {
+              rem_round_zero(signed(vs2_val[i]), signed(rs1_val))
+            };
 
           /* signed overflow case returns zero naturally as required due to -1 divisor */
           to_bits(SEW, r)
@@ -2257,9 +2294,9 @@ function clause execute WVXTYPE(funct6, vm, vs2, rs1, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) | not(
-    valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen),
-  ) then {
+  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
+    not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen))
+  then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -2394,9 +2431,9 @@ function clause execute WMVXTYPE(funct6, vm, vs2, rs1, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) | not(
-    valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen),
-  ) then {
+  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
+    not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen))
+  then {
     handle_illegal();
     return RETIRE_FAIL
   };

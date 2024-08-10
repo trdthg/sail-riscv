@@ -109,7 +109,9 @@ function within_phys_mem forall 'n, 'n <= max_mem_access.
   if ram_base_int <= addr_int & (addr_int + sizeof('n)) <= (ram_base_int + ram_size_int) then {
     true
   } else {
-    if rom_base_int <= addr_int & (addr_int + sizeof('n)) <= (rom_base_int + rom_size_int) then { true } else {
+    if rom_base_int <= addr_int & (addr_int + sizeof('n)) <= (rom_base_int + rom_size_int) then {
+      true
+    } else {
       print_platform("within_phys_mem: " ^ BitStr(addr) ^ " not within phys-mem:");
       print_platform("  plat_rom_base: " ^ BitStr(plat_rom_base()));
       print_platform("  plat_rom_size: " ^ BitStr(plat_rom_size()));
@@ -361,21 +363,24 @@ function htif_store(paddr, width, data) = {
     htif_tohost = zero_extend(data)
   } else {
     if width == 4 & paddr == plat_htif_tohost() then {
-      if data == (htif_tohost[31..0]) then { htif_payload_writes = htif_payload_writes + 1 } else {
+      if data == (htif_tohost[31..0]) then {
+        htif_payload_writes = htif_payload_writes + 1
+      } else {
         htif_payload_writes = 0x1
       };
       htif_tohost = vector_update_subrange(htif_tohost, 31, 0, data)
     } else {
       if width == 4 & paddr == plat_htif_tohost() + 4 then
         {
-          if (data[15..0]) == (htif_tohost[47..32]) then { htif_payload_writes = htif_payload_writes + 1 } else {
+          if (data[15..0]) == (htif_tohost[47..32]) then {
+            htif_payload_writes = htif_payload_writes + 1
+          } else {
             htif_payload_writes = 0x1
           };
           htif_cmd_write = bitone;
           htif_tohost = vector_update_subrange(htif_tohost, 63, 32, data)
         } /* unaligned command writes are not supported and will not be detected */
-
-      else {
+       else {
         htif_tohost = zero_extend(data)
       }
     }
@@ -423,9 +428,8 @@ $ifndef RVFI_DII
 
 /* Top-level MMIO dispatch */
 function within_mmio_readable forall 'n, 0 < 'n <= max_mem_access.
-(addr : xlenbits, width : int('n)) -> bool = within_clint(addr, width) | (within_htif_readable(addr, width) & 1 <= sizeof(
-  'n
-))
+(addr : xlenbits, width : int('n)) -> bool = within_clint(addr, width) | (within_htif_readable(addr, width)
+  & 1 <= sizeof('n))
 $else
 function within_mmio_readable forall 'n, 0 < 'n <= max_mem_access.
 (addr : xlenbits, width : int('n)) -> bool = false
@@ -433,38 +437,40 @@ $endif
 
 $ifndef RVFI_DII
 function within_mmio_writable forall 'n, 0 < 'n <= max_mem_access.
-(addr : xlenbits, width : int('n)) -> bool = within_clint(addr, width) | (within_htif_writable(addr, width) & sizeof('n) <= 8)
+(addr : xlenbits, width : int('n)) -> bool = within_clint(addr, width) | (within_htif_writable(addr, width)
+  & sizeof('n) <= 8)
 $else
 function within_mmio_writable forall 'n, 0 < 'n <= max_mem_access.
 (addr : xlenbits, width : int('n)) -> bool = false
 $endif
 
 function mmio_read forall 'n, 0 < 'n <= max_mem_access.
-(t : AccessType(ext_access_type), paddr : xlenbits, width : int('n)) -> MemoryOpResult(bits(8 * 'n)) = if within_clint(
-  paddr,
-  width,
-) then {
-  clint_load(t, paddr, width)
-} else {
-  if within_htif_readable(paddr, width) & (1 <= sizeof('n)) then {
-    htif_load(t, paddr, width)
+(t : AccessType(ext_access_type), paddr : xlenbits, width : int('n)) -> MemoryOpResult(bits(8 * 'n)) =
+  if within_clint(paddr, width) then {
+    clint_load(t, paddr, width)
   } else {
-    match t {
-      Execute() => MemException(E_Fetch_Access_Fault()),
-      Read(Data) => MemException(E_Load_Access_Fault()),
-      _ => MemException(E_SAMO_Access_Fault()),
+    if within_htif_readable(paddr, width) & (1 <= sizeof('n)) then {
+      htif_load(t, paddr, width)
+    } else {
+      match t {
+        Execute() => MemException(E_Fetch_Access_Fault()),
+        Read(Data) => MemException(E_Load_Access_Fault()),
+        _ => MemException(E_SAMO_Access_Fault()),
+      }
     }
   }
-}
 
 function mmio_write forall 'n, 0 < 'n <= max_mem_access.
-(paddr : xlenbits, width : int('n), data : bits(8 * 'n)) -> MemoryOpResult(bool) = if within_clint(paddr, width) then {
-  clint_store(paddr, width, data)
-} else {
-  if within_htif_writable(paddr, width) & sizeof('n) <= 8 then { htif_store(paddr, width, data) } else {
-    MemException(E_SAMO_Access_Fault())
+(paddr : xlenbits, width : int('n), data : bits(8 * 'n)) -> MemoryOpResult(bool) =
+  if within_clint(paddr, width) then {
+    clint_store(paddr, width, data)
+  } else {
+    if within_htif_writable(paddr, width) & sizeof('n) <= 8 then {
+      htif_store(paddr, width, data)
+    } else {
+      MemException(E_SAMO_Access_Fault())
+    }
   }
-}
 
 /* Platform initialization and ticking. */
 function init_platform () -> unit = {

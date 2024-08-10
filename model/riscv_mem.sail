@@ -73,10 +73,12 @@ function phys_mem_read forall 'n, 0 < 'n <= max_mem_access.
 ) -> (
   MemoryOpResult((bits(8 * 'n), mem_meta))
 ) = {
-  let result = (match read_kind_of_flags(aq, rl, res) {
-    Some(rk) => Some(read_ram(rk, paddr, width, meta)),
-    None() => None(),
-  }) : option((bits(8 * 'n), mem_meta));
+  let result =
+    (match read_kind_of_flags(aq, rl, res) {
+      Some(rk) => Some(read_ram(rk, paddr, width, meta)),
+      None() => None(),
+    }) :
+      option((bits(8 * 'n), mem_meta));
   match (t, result) {
     (Execute(), None()) => MemException(E_Fetch_Access_Fault()),
     (Read(Data), None()) => MemException(E_Load_Access_Fault()),
@@ -145,7 +147,9 @@ function rvfi_read(addr, width, result) = {
     MemValue(v, _) => if width <= 16 then {
       rvfi_mem_data[rvfi_mem_rdata] = sail_zero_extend(v, 256);
       rvfi_mem_data[rvfi_mem_rmask] = rvfi_encode_width_mask(width)
-    } else { internal_error(__FILE__, __LINE__, "Expected at most 16 bytes here!") },
+    } else {
+      internal_error(__FILE__, __LINE__, "Expected at most 16 bytes here!")
+    },
     MemException(_) => (),
   }
 }
@@ -167,15 +171,16 @@ val mem_read_priv_meta : forall 'n, 0 < 'n <= max_mem_access.
 
 /* The most generic memory read operation */
 function mem_read_priv_meta(typ, priv, paddr, width, aq, rl, res, meta) = {
-  let result : MemoryOpResult((bits(8 * 'n), mem_meta)) = if (aq | res) & not(is_aligned_addr(paddr, width)) then {
-    MemException(E_Load_Addr_Align())
-  } else {
-    match (aq, rl, res) {
-      (false, true, false) => throw Error_not_implemented("load.rl"),
-      (false, true, true) => throw Error_not_implemented("lr.rl"),
-      (_, _, _) => checked_mem_read(typ, priv, paddr, width, aq, rl, res, meta),
-    }
-  };
+  let result : MemoryOpResult((bits(8 * 'n), mem_meta)) =
+    if (aq | res) & not(is_aligned_addr(paddr, width)) then {
+      MemException(E_Load_Addr_Align())
+    } else {
+      match (aq, rl, res) {
+        (false, true, false) => throw Error_not_implemented("load.rl"),
+        (false, true, true) => throw Error_not_implemented("lr.rl"),
+        (_, _, _) => checked_mem_read(typ, priv, paddr, width, aq, rl, res, meta),
+      }
+    };
   rvfi_read(paddr, width, result);
   result
 }
@@ -208,9 +213,12 @@ function mem_read(typ, paddr, width, aq, rel, res) = mem_read_priv(
 )
 
 val mem_write_ea : forall 'n, 0 < 'n <= max_mem_access. (xlenbits, int('n), bool, bool, bool) -> MemoryOpResult(unit)
-function mem_write_ea(addr, width, aq, rl, con) = if (rl | con) & not(is_aligned_addr(addr, width)) then {
-  MemException(E_SAMO_Addr_Align())
-} else { MemValue(write_ram_ea(write_kind_of_flags(aq, rl, con), addr, width)) }
+function mem_write_ea(addr, width, aq, rl, con) =
+  if (rl | con) & not(is_aligned_addr(addr, width)) then {
+    MemException(E_SAMO_Addr_Align())
+  } else {
+    MemValue(write_ram_ea(write_kind_of_flags(aq, rl, con), addr, width))
+  }
 
 $ifdef RVFI_DII
 val rvfi_write : forall 'n, 0 < 'n <= max_mem_access.

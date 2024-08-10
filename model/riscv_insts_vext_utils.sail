@@ -76,7 +76,9 @@ function valid_reg_overlap(rs, rd, EMUL_pow_rs, EMUL_pow_rd) = {
   let rs_int = unsigned(rs);
   let rd_int = unsigned(rd);
   if EMUL_pow_rs < EMUL_pow_rd then {
-    (rs_int + rs_group <= rd_int) | (rs_int >= rd_int + rd_group) | ((rs_int + rs_group == rd_int + rd_group) & (EMUL_pow_rs >= 0))
+    (rs_int + rs_group <= rd_int)
+      | (rs_int >= rd_int + rd_group)
+      | ((rs_int + rs_group == rd_int + rd_group) & (EMUL_pow_rs >= 0))
   } else {
     if EMUL_pow_rs > EMUL_pow_rd then { (rd_int <= rs_int) | (rd_int >= rs_int + rs_group) } else { true }
   }
@@ -162,9 +164,10 @@ function illegal_fp_vd_unmasked(SEW, rm_3b) = {
 /* j. Variable width check for floating-point widening/narrowing instructions */
 val illegal_fp_variable_width : (regidx, bits(1), {8, 16, 32, 64}, bits(3), int, int) -> bool
 function illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_new, LMUL_pow_new) = {
-  not(valid_vtype()) | not(valid_rd_mask(vd, vm)) | not(valid_fp_op(SEW, rm_3b)) | not(
-    valid_eew_emul(SEW_new, LMUL_pow_new),
-  )
+  not(valid_vtype())
+    | not(valid_rd_mask(vd, vm))
+    | not(valid_fp_op(SEW, rm_3b))
+    | not(valid_eew_emul(SEW_new, LMUL_pow_new))
 }
 
 /* k. Normal check for floating-point reduction instructions */
@@ -176,17 +179,19 @@ function illegal_fp_reduction(SEW, rm_3b) = {
 /* l. Variable width check for floating-point widening reduction instructions */
 val illegal_fp_reduction_widen : ({8, 16, 32, 64}, bits(3), int, int) -> bool
 function illegal_fp_reduction_widen(SEW, rm_3b, SEW_widen, LMUL_pow_widen) = {
-  not(valid_vtype()) | not(assert_vstart(0)) | not(valid_fp_op(SEW, rm_3b)) | not(
-    valid_eew_emul(SEW_widen, LMUL_pow_widen),
-  )
+  not(valid_vtype())
+    | not(assert_vstart(0))
+    | not(valid_fp_op(SEW, rm_3b))
+    | not(valid_eew_emul(SEW_widen, LMUL_pow_widen))
 }
 
 /* m. Non-indexed load instruction check */
 val illegal_load : (regidx, bits(1), int, int, int) -> bool
 function illegal_load(vd, vm, nf, EEW, EMUL_pow) = {
-  not(valid_vtype()) | not(valid_rd_mask(vd, vm)) | not(valid_eew_emul(EEW, EMUL_pow)) | not(
-    valid_segment(nf, EMUL_pow),
-  )
+  not(valid_vtype())
+    | not(valid_rd_mask(vd, vm))
+    | not(valid_eew_emul(EEW, EMUL_pow))
+    | not(valid_segment(nf, EMUL_pow))
 }
 
 /* n. Non-indexed store instruction check (with vs3 rather than vd) */
@@ -198,9 +203,10 @@ function illegal_store(nf, EEW, EMUL_pow) = {
 /* o. Indexed load instruction check */
 val illegal_indexed_load : (regidx, bits(1), int, int, int, int) -> bool
 function illegal_indexed_load(vd, vm, nf, EEW_index, EMUL_pow_index, EMUL_pow_data) = {
-  not(valid_vtype()) | not(valid_rd_mask(vd, vm)) | not(valid_eew_emul(EEW_index, EMUL_pow_index)) | not(
-    valid_segment(nf, EMUL_pow_data),
-  )
+  not(valid_vtype())
+    | not(valid_rd_mask(vd, vm))
+    | not(valid_eew_emul(EEW_index, EMUL_pow_index))
+    | not(valid_segment(nf, EMUL_pow_data))
 }
 
 /* p. Indexed store instruction check (with vs3 rather than vd) */
@@ -233,7 +239,7 @@ function get_start_element () = {
     It is recommended that implementations trap if vstart is out of bounds.
     It is not required to trap, as a possible future use of upper vstart bits
     is to store imprecise trap information. */
-  if start_element > (2 ^(3 + VLEN_pow - SEW_pow) - 1) then { handle_illegal() };
+  if start_element > (2 ^ (3 + VLEN_pow - SEW_pow) - 1) then { handle_illegal() };
   start_element
 }
 
@@ -457,10 +463,14 @@ function read_vreg_seg(num_elem, SEW, LMUL_pow, nf, vrid) = {
   let LMUL_reg : int = if LMUL_pow <= 0 then { 1 } else { int_power(2, LMUL_pow) };
   vreg_list : vector('q, dec, vector('n, dec, bits('m))) = undefined;
   result : vector('n, dec, bits('q * 'm)) = undefined;
-  foreach (j from 0 to (nf - 1)) { vreg_list[j] = read_vreg(num_elem, SEW, LMUL_pow, vrid + to_bits(5, j * LMUL_reg)) };
+  foreach (j from 0 to (nf - 1)) {
+    vreg_list[j] = read_vreg(num_elem, SEW, LMUL_pow, vrid + to_bits(5, j * LMUL_reg))
+  };
   foreach (i from 0 to (num_elem - 1)) {
     result[i] = zeros(sizeof('q) * sizeof('m));
-    foreach (j from 0 to (nf - 1)) { result[i] = (result[i]) | (zero_extend(vreg_list[j][i]) << (j * sizeof('m))) }
+    foreach (j from 0 to (nf - 1)) {
+      result[i] = (result[i]) | (zero_extend(vreg_list[j][i]) << (j * sizeof('m)))
+    }
   };
   result
 }
@@ -604,11 +614,8 @@ function get_fixed_rounding_incr(vec_elem, shift_amount) = {
     match rounding_mode {
       0b00 => slice(vec_elem, shift_amount - 1, 1),
       0b01 => bool_to_bits(
-        (slice(vec_elem, shift_amount - 1, 1) == 0b1) & (slice(vec_elem, 0, shift_amount - 1) != zeros() | slice(
-          vec_elem,
-          shift_amount,
-          1,
-        ) == 0b1),
+        (slice(vec_elem, shift_amount - 1, 1) == 0b1) & (slice(vec_elem, 0, shift_amount - 1) != zeros()
+          | slice(vec_elem, shift_amount, 1) == 0b1),
       ),
       0b10 => 0b0,
       0b11 => bool_to_bits(not(slice(vec_elem, shift_amount, 1) == 0b1) & (slice(vec_elem, 0, shift_amount) != zeros())),
@@ -690,27 +697,28 @@ function fp_min(op1, op2) = {
     64 => riscv_f64Lt_quiet(op1, op2),
   };
 
-  let result_val = if f_is_NaN(op1) & f_is_NaN(op2) then {
-    canonical_NaN(sizeof('m))
-  } else {
-    if f_is_NaN(op1) then {
-      op2
+  let result_val =
+    if f_is_NaN(op1) & f_is_NaN(op2) then {
+      canonical_NaN(sizeof('m))
     } else {
-      if f_is_NaN(op2) then {
-        op1
+      if f_is_NaN(op1) then {
+        op2
       } else {
-        if f_is_neg_zero(op1) & f_is_pos_zero(op2) then {
+        if f_is_NaN(op2) then {
           op1
         } else {
-          if f_is_neg_zero(op2) & f_is_pos_zero(op1) then {
-            op2
+          if f_is_neg_zero(op1) & f_is_pos_zero(op2) then {
+            op1
           } else {
-            if op1_lt_op2 then { op1 } else { op2 }
+            if f_is_neg_zero(op2) & f_is_pos_zero(op1) then {
+              op2
+            } else {
+              if op1_lt_op2 then { op1 } else { op2 }
+            }
           }
         }
       }
-    }
-  };
+    };
   accrue_fflags(fflags);
   result_val
 }
@@ -723,27 +731,28 @@ function fp_max(op1, op2) = {
     64 => riscv_f64Lt_quiet(op1, op2),
   };
 
-  let result_val = if f_is_NaN(op1) & f_is_NaN(op2) then {
-    canonical_NaN(sizeof('m))
-  } else {
-    if f_is_NaN(op1) then {
-      op2
+  let result_val =
+    if f_is_NaN(op1) & f_is_NaN(op2) then {
+      canonical_NaN(sizeof('m))
     } else {
-      if f_is_NaN(op2) then {
-        op1
+      if f_is_NaN(op1) then {
+        op2
       } else {
-        if f_is_neg_zero(op1) & f_is_pos_zero(op2) then {
-          op2
+        if f_is_NaN(op2) then {
+          op1
         } else {
-          if f_is_neg_zero(op2) & f_is_pos_zero(op1) then {
-            op1
+          if f_is_neg_zero(op1) & f_is_pos_zero(op2) then {
+            op2
           } else {
-            if op1_lt_op2 then { op2 } else { op1 }
+            if f_is_neg_zero(op2) & f_is_pos_zero(op1) then {
+              op1
+            } else {
+              if op1_lt_op2 then { op2 } else { op1 }
+            }
           }
         }
       }
-    }
-  };
+    };
   accrue_fflags(fflags);
   result_val
 }
@@ -877,34 +886,36 @@ function fp_nmulsub(rm_3b, op1, op2, opsub) = {
 
 val fp_class : forall 'm, 'm in {16, 32, 64}. bits('m) -> bits('m)
 function fp_class xf = {
-  let result_val_10b : bits(10) = if f_is_neg_inf(xf) then {
-    0b0000000001
-  } else {
-    if f_is_neg_norm(xf) then {
-      0b0000000010
+  let result_val_10b : bits(10) =
+    if f_is_neg_inf(xf) then {
+      0b0000000001
     } else {
-      if f_is_neg_subnorm(xf) then {
-        0b0000000100
+      if f_is_neg_norm(xf) then {
+        0b0000000010
       } else {
-        if f_is_neg_zero(xf) then {
-          0b0000001000
+        if f_is_neg_subnorm(xf) then {
+          0b0000000100
         } else {
-          if f_is_pos_zero(xf) then {
-            0b0000010000
+          if f_is_neg_zero(xf) then {
+            0b0000001000
           } else {
-            if f_is_pos_subnorm(xf) then {
-              0b0000100000
+            if f_is_pos_zero(xf) then {
+              0b0000010000
             } else {
-              if f_is_pos_norm(xf) then {
-                0b0001000000
+              if f_is_pos_subnorm(xf) then {
+                0b0000100000
               } else {
-                if f_is_pos_inf(xf) then {
-                  0b0010000000
+                if f_is_pos_norm(xf) then {
+                  0b0001000000
                 } else {
-                  if f_is_SNaN(xf) then {
-                    0b0100000000
+                  if f_is_pos_inf(xf) then {
+                    0b0010000000
                   } else {
-                    if f_is_QNaN(xf) then { 0b1000000000 } else { zeros() }
+                    if f_is_SNaN(xf) then {
+                      0b0100000000
+                    } else {
+                      if f_is_QNaN(xf) then { 0b1000000000 } else { zeros() }
+                    }
                   }
                 }
               }
@@ -912,8 +923,7 @@ function fp_class xf = {
           }
         }
       }
-    }
-  };
+    };
 
   zero_extend(result_val_10b)
 }
@@ -1127,13 +1137,14 @@ function rsqrt7(v, sub) = {
     53,
   ];
 
-  let (normalized_exp, normalized_sig) = if sub then {
-    let nr_leadingzeros = count_leadingzeros(sig, s);
-    assert(nr_leadingzeros >= 0);
-    (to_bits(64, 0 - nr_leadingzeros), zero_extend(64, (sig[(s - 1)..0]) << (1 + nr_leadingzeros)))
-  } else {
-    (exp, sig)
-  };
+  let (normalized_exp, normalized_sig) =
+    if sub then {
+      let nr_leadingzeros = count_leadingzeros(sig, s);
+      assert(nr_leadingzeros >= 0);
+      (to_bits(64, 0 - nr_leadingzeros), zero_extend(64, (sig[(s - 1)..0]) << (1 + nr_leadingzeros)))
+    } else {
+      (exp, sig)
+    };
 
   let idx : nat = match sizeof('m) {
     16 => unsigned([normalized_exp[0]] @ normalized_sig[9..4]),
@@ -1142,7 +1153,7 @@ function rsqrt7(v, sub) = {
   };
   assert(idx >= 0 & idx < 128);
   let out_sig = to_bits(s, table[127 - idx]) << (s - 7);
-  let out_exp = to_bits(e, (3 * (2 ^(e - 1) - 1) - 1 - signed(normalized_exp)) / 2);
+  let out_exp = to_bits(e, (3 * (2 ^ (e - 1) - 1) - 1 - signed(normalized_exp)) / 2);
   zero_extend(64, sign @ out_exp @ out_sig)
 }
 
@@ -1335,9 +1346,12 @@ function recip7(v, rm_3b, sub) = {
 
   let nr_leadingzeros = count_leadingzeros(sig, s);
   assert(nr_leadingzeros >= 0);
-  let (normalized_exp, normalized_sig) = if sub then {
-    (to_bits(64, 0 - nr_leadingzeros), zero_extend(64, (sig[(s - 1)..0]) << (1 + nr_leadingzeros)))
-  } else { (exp, sig) };
+  let (normalized_exp, normalized_sig) =
+    if sub then {
+      (to_bits(64, 0 - nr_leadingzeros), zero_extend(64, (sig[(s - 1)..0]) << (1 + nr_leadingzeros)))
+    } else {
+      (exp, sig)
+    };
 
   let idx : nat = match sizeof('m) {
     16 => unsigned(normalized_sig[9..3]),
@@ -1345,19 +1359,22 @@ function recip7(v, rm_3b, sub) = {
     64 => unsigned(normalized_sig[51..45]),
   };
   assert(idx >= 0 & idx < 128);
-  let mid_exp = to_bits(e, 2 * (2 ^(e - 1) - 1) - 1 - signed(normalized_exp));
+  let mid_exp = to_bits(e, 2 * (2 ^ (e - 1) - 1) - 1 - signed(normalized_exp));
   let mid_sig = to_bits(s, table[127 - idx]) << (s - 7);
 
-  let (out_exp, out_sig) = if mid_exp == zeros(e) then {
-    (mid_exp, mid_sig >> 1 | 0b1 @ zeros(s - 1))
-  } else {
-    if mid_exp == ones(e) then { (zeros(e), mid_sig >> 2 | 0b01 @ zeros(s - 2)) } else { (mid_exp, mid_sig) }
-  };
+  let (out_exp, out_sig) =
+    if mid_exp == zeros(e) then {
+      (mid_exp, mid_sig >> 1 | 0b1 @ zeros(s - 1))
+    } else {
+      if mid_exp == ones(e) then { (zeros(e), mid_sig >> 2 | 0b01 @ zeros(s - 2)) } else { (mid_exp, mid_sig) }
+    };
 
   if sub & nr_leadingzeros > 1 then {
     if rm_3b == 0b001 | rm_3b == 0b010 & sign == 0b0 | rm_3b == 0b011 & sign == 0b1 then {
       (true, zero_extend(64, sign @ ones(e - 1) @ 0b0 @ ones(s)))
-    } else { (true, zero_extend(64, sign @ ones(e) @ zeros(s))) }
+    } else {
+      (true, zero_extend(64, sign @ ones(e) @ zeros(s)))
+    }
   } else {
     (false, zero_extend(64, sign @ out_exp @ out_sig))
   }
@@ -1374,10 +1391,14 @@ function riscv_f16Recip7(rm, v) = {
     0x0010 => (dzFlag(), 0x7c00),
     0x0100 => (nvFlag(), 0x7e00),
     0x0200 => (zeros(5), 0x7e00),
-    0x0004 => if round_abnormal_true then { (nxFlag() | ofFlag(), res_true[15..0]) } else {
+    0x0004 => if round_abnormal_true then {
+      (nxFlag() | ofFlag(), res_true[15..0])
+    } else {
       (zeros(5), res_true[15..0])
     },
-    0x0020 => if round_abnormal_true then { (nxFlag() | ofFlag(), res_true[15..0]) } else {
+    0x0020 => if round_abnormal_true then {
+      (nxFlag() | ofFlag(), res_true[15..0])
+    } else {
       (zeros(5), res_true[15..0])
     },
     _ => if round_abnormal_false then { (nxFlag() | ofFlag(), res_false[15..0]) } else { (zeros(5), res_false[15..0]) },
@@ -1395,10 +1416,14 @@ function riscv_f32Recip7(rm, v) = {
     0x0010 => (dzFlag(), 0x7f800000),
     0x0100 => (nvFlag(), 0x7fc00000),
     0x0200 => (zeros(5), 0x7fc00000),
-    0x0004 => if round_abnormal_true then { (nxFlag() | ofFlag(), res_true[31..0]) } else {
+    0x0004 => if round_abnormal_true then {
+      (nxFlag() | ofFlag(), res_true[31..0])
+    } else {
       (zeros(5), res_true[31..0])
     },
-    0x0020 => if round_abnormal_true then { (nxFlag() | ofFlag(), res_true[31..0]) } else {
+    0x0020 => if round_abnormal_true then {
+      (nxFlag() | ofFlag(), res_true[31..0])
+    } else {
       (zeros(5), res_true[31..0])
     },
     _ => if round_abnormal_false then { (nxFlag() | ofFlag(), res_false[31..0]) } else { (zeros(5), res_false[31..0]) },
@@ -1416,10 +1441,14 @@ function riscv_f64Recip7(rm, v) = {
     0x0010 => (dzFlag(), 0x7ff0000000000000),
     0x0100 => (nvFlag(), 0x7ff8000000000000),
     0x0200 => (zeros(5), 0x7ff8000000000000),
-    0x0004 => if round_abnormal_true then { (nxFlag() | ofFlag(), res_true[63..0]) } else {
+    0x0004 => if round_abnormal_true then {
+      (nxFlag() | ofFlag(), res_true[63..0])
+    } else {
       (zeros(5), res_true[63..0])
     },
-    0x0020 => if round_abnormal_true then { (nxFlag() | ofFlag(), res_true[63..0]) } else {
+    0x0020 => if round_abnormal_true then {
+      (nxFlag() | ofFlag(), res_true[63..0])
+    } else {
       (zeros(5), res_true[63..0])
     },
     _ => if round_abnormal_false then { (nxFlag() | ofFlag(), res_false[63..0]) } else { (zeros(5), res_false[63..0]) },

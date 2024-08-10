@@ -34,7 +34,7 @@ function clause execute RIVVTYPE(funct6, vm, vs2, vs1, vd) = {
     return RETIRE_FAIL
   };
 
-  if unsigned(vl) == 0 then { return RETIRE_SUCCESS /* if vl=0, no operation is performed */  };
+  if unsigned(vl) == 0 then { return RETIRE_SUCCESS /* if vl=0, no operation is performed */ };
 
   let (n as 'n) = num_elem_vs;
   let (d as 'd) = num_elem_vd;
@@ -101,7 +101,7 @@ function clause execute RMVVTYPE(funct6, vm, vs2, vs1, vd) = {
     return RETIRE_FAIL
   };
 
-  if unsigned(vl) == 0 then { return RETIRE_SUCCESS /* if vl=0, no operation is performed */  };
+  if unsigned(vl) == 0 then { return RETIRE_SUCCESS /* if vl=0, no operation is performed */ };
 
   let (n as 'n) = num_elem_vs;
   let (d as 'd) = num_elem_vd;
@@ -177,7 +177,7 @@ function process_rfvv_single(funct6, vm, vs2, vs1, vd, num_elem_vs, SEW, LMUL_po
   };
   assert(SEW != 8);
 
-  if unsigned(vl) == 0 then { return RETIRE_SUCCESS /* if vl=0, no operation is performed */  };
+  if unsigned(vl) == 0 then { return RETIRE_SUCCESS /* if vl=0, no operation is performed */ };
 
   let (n as 'n) = num_elem_vs;
   let (d as 'd) = num_elem_vd;
@@ -224,7 +224,7 @@ function process_rfvv_widen(funct6, vm, vs2, vs1, vd, num_elem_vs, SEW, LMUL_pow
   };
   assert(SEW >= 16 & SEW_widen <= 64);
 
-  if unsigned(vl) == 0 then { return RETIRE_SUCCESS /* if vl=0, no operation is performed */  };
+  if unsigned(vl) == 0 then { return RETIRE_SUCCESS /* if vl=0, no operation is performed */ };
 
   let (n as 'n) = num_elem_vs;
   let (d as 'd) = num_elem_vd;
@@ -259,7 +259,9 @@ function clause execute RFVVTYPE(funct6, vm, vs2, vs1, vd) = {
 
   if funct6 == FVV_VFWREDOSUM | funct6 == FVV_VFWREDUSUM then {
     process_rfvv_widen(funct6, vm, vs2, vs1, vd, num_elem_vs, SEW, LMUL_pow)
-  } else { process_rfvv_single(funct6, vm, vs2, vs1, vd, num_elem_vs, SEW, LMUL_pow) }
+  } else {
+    process_rfvv_single(funct6, vm, vs2, vs1, vd, num_elem_vs, SEW, LMUL_pow)
+  }
 }
 
 mapping rfvvtype_mnemonic : rfvvfunct6 <-> string = {

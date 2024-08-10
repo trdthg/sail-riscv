@@ -106,7 +106,8 @@ mapping clause assembly = RISCV_BREV8(rs1, rd)
 function clause execute RISCV_BREV8(rs1, rd) = {
   let rs1_val = X(rs1);
   var result : xlenbits = zeros();
-  foreach (i from 0 to (sizeof(xlen) - 8) by 8) result[(i + 7)..i] = reverse(rs1_val[(i + 7)..i]);
+  foreach (i from 0 to (sizeof(xlen) - 8) by 8)
+    result[(i + 7)..i] = reverse(rs1_val[(i + 7)..i]);
   X(rd) = result;
   RETIRE_SUCCESS
 }

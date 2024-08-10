@@ -29,11 +29,12 @@ val nan_box_H : bits(16) -> flenbits
 function nan_box_H val_16b = if sizeof(flen) == 32 then { 0xFFFF @ val_16b } else { 0xFFFFFFFFFFFF @ val_16b }
 
 val nan_unbox_H : flenbits -> bits(16)
-function nan_unbox_H regval = if sizeof(flen) == 32 then {
-  if (regval[31..16]) == 0xFFFF then { regval[15..0] } else { canonical_NaN_H() }
-} else {
-  if (regval[63..16]) == 0xFFFFFFFFFFFF then { regval[15..0] } else { canonical_NaN_H() }
-}
+function nan_unbox_H regval =
+  if sizeof(flen) == 32 then {
+    if (regval[31..16]) == 0xFFFF then { regval[15..0] } else { canonical_NaN_H() }
+  } else {
+    if (regval[63..16]) == 0xFFFFFFFFFFFF then { regval[15..0] } else { canonical_NaN_H() }
+  }
 
 val nan_box_S : bits(32) -> flenbits
 function nan_box_S val_32b = {

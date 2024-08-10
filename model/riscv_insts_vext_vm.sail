@@ -49,7 +49,7 @@ function clause execute VVMTYPE(funct6, vs2, vs1, vd) = {
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
       let res : bool = match funct6 {
-        VVM_VMADC => unsigned(vs2_val[i]) + unsigned(vs1_val[i]) + unsigned(bool_to_bits(vm_val[i])) > 2 ^SEW - 1,
+        VVM_VMADC => unsigned(vs2_val[i]) + unsigned(vs1_val[i]) + unsigned(bool_to_bits(vm_val[i])) > 2 ^ SEW - 1,
         VVM_VMSBC => unsigned(vs2_val[i]) - unsigned(vs1_val[i]) - unsigned(bool_to_bits(vm_val[i])) < 0,
       };
       result[i] = res
@@ -107,7 +107,7 @@ function clause execute VVMCTYPE(funct6, vs2, vs1, vd) = {
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
       let res : bool = match funct6 {
-        VVMC_VMADC => unsigned(vs2_val[i]) + unsigned(vs1_val[i]) > 2 ^SEW - 1,
+        VVMC_VMADC => unsigned(vs2_val[i]) + unsigned(vs1_val[i]) > 2 ^ SEW - 1,
         VVMC_VMSBC => unsigned(vs2_val[i]) - unsigned(vs1_val[i]) < 0,
       };
       result[i] = res
@@ -156,7 +156,9 @@ function clause execute VVMSTYPE(funct6, vs2, vs1, vd) = {
 
   /* for bypassing normal masking in init_masked_result */
   vec_trues : vector('n, dec, bool) = undefined;
-  foreach (i from 0 to (num_elem - 1)) { vec_trues[i] = true };
+  foreach (i from 0 to (num_elem - 1)) {
+    vec_trues[i] = true
+  };
 
   let vm_val : vector('n, dec, bool) = read_vmask_carry(num_elem, 0b0, 0b00000);
   let vs1_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs1);
@@ -297,7 +299,7 @@ function clause execute VXMTYPE(funct6, vs2, rs1, vd) = {
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
       let res : bool = match funct6 {
-        VXM_VMADC => unsigned(vs2_val[i]) + unsigned(rs1_val) + unsigned(bool_to_bits(vm_val[i])) > 2 ^SEW - 1,
+        VXM_VMADC => unsigned(vs2_val[i]) + unsigned(rs1_val) + unsigned(bool_to_bits(vm_val[i])) > 2 ^ SEW - 1,
         VXM_VMSBC => unsigned(vs2_val[i]) - unsigned(rs1_val) - unsigned(bool_to_bits(vm_val[i])) < 0,
       };
       result[i] = res
@@ -355,7 +357,7 @@ function clause execute VXMCTYPE(funct6, vs2, rs1, vd) = {
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
       let res : bool = match funct6 {
-        VXMC_VMADC => unsigned(vs2_val[i]) + unsigned(rs1_val) > 2 ^SEW - 1,
+        VXMC_VMADC => unsigned(vs2_val[i]) + unsigned(rs1_val) > 2 ^ SEW - 1,
         VXMC_VMSBC => unsigned(vs2_val[i]) - unsigned(rs1_val) < 0,
       };
       result[i] = res
@@ -404,7 +406,9 @@ function clause execute VXMSTYPE(funct6, vs2, rs1, vd) = {
 
   /* for bypassing normal masking in init_masked_result */
   vec_trues : vector('n, dec, bool) = undefined;
-  foreach (i from 0 to (num_elem - 1)) { vec_trues[i] = true };
+  foreach (i from 0 to (num_elem - 1)) {
+    vec_trues[i] = true
+  };
 
   let vm_val : vector('n, dec, bool) = read_vmask_carry(num_elem, 0b0, 0b00000);
   let rs1_val : bits('m) = get_scalar(rs1, SEW);
@@ -550,7 +554,7 @@ function clause execute VIMTYPE(funct6, vs2, simm, vd) = {
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
       let res : bool = match funct6 {
-        VIM_VMADC => unsigned(vs2_val[i]) + unsigned(imm_val) + unsigned(bool_to_bits(vm_val[i])) > 2 ^SEW - 1,
+        VIM_VMADC => unsigned(vs2_val[i]) + unsigned(imm_val) + unsigned(bool_to_bits(vm_val[i])) > 2 ^ SEW - 1,
       };
       result[i] = res
     }
@@ -604,7 +608,7 @@ function clause execute VIMCTYPE(funct6, vs2, simm, vd) = {
 
   foreach (i from 0 to (num_elem - 1)) {
     if mask[i] then {
-      let res : bool = match funct6 { VIMC_VMADC => unsigned(vs2_val[i]) + unsigned(imm_val) > 2 ^SEW - 1,  };
+      let res : bool = match funct6 { VIMC_VMADC => unsigned(vs2_val[i]) + unsigned(imm_val) > 2 ^ SEW - 1,  };
       result[i] = res
     }
   };
@@ -649,7 +653,9 @@ function clause execute VIMSTYPE(funct6, vs2, simm, vd) = {
 
   /* for bypassing normal masking in init_masked_result */
   vec_trues : vector('n, dec, bool) = undefined;
-  foreach (i from 0 to (num_elem - 1)) { vec_trues[i] = true };
+  foreach (i from 0 to (num_elem - 1)) {
+    vec_trues[i] = true
+  };
 
   let vm_val : vector('n, dec, bool) = read_vmask_carry(num_elem, 0b0, 0b00000);
   let imm_val : bits('m) = sign_extend(simm);

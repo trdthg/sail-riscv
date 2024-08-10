@@ -840,7 +840,7 @@ val process_vlre : forall 'f 'b 'n, ('f in {1, 2, 4, 8}) & ('b in {1, 2, 4, 8}) 
 function process_vlre(nf, vd, load_width_bytes, rs1, elem_per_reg) = {
   let width_type : word_width = size_bytes(load_width_bytes);
   let start_element = get_start_element();
-  if start_element >= nf * elem_per_reg then { return RETIRE_SUCCESS /* no elements are written if vstart >= evl */  };
+  if start_element >= nf * elem_per_reg then { return RETIRE_SUCCESS /* no elements are written if vstart >= evl */ };
   let elem_to_align : int = start_element % elem_per_reg;
   cur_field : int = start_element / elem_per_reg;
   cur_elem : int = start_element;
@@ -948,7 +948,7 @@ val process_vsre : forall 'f 'b 'n, ('f in {1, 2, 4, 8}) & ('b in {1, 2, 4, 8}) 
 function process_vsre(nf, load_width_bytes, rs1, vs3, elem_per_reg) = {
   let width_type : word_width = BYTE;
   let start_element = get_start_element();
-  if start_element >= nf * elem_per_reg then { return RETIRE_SUCCESS /* no elements are written if vstart >= evl */  };
+  if start_element >= nf * elem_per_reg then { return RETIRE_SUCCESS /* no elements are written if vstart >= evl */ };
   let elem_to_align : int = start_element % elem_per_reg;
   cur_field : int = start_element / elem_per_reg;
   cur_elem : int = start_element;
@@ -1184,11 +1184,12 @@ function clause execute VMTYPE(rs1, vd_or_vs3, op) = {
   let EEW = 8;
   let EMUL_pow = 0;
   let vl_val = unsigned(vl);
-  let evl : int = if vl_val % 8 == 0 then {
-    vl_val / 8 /* the effective vector length is evl=ceil(vl/8) */
-  } else {
-    vl_val / 8 + 1
-  };
+  let evl : int =
+    if vl_val % 8 == 0 then {
+      vl_val / 8 /* the effective vector length is evl=ceil(vl/8) */
+    } else {
+      vl_val / 8 + 1
+    };
   let num_elem = get_num_elem(EMUL_pow, EEW);
 
   if illegal_vd_unmasked() then {

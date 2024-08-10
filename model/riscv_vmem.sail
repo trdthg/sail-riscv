@@ -91,7 +91,7 @@ function pt_walk(sv_params, va, ac, priv, mxr, do_sum, pt_base, level, global, e
     Read(Data), // AccessType
     Supervisor, // Privilege
     pte_phys_addr,
-    2 ^sv_params.log_pte_size_bytes,
+    2 ^ sv_params.log_pte_size_bytes,
     false, // aq
     false, // rl
     false,
@@ -197,24 +197,30 @@ function legalize_satp(
 // Fields of SATP
 // ASID is 9b in Sv32, 16b in Sv39/Sv48/Sv57: we use 16b for both
 // PRIVATE
-function satp_to_asid satp_val : xlenbits -> asidbits = if sizeof(xlen) == 32 then {
-  zero_extend(Mk_Satp32(satp_val)[Asid])
-} else {
-  if sizeof(xlen) == 64 then { Mk_Satp64(satp_val)[Asid] } else {
-    internal_error(__FILE__, __LINE__, "Unsupported xlen" ^ dec_str(sizeof(xlen)))
+function satp_to_asid satp_val : xlenbits -> asidbits =
+  if sizeof(xlen) == 32 then {
+    zero_extend(Mk_Satp32(satp_val)[Asid])
+  } else {
+    if sizeof(xlen) == 64 then {
+      Mk_Satp64(satp_val)[Asid]
+    } else {
+      internal_error(__FILE__, __LINE__, "Unsupported xlen" ^ dec_str(sizeof(xlen)))
+    }
   }
-}
 
 // Result is 64b to cover both RV32 and RV64 addrs
 // PRIVATE
 function satp_to_PT_base satp_val : xlenbits -> bits(64) = {
-  let ppn = if sizeof(xlen) == 32 then {
-    zero_extend(64, Mk_Satp32(satp_val)[PPN])
-  } else {
-    if sizeof(xlen) == 64 then { zero_extend(64, Mk_Satp64(satp_val)[PPN]) } else {
-      internal_error(__FILE__, __LINE__, "Unsupported xlen" ^ dec_str(sizeof(xlen)))
-    }
-  };
+  let ppn =
+    if sizeof(xlen) == 32 then {
+      zero_extend(64, Mk_Satp32(satp_val)[PPN])
+    } else {
+      if sizeof(xlen) == 64 then {
+        zero_extend(64, Mk_Satp64(satp_val)[PPN])
+      } else {
+        internal_error(__FILE__, __LINE__, "Unsupported xlen" ^ dec_str(sizeof(xlen)))
+      }
+    };
   ppn << pagesize_bits
 }
 
@@ -313,14 +319,11 @@ function translate_TLB_hit(
           TR_Failure(PTW_PTE_Update(), ext_ptw)
         } else {
           // Writeback the PTE (which has new A/D bits)
-          let n_ent = {
-            ent with
-            pte = pte',
-          };
+          let n_ent = { ent with pte = pte' };
           write_TLB(tlb_index, n_ent);
           let pte_phys_addr = ent.pteAddr[(sizeof(xlen) - 1)..0];
 
-          match write_pte(pte_phys_addr, 2 ^sv_params.log_pte_size_bytes, pte') {
+          match write_pte(pte_phys_addr, 2 ^ sv_params.log_pte_size_bytes, pte') {
             MemValue(_) => (),
             MemException(e) => internal_error(__FILE__, __LINE__, "invalid physical address in TLB"),
           };
@@ -367,7 +370,7 @@ function translate_TLB_miss(
             // Writeback the PTE (which has new A/D bits)
             let pte_phys_addr = pteAddr[(sizeof(xlen) - 1)..0];
 
-            match write_pte(pte_phys_addr, 2 ^sv_params.log_pte_size_bytes, pte') {
+            match write_pte(pte_phys_addr, 2 ^ sv_params.log_pte_size_bytes, pte') {
               MemValue(_) => {
                 add_to_TLB(asid, vAddr, pAddr, pte', pteAddr, level, global, sv_params.vpn_size_bits, pagesize_bits);
                 TR_Address(pAddr, ext_ptw)

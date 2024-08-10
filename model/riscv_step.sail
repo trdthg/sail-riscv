@@ -48,9 +48,16 @@ function step step_no : int -> bool = {
           let ast = ext_decode_compressed(h);
           if get_config_print_instr() then {
             print_instr(
-              "[" ^ dec_str(step_no) ^ "] [" ^ to_str(cur_privilege) ^ "]: " ^ BitStr(PC) ^ " (" ^ BitStr(h) ^ ") " ^ to_str(
-                ast,
-              ),
+              "["
+                ^ dec_str(step_no)
+                ^ "] ["
+                ^ to_str(cur_privilege)
+                ^ "]: "
+                ^ BitStr(PC)
+                ^ " ("
+                ^ BitStr(h)
+                ^ ") "
+                ^ to_str(ast),
             )
           };
 
@@ -69,9 +76,16 @@ function step step_no : int -> bool = {
           let ast = ext_decode(w);
           if get_config_print_instr() then {
             print_instr(
-              "[" ^ dec_str(step_no) ^ "] [" ^ to_str(cur_privilege) ^ "]: " ^ BitStr(PC) ^ " (" ^ BitStr(w) ^ ") " ^ to_str(
-                ast,
-              ),
+              "["
+                ^ dec_str(step_no)
+                ^ "] ["
+                ^ to_str(cur_privilege)
+                ^ "]: "
+                ^ BitStr(PC)
+                ^ " ("
+                ^ BitStr(w)
+                ^ ") "
+                ^ to_str(ast),
             )
           };
           nextPC = PC + 4;

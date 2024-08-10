@@ -179,7 +179,8 @@ mapping clause assembly = RISCV_REV8(rs1, rd)
 function clause execute RISCV_REV8(rs1, rd) = {
   let rs1_val = X(rs1);
   var result : xlenbits = zeros();
-  foreach (i from 0 to (sizeof(xlen) - 8) by 8) result[(i + 7)..i] = rs1_val[(sizeof(xlen) - i - 1)..(sizeof(xlen) - i - 8)];
+  foreach (i from 0 to (sizeof(xlen) - 8) by 8)
+    result[(i + 7)..i] = rs1_val[(sizeof(xlen) - i - 1)..(sizeof(xlen) - i - 8)];
   X(rd) = result;
   RETIRE_SUCCESS
 }
@@ -196,7 +197,8 @@ mapping clause assembly = RISCV_ORCB(rs1, rd)
 function clause execute RISCV_ORCB(rs1, rd) = {
   let rs1_val = X(rs1);
   var result : xlenbits = zeros();
-  foreach (i from 0 to (sizeof(xlen) - 8) by 8) result[(i + 7)..i] = if (rs1_val[(i + 7)..i]) == zeros() then 0x00 else 0xFF;
+  foreach (i from 0 to (sizeof(xlen) - 8) by 8)
+    result[(i + 7)..i] = if (rs1_val[(i + 7)..i]) == zeros() then 0x00 else 0xFF;
   X(rd) = result;
   RETIRE_SUCCESS
 }
@@ -213,7 +215,8 @@ mapping clause assembly = RISCV_CPOP(rs1, rd)
 function clause execute RISCV_CPOP(rs1, rd) = {
   let rs1_val = X(rs1);
   var result : nat = 0;
-  foreach (i from 0 to (xlen_val - 1)) if (rs1_val[i]) == bitone then { result = result + 1 };
+  foreach (i from 0 to (xlen_val - 1))
+    if (rs1_val[i]) == bitone then { result = result + 1 };
   X(rd) = to_bits(sizeof(xlen), result);
   RETIRE_SUCCESS
 }
@@ -230,7 +233,8 @@ mapping clause assembly = RISCV_CPOPW(rs1, rd)
 function clause execute RISCV_CPOPW(rs1, rd) = {
   let rs1_val = X(rs1);
   var result : nat = 0;
-  foreach (i from 0 to 31) if (rs1_val[i]) == bitone then { result = result + 1 };
+  foreach (i from 0 to 31)
+    if (rs1_val[i]) == bitone then { result = result + 1 };
   X(rd) = to_bits(sizeof(xlen), result);
   RETIRE_SUCCESS
 }
@@ -248,9 +252,8 @@ function clause execute RISCV_CLZ(rs1, rd) = {
   let rs1_val = X(rs1);
   var result : nat = 0;
   var done : bool = false;
-  foreach (i from (sizeof(xlen) - 1) downto 0) if not(done) then {
-    if (rs1_val[i]) == bitzero then { result = result + 1 } else { done = true }
-  };
+  foreach (i from (sizeof(xlen) - 1) downto 0)
+    if not(done) then { if (rs1_val[i]) == bitzero then { result = result + 1 } else { done = true } };
   X(rd) = to_bits(sizeof(xlen), result);
   RETIRE_SUCCESS
 }
@@ -268,9 +271,8 @@ function clause execute RISCV_CLZW(rs1, rd) = {
   let rs1_val = X(rs1);
   var result : nat = 0;
   var done : bool = false;
-  foreach (i from 31 downto 0) if not(done) then {
-    if (rs1_val[i]) == bitzero then { result = result + 1 } else { done = true }
-  };
+  foreach (i from 31 downto 0)
+    if not(done) then { if (rs1_val[i]) == bitzero then { result = result + 1 } else { done = true } };
   X(rd) = to_bits(sizeof(xlen), result);
   RETIRE_SUCCESS
 }
@@ -288,9 +290,8 @@ function clause execute RISCV_CTZ(rs1, rd) = {
   let rs1_val = X(rs1);
   var result : nat = 0;
   var done : bool = false;
-  foreach (i from 0 to (sizeof(xlen) - 1)) if not(done) then {
-    if (rs1_val[i]) == bitzero then { result = result + 1 } else { done = true }
-  };
+  foreach (i from 0 to (sizeof(xlen) - 1))
+    if not(done) then { if (rs1_val[i]) == bitzero then { result = result + 1 } else { done = true } };
   X(rd) = to_bits(sizeof(xlen), result);
   RETIRE_SUCCESS
 }
@@ -308,9 +309,8 @@ function clause execute RISCV_CTZW(rs1, rd) = {
   let rs1_val = X(rs1);
   var result : nat = 0;
   var done : bool = false;
-  foreach (i from 0 to 31) if not(done) then {
-    if (rs1_val[i]) == bitzero then { result = result + 1 } else { done = true }
-  };
+  foreach (i from 0 to 31)
+    if not(done) then { if (rs1_val[i]) == bitzero then { result = result + 1 } else { done = true } };
   X(rd) = to_bits(sizeof(xlen), result);
   RETIRE_SUCCESS
 }

@@ -130,25 +130,27 @@ function flt_D(v1, v2, is_quiet) = {
   let (s1, e1, m1) = fsplit_D(v1);
   let (s2, e2, m2) = fsplit_D(v2);
 
-  let result : bool = if (s1 == 0b0) & (s2 == 0b0) then {
-    if e1 == e2 then { unsigned(m1) < unsigned(m2) } else { unsigned(e1) < unsigned(e2) }
-  } else {
-    if (s1 == 0b0) & (s2 == 0b1) then {
-      false
+  let result : bool =
+    if (s1 == 0b0) & (s2 == 0b0) then {
+      if e1 == e2 then { unsigned(m1) < unsigned(m2) } else { unsigned(e1) < unsigned(e2) }
     } else {
-      if (s1 == 0b1) & (s2 == 0b0) then {
-        true
+      if (s1 == 0b0) & (s2 == 0b1) then {
+        false
       } else {
-        if e1 == e2 then { unsigned(m1) > unsigned(m2) } else { unsigned(e1) > unsigned(e2) }
+        if (s1 == 0b1) & (s2 == 0b0) then {
+          true
+        } else {
+          if e1 == e2 then { unsigned(m1) > unsigned(m2) } else { unsigned(e1) > unsigned(e2) }
+        }
       }
-    }
-  };
+    };
 
-  let fflags = if is_quiet then {
-    if f_is_SNaN_D(v1) | f_is_SNaN_D(v2) then { nvFlag() } else { zeros() }
-  } else {
-    if f_is_NaN_D(v1) | f_is_NaN_D(v2) then { nvFlag() } else { zeros() }
-  };
+  let fflags =
+    if is_quiet then {
+      if f_is_SNaN_D(v1) | f_is_SNaN_D(v2) then { nvFlag() } else { zeros() }
+    } else {
+      if f_is_NaN_D(v1) | f_is_NaN_D(v2) then { nvFlag() } else { zeros() }
+    };
 
   (result, fflags)
 }
@@ -161,26 +163,28 @@ function fle_D(v1, v2, is_quiet) = {
   let v1Is0 = f_is_neg_zero_D(v1) | f_is_pos_zero_D(v1);
   let v2Is0 = f_is_neg_zero_D(v2) | f_is_pos_zero_D(v2);
 
-  let result : bool = if (s1 == 0b0) & (s2 == 0b0) then {
-    if e1 == e2 then { unsigned(m1) <= unsigned(m2) } else { unsigned(e1) < unsigned(e2) }
-  } else {
-    if (s1 == 0b0) & (s2 == 0b1) then {
-      v1Is0 & v2Is0
-      /* Equal in this case (+0=-0) */
+  let result : bool =
+    if (s1 == 0b0) & (s2 == 0b0) then {
+      if e1 == e2 then { unsigned(m1) <= unsigned(m2) } else { unsigned(e1) < unsigned(e2) }
     } else {
-      if (s1 == 0b1) & (s2 == 0b0) then {
-        true
+      if (s1 == 0b0) & (s2 == 0b1) then {
+        v1Is0 & v2Is0
+        /* Equal in this case (+0=-0) */
       } else {
-        if e1 == e2 then { unsigned(m1) >= unsigned(m2) } else { unsigned(e1) > unsigned(e2) }
+        if (s1 == 0b1) & (s2 == 0b0) then {
+          true
+        } else {
+          if e1 == e2 then { unsigned(m1) >= unsigned(m2) } else { unsigned(e1) > unsigned(e2) }
+        }
       }
-    }
-  };
+    };
 
-  let fflags = if is_quiet then {
-    if f_is_SNaN_D(v1) | f_is_SNaN_D(v2) then { nvFlag() } else { zeros() }
-  } else {
-    if f_is_NaN_D(v1) | f_is_NaN_D(v2) then { nvFlag() } else { zeros() }
-  };
+  let fflags =
+    if is_quiet then {
+      if f_is_SNaN_D(v1) | f_is_SNaN_D(v2) then { nvFlag() } else { zeros() }
+    } else {
+      if f_is_NaN_D(v1) | f_is_NaN_D(v2) then { nvFlag() } else { zeros() }
+    };
 
   (result, fflags)
 }
@@ -194,7 +198,8 @@ function haveDoubleFPU () -> bool = haveDExt() | haveZdinx()
 val validDoubleRegs : forall 'n, 'n > 0. (implicit('n), vector('n, dec, regidx)) -> bool
 function validDoubleRegs(n, regs) = {
   if haveZdinx() & sizeof(xlen) == 32 then {
-    foreach (i from 0 to (n - 1)) if (regs[i][0]) == bitone then { return false }
+    foreach (i from 0 to (n - 1))
+      if (regs[i][0]) == bitone then { return false }
   };
   true
 }
@@ -739,31 +744,32 @@ function clause execute F_BIN_TYPE_D(rs2, rs1, rd, FMIN_D) = {
   let is_quiet = true;
   let (rs1_lt_rs2, fflags) = fle_D(rs1_val_D, rs2_val_D, is_quiet);
 
-  let rd_val_D = if f_is_NaN_D(rs1_val_D) & f_is_NaN_D(rs2_val_D) then {
-    canonical_NaN_D()
-  } else {
-    if f_is_NaN_D(rs1_val_D) then {
-      rs2_val_D
+  let rd_val_D =
+    if f_is_NaN_D(rs1_val_D) & f_is_NaN_D(rs2_val_D) then {
+      canonical_NaN_D()
     } else {
-      if f_is_NaN_D(rs2_val_D) then {
-        rs1_val_D
+      if f_is_NaN_D(rs1_val_D) then {
+        rs2_val_D
       } else {
-        if f_is_neg_zero_D(rs1_val_D) & f_is_pos_zero_D(rs2_val_D) then {
+        if f_is_NaN_D(rs2_val_D) then {
           rs1_val_D
         } else {
-          if f_is_neg_zero_D(rs2_val_D) & f_is_pos_zero_D(rs1_val_D) then {
-            rs2_val_D
+          if f_is_neg_zero_D(rs1_val_D) & f_is_pos_zero_D(rs2_val_D) then {
+            rs1_val_D
           } else {
-            if rs1_lt_rs2 then {
-              rs1_val_D
+            if f_is_neg_zero_D(rs2_val_D) & f_is_pos_zero_D(rs1_val_D) then {
+              rs2_val_D
             } else {
-              /* (not rs1_lt_rs2) */ rs2_val_D
+              if rs1_lt_rs2 then {
+                rs1_val_D
+              } else {
+                /* (not rs1_lt_rs2) */ rs2_val_D
+              }
             }
           }
         }
       }
-    }
-  };
+    };
 
   accrue_fflags(fflags);
   F_or_X_D(rd) = rd_val_D;
@@ -777,31 +783,32 @@ function clause execute F_BIN_TYPE_D(rs2, rs1, rd, FMAX_D) = {
   let is_quiet = true;
   let (rs2_lt_rs1, fflags) = fle_D(rs2_val_D, rs1_val_D, is_quiet);
 
-  let rd_val_D = if f_is_NaN_D(rs1_val_D) & f_is_NaN_D(rs2_val_D) then {
-    canonical_NaN_D()
-  } else {
-    if f_is_NaN_D(rs1_val_D) then {
-      rs2_val_D
+  let rd_val_D =
+    if f_is_NaN_D(rs1_val_D) & f_is_NaN_D(rs2_val_D) then {
+      canonical_NaN_D()
     } else {
-      if f_is_NaN_D(rs2_val_D) then {
-        rs1_val_D
+      if f_is_NaN_D(rs1_val_D) then {
+        rs2_val_D
       } else {
-        if f_is_neg_zero_D(rs1_val_D) & f_is_pos_zero_D(rs2_val_D) then {
-          rs2_val_D
+        if f_is_NaN_D(rs2_val_D) then {
+          rs1_val_D
         } else {
-          if f_is_neg_zero_D(rs2_val_D) & f_is_pos_zero_D(rs1_val_D) then {
-            rs1_val_D
+          if f_is_neg_zero_D(rs1_val_D) & f_is_pos_zero_D(rs2_val_D) then {
+            rs2_val_D
           } else {
-            if rs2_lt_rs1 then {
+            if f_is_neg_zero_D(rs2_val_D) & f_is_pos_zero_D(rs1_val_D) then {
               rs1_val_D
             } else {
-              /* (not rs2_lt_rs1) */ rs2_val_D
+              if rs2_lt_rs1 then {
+                rs1_val_D
+              } else {
+                /* (not rs2_lt_rs1) */ rs2_val_D
+              }
             }
           }
         }
       }
-    }
-  };
+    };
 
   accrue_fflags(fflags);
   F_or_X_D(rd) = rd_val_D;
@@ -920,34 +927,36 @@ mapping clause encdec = F_UN_TYPE_D(rs1, rd, FMV_D_X)                         if
 function clause execute F_UN_TYPE_D(rs1, rd, FCLASS_D) = {
   let rs1_val_D = F_or_X_D(rs1);
 
-  let rd_val_10b : bits(10) = if f_is_neg_inf_D(rs1_val_D) then {
-    0b0000000001
-  } else {
-    if f_is_neg_norm_D(rs1_val_D) then {
-      0b0000000010
+  let rd_val_10b : bits(10) =
+    if f_is_neg_inf_D(rs1_val_D) then {
+      0b0000000001
     } else {
-      if f_is_neg_subnorm_D(rs1_val_D) then {
-        0b0000000100
+      if f_is_neg_norm_D(rs1_val_D) then {
+        0b0000000010
       } else {
-        if f_is_neg_zero_D(rs1_val_D) then {
-          0b0000001000
+        if f_is_neg_subnorm_D(rs1_val_D) then {
+          0b0000000100
         } else {
-          if f_is_pos_zero_D(rs1_val_D) then {
-            0b0000010000
+          if f_is_neg_zero_D(rs1_val_D) then {
+            0b0000001000
           } else {
-            if f_is_pos_subnorm_D(rs1_val_D) then {
-              0b0000100000
+            if f_is_pos_zero_D(rs1_val_D) then {
+              0b0000010000
             } else {
-              if f_is_pos_norm_D(rs1_val_D) then {
-                0b0001000000
+              if f_is_pos_subnorm_D(rs1_val_D) then {
+                0b0000100000
               } else {
-                if f_is_pos_inf_D(rs1_val_D) then {
-                  0b0010000000
+                if f_is_pos_norm_D(rs1_val_D) then {
+                  0b0001000000
                 } else {
-                  if f_is_SNaN_D(rs1_val_D) then {
-                    0b0100000000
+                  if f_is_pos_inf_D(rs1_val_D) then {
+                    0b0010000000
                   } else {
-                    if f_is_QNaN_D(rs1_val_D) then { 0b1000000000 } else { zeros() }
+                    if f_is_SNaN_D(rs1_val_D) then {
+                      0b0100000000
+                    } else {
+                      if f_is_QNaN_D(rs1_val_D) then { 0b1000000000 } else { zeros() }
+                    }
                   }
                 }
               }
@@ -955,8 +964,7 @@ function clause execute F_UN_TYPE_D(rs1, rd, FCLASS_D) = {
           }
         }
       }
-    }
-  };
+    };
 
   X(rd) = zero_extend(rd_val_10b);
   RETIRE_SUCCESS

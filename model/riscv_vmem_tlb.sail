@@ -105,7 +105,9 @@ function tlb_hash vaddr : bits(64) -> tlb_index_range = unsigned(vaddr[17..12])
 
 // PUBLIC: invoked in init_vmem() [riscv_vmem.sail]
 function init_TLB () -> unit = {
-  foreach (i from 0 to (length(tlb) - 1)) { tlb[i] = None() }
+  foreach (i from 0 to (length(tlb) - 1)) {
+    tlb[i] = None()
+  }
 }
 
 // PUBLIC: invoked in translate_TLB_hit() [riscv_vmem.sail]
@@ -185,8 +187,7 @@ function flush_TLB(asid_xlen : option(xlenbits), addr_xlen : option(xlenbits)) -
   };
   foreach (i from 0 to (length(tlb) - 1)) {
     match tlb[i] {
-      Some(e) =>
-        if flush_TLB_Entry(e, asid, addr_64b) then { tlb[i] = None() },
+      Some(e) => if flush_TLB_Entry(e, asid, addr_64b) then { tlb[i] = None() },
       None() => (),
     }
   }

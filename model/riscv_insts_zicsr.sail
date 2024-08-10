@@ -300,10 +300,9 @@ function writeCSR(csr : csreg, value : xlenbits) -> unit = {
     _ => ext_write_CSR(csr, value),
   };
   match res {
-    Some(v) =>
-      if get_config_print_reg() then {
-        print_reg("CSR " ^ to_str(csr) ^ " <- " ^ BitStr(v) ^ " (input: " ^ BitStr(value) ^ ")")
-      },
+    Some(v) => if get_config_print_reg() then {
+      print_reg("CSR " ^ to_str(csr) ^ " <- " ^ BitStr(v) ^ " (input: " ^ BitStr(value) ^ ")")
+    },
     None() => print_bits("unhandled write to CSR ", csr),
   }
 }

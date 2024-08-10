@@ -108,25 +108,27 @@ function fle_H(v1, v2, is_quiet) = {
   let v1Is0 = f_is_neg_zero_H(v1) | f_is_pos_zero_H(v1);
   let v2Is0 = f_is_neg_zero_H(v2) | f_is_pos_zero_H(v2);
 
-  let result : bool = if (s1 == 0b0) & (s2 == 0b0) then {
-    if e1 == e2 then { unsigned(m1) <= unsigned(m2) } else { unsigned(e1) < unsigned(e2) }
-  } else {
-    if (s1 == 0b0) & (s2 == 0b1) then {
-      v1Is0 & v2Is0 /* Equal in this case (+0=-0) */
+  let result : bool =
+    if (s1 == 0b0) & (s2 == 0b0) then {
+      if e1 == e2 then { unsigned(m1) <= unsigned(m2) } else { unsigned(e1) < unsigned(e2) }
     } else {
-      if (s1 == 0b1) & (s2 == 0b0) then {
-        true
+      if (s1 == 0b0) & (s2 == 0b1) then {
+        v1Is0 & v2Is0 /* Equal in this case (+0=-0) */
       } else {
-        if e1 == e2 then { unsigned(m1) >= unsigned(m2) } else { unsigned(e1) > unsigned(e2) }
+        if (s1 == 0b1) & (s2 == 0b0) then {
+          true
+        } else {
+          if e1 == e2 then { unsigned(m1) >= unsigned(m2) } else { unsigned(e1) > unsigned(e2) }
+        }
       }
-    }
-  };
+    };
 
-  let fflags = if is_quiet then {
-    if f_is_SNaN_H(v1) | f_is_SNaN_H(v2) then { nvFlag() } else { zeros() }
-  } else {
-    if f_is_NaN_H(v1) | f_is_NaN_H(v2) then { nvFlag() } else { zeros() }
-  };
+  let fflags =
+    if is_quiet then {
+      if f_is_SNaN_H(v1) | f_is_SNaN_H(v2) then { nvFlag() } else { zeros() }
+    } else {
+      if f_is_NaN_H(v1) | f_is_NaN_H(v2) then { nvFlag() } else { zeros() }
+    };
 
   (result, fflags)
 }
@@ -335,31 +337,32 @@ function clause execute F_BIN_TYPE_H(rs2, rs1, rd, FMIN_H) = {
   let is_quiet = true;
   let (rs1_lt_rs2, fflags) = fle_H(rs1_val_H, rs2_val_H, is_quiet);
 
-  let rd_val_H = if f_is_NaN_H(rs1_val_H) & f_is_NaN_H(rs2_val_H) then {
-    canonical_NaN_H()
-  } else {
-    if f_is_NaN_H(rs1_val_H) then {
-      rs2_val_H
+  let rd_val_H =
+    if f_is_NaN_H(rs1_val_H) & f_is_NaN_H(rs2_val_H) then {
+      canonical_NaN_H()
     } else {
-      if f_is_NaN_H(rs2_val_H) then {
-        rs1_val_H
+      if f_is_NaN_H(rs1_val_H) then {
+        rs2_val_H
       } else {
-        if f_is_neg_zero_H(rs1_val_H) & f_is_pos_zero_H(rs2_val_H) then {
+        if f_is_NaN_H(rs2_val_H) then {
           rs1_val_H
         } else {
-          if f_is_neg_zero_H(rs2_val_H) & f_is_pos_zero_H(rs1_val_H) then {
-            rs2_val_H
+          if f_is_neg_zero_H(rs1_val_H) & f_is_pos_zero_H(rs2_val_H) then {
+            rs1_val_H
           } else {
-            if rs1_lt_rs2 then {
-              rs1_val_H
+            if f_is_neg_zero_H(rs2_val_H) & f_is_pos_zero_H(rs1_val_H) then {
+              rs2_val_H
             } else {
-              /* (not rs1_lt_rs2) */ rs2_val_H
+              if rs1_lt_rs2 then {
+                rs1_val_H
+              } else {
+                /* (not rs1_lt_rs2) */ rs2_val_H
+              }
             }
           }
         }
       }
-    }
-  };
+    };
 
   accrue_fflags(fflags);
   F_or_X_H(rd) = rd_val_H;
@@ -373,31 +376,32 @@ function clause execute F_BIN_TYPE_H(rs2, rs1, rd, FMAX_H) = {
   let is_quiet = true;
   let (rs2_lt_rs1, fflags) = fle_H(rs2_val_H, rs1_val_H, is_quiet);
 
-  let rd_val_H = if f_is_NaN_H(rs1_val_H) & f_is_NaN_H(rs2_val_H) then {
-    canonical_NaN_H()
-  } else {
-    if f_is_NaN_H(rs1_val_H) then {
-      rs2_val_H
+  let rd_val_H =
+    if f_is_NaN_H(rs1_val_H) & f_is_NaN_H(rs2_val_H) then {
+      canonical_NaN_H()
     } else {
-      if f_is_NaN_H(rs2_val_H) then {
-        rs1_val_H
+      if f_is_NaN_H(rs1_val_H) then {
+        rs2_val_H
       } else {
-        if f_is_neg_zero_H(rs1_val_H) & f_is_pos_zero_H(rs2_val_H) then {
-          rs2_val_H
+        if f_is_NaN_H(rs2_val_H) then {
+          rs1_val_H
         } else {
-          if f_is_neg_zero_H(rs2_val_H) & f_is_pos_zero_H(rs1_val_H) then {
-            rs1_val_H
+          if f_is_neg_zero_H(rs1_val_H) & f_is_pos_zero_H(rs2_val_H) then {
+            rs2_val_H
           } else {
-            if rs2_lt_rs1 then {
+            if f_is_neg_zero_H(rs2_val_H) & f_is_pos_zero_H(rs1_val_H) then {
               rs1_val_H
             } else {
-              /* (not rs2_lt_rs1) */ rs2_val_H
+              if rs2_lt_rs1 then {
+                rs1_val_H
+              } else {
+                /* (not rs2_lt_rs1) */ rs2_val_H
+              }
             }
           }
         }
       }
-    }
-  };
+    };
 
   accrue_fflags(fflags);
   F_or_X_H(rd) = rd_val_H;
@@ -912,34 +916,36 @@ mapping clause encdec = F_UN_TYPE_H(rs1, rd, FMV_H_X)                         if
 function clause execute F_UN_TYPE_H(rs1, rd, FCLASS_H) = {
   let rs1_val_H = F_or_X_H(rs1);
 
-  let rd_val_10b : bits(10) = if f_is_neg_inf_H(rs1_val_H) then {
-    0b0000000001
-  } else {
-    if f_is_neg_norm_H(rs1_val_H) then {
-      0b0000000010
+  let rd_val_10b : bits(10) =
+    if f_is_neg_inf_H(rs1_val_H) then {
+      0b0000000001
     } else {
-      if f_is_neg_subnorm_H(rs1_val_H) then {
-        0b0000000100
+      if f_is_neg_norm_H(rs1_val_H) then {
+        0b0000000010
       } else {
-        if f_is_neg_zero_H(rs1_val_H) then {
-          0b0000001000
+        if f_is_neg_subnorm_H(rs1_val_H) then {
+          0b0000000100
         } else {
-          if f_is_pos_zero_H(rs1_val_H) then {
-            0b0000010000
+          if f_is_neg_zero_H(rs1_val_H) then {
+            0b0000001000
           } else {
-            if f_is_pos_subnorm_H(rs1_val_H) then {
-              0b0000100000
+            if f_is_pos_zero_H(rs1_val_H) then {
+              0b0000010000
             } else {
-              if f_is_pos_norm_H(rs1_val_H) then {
-                0b0001000000
+              if f_is_pos_subnorm_H(rs1_val_H) then {
+                0b0000100000
               } else {
-                if f_is_pos_inf_H(rs1_val_H) then {
-                  0b0010000000
+                if f_is_pos_norm_H(rs1_val_H) then {
+                  0b0001000000
                 } else {
-                  if f_is_SNaN_H(rs1_val_H) then {
-                    0b0100000000
+                  if f_is_pos_inf_H(rs1_val_H) then {
+                    0b0010000000
                   } else {
-                    if f_is_QNaN_H(rs1_val_H) then { 0b1000000000 } else { zeros() }
+                    if f_is_SNaN_H(rs1_val_H) then {
+                      0b0100000000
+                    } else {
+                      if f_is_QNaN_H(rs1_val_H) then { 0b1000000000 } else { zeros() }
+                    }
                   }
                 }
               }
@@ -947,8 +953,7 @@ function clause execute F_UN_TYPE_H(rs1, rd, FCLASS_H) = {
           }
         }
       }
-    }
-  };
+    };
 
   X(rd) = zero_extend(rd_val_10b);
   RETIRE_SUCCESS

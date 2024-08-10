@@ -185,9 +185,10 @@ function clause execute FWVVTYPE(funct6, vm, vs2, vs1, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) | not(
-    valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen),
-  ) | not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen)) then {
+  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen)
+    | not(valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen))
+    | not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen))
+  then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -252,9 +253,10 @@ function clause execute FWVVMATYPE(funct6, vm, vs1, vs2, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) | not(
-    valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen),
-  ) | not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen)) then {
+  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen)
+    | not(valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen))
+    | not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen))
+  then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -318,9 +320,9 @@ function clause execute FWVTYPE(funct6, vm, vs2, vs1, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) | not(
-    valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen),
-  ) then {
+  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
+    not(valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen))
+  then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -501,9 +503,9 @@ function clause execute VFWUNARY0(vm, vs2, vfwunary0, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) | not(
-    valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen),
-  ) then {
+  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
+    not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen))
+  then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -649,9 +651,9 @@ function clause execute VFNUNARY0(vm, vs2, vfnunary0, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) | not(
-    valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow),
-  ) then {
+  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
+    not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
+  then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -1095,9 +1097,9 @@ function clause execute FWVFTYPE(funct6, vm, vs2, rs1, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) | not(
-    valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen),
-  ) then {
+  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
+    not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen))
+  then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -1162,9 +1164,9 @@ function clause execute FWVFMATYPE(funct6, vm, rs1, vs2, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) | not(
-    valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen),
-  ) then {
+  if illegal_fp_variable_width(vd, vm, SEW, rm_3b, SEW_widen, LMUL_pow_widen) |
+    not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen))
+  then {
     handle_illegal();
     return RETIRE_FAIL
   };
@@ -1283,11 +1285,12 @@ function clause execute VFMERGE(vs2, rs1, vd) = {
   let SEW = get_sew();
   let LMUL_pow = get_lmul_pow();
   let num_elem = get_num_elem(LMUL_pow, SEW); /* max(VLMAX,VLEN/SEW)) */
-  let real_num_elem = if LMUL_pow >= 0 then {
-    num_elem /* VLMAX */
-  } else {
-    num_elem / (0 - LMUL_pow)
-  };
+  let real_num_elem =
+    if LMUL_pow >= 0 then {
+      num_elem /* VLMAX */
+    } else {
+      num_elem / (0 - LMUL_pow)
+    };
 
   if illegal_fp_vd_masked(vd, SEW, rm_3b) then {
     handle_illegal();
