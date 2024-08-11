@@ -614,8 +614,8 @@ function get_fixed_rounding_incr(vec_elem, shift_amount) = {
     match rounding_mode {
       0b00 => slice(vec_elem, shift_amount - 1, 1),
       0b01 => bool_to_bits(
-        (slice(vec_elem, shift_amount - 1, 1) == 0b1) & (slice(vec_elem, 0, shift_amount - 1) != zeros()
-          | slice(vec_elem, shift_amount, 1) == 0b1),
+        (slice(vec_elem, shift_amount - 1, 1) == 0b1)
+          & (slice(vec_elem, 0, shift_amount - 1) != zeros() | slice(vec_elem, shift_amount, 1) == 0b1),
       ),
       0b10 => 0b0,
       0b11 => bool_to_bits(not(slice(vec_elem, shift_amount, 1) == 0b1) & (slice(vec_elem, 0, shift_amount) != zeros())),

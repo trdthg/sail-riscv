@@ -370,17 +370,15 @@ function htif_store(paddr, width, data) = {
       };
       htif_tohost = vector_update_subrange(htif_tohost, 31, 0, data)
     } else {
-      if width == 4 & paddr == plat_htif_tohost() + 4 then
-        {
-          if (data[15..0]) == (htif_tohost[47..32]) then {
-            htif_payload_writes = htif_payload_writes + 1
-          } else {
-            htif_payload_writes = 0x1
-          };
-          htif_cmd_write = bitone;
-          htif_tohost = vector_update_subrange(htif_tohost, 63, 32, data)
-        } /* unaligned command writes are not supported and will not be detected */
-       else {
+      if width == 4 & paddr == plat_htif_tohost() + 4 then {
+        if (data[15..0]) == (htif_tohost[47..32]) then {
+          htif_payload_writes = htif_payload_writes + 1
+        } else {
+          htif_payload_writes = 0x1
+        };
+        htif_cmd_write = bitone;
+        htif_tohost = vector_update_subrange(htif_tohost, 63, 32, data)
+      } /* unaligned command writes are not supported and will not be detected */ else {
         htif_tohost = zero_extend(data)
       }
     }
@@ -428,8 +426,8 @@ $ifndef RVFI_DII
 
 /* Top-level MMIO dispatch */
 function within_mmio_readable forall 'n, 0 < 'n <= max_mem_access.
-(addr : xlenbits, width : int('n)) -> bool = within_clint(addr, width) | (within_htif_readable(addr, width)
-  & 1 <= sizeof('n))
+(addr : xlenbits, width : int('n)) -> bool = within_clint(addr, width)
+  | (within_htif_readable(addr, width) & 1 <= sizeof('n))
 $else
 function within_mmio_readable forall 'n, 0 < 'n <= max_mem_access.
 (addr : xlenbits, width : int('n)) -> bool = false
@@ -437,8 +435,8 @@ $endif
 
 $ifndef RVFI_DII
 function within_mmio_writable forall 'n, 0 < 'n <= max_mem_access.
-(addr : xlenbits, width : int('n)) -> bool = within_clint(addr, width) | (within_htif_writable(addr, width)
-  & sizeof('n) <= 8)
+(addr : xlenbits, width : int('n)) -> bool = within_clint(addr, width)
+  | (within_htif_writable(addr, width) & sizeof('n) <= 8)
 $else
 function within_mmio_writable forall 'n, 0 < 'n <= max_mem_access.
 (addr : xlenbits, width : int('n)) -> bool = false

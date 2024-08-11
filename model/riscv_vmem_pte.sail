@@ -49,7 +49,8 @@ function pte_is_ptr pte_flags : PTE_Flags -> bool = ((pte_flags[X]) == 0b0)
   & ((pte_flags[R]) == 0b0)
 
 // PRIVATE: check if a PTE is valid
-function pte_is_invalid pte_flags : PTE_Flags -> bool = ((pte_flags[V]) == 0b0) | (((pte_flags[W]) == 0b1) & ((pte_flags[R]) == 0b0))
+function pte_is_invalid pte_flags : PTE_Flags -> bool = ((pte_flags[V]) == 0b0)
+  | (((pte_flags[W]) == 0b1) & ((pte_flags[R]) == 0b0))
 
 // ----------------
 // Check access permissions in PTE
@@ -100,8 +101,8 @@ function update_PTE_Bits(sv_params : SV_Params, pte : bits(64), a : AccessType(e
 
   // Update 'dirty' bit?
   let update_d : bool =
-    ((pte_flags[D]) == 0b0) &
-      (match a {
+    ((pte_flags[D]) == 0b0)
+      & (match a {
         Execute() => false,
         Read() => false,
         Write(_) => true,

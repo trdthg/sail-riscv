@@ -35,52 +35,49 @@ type PTW_Level = range(0,3)
 
 // range(0,4) when add Sv57 (TODO)
 // PRIVATE
-let sv32_params : SV_Params =
-  struct {
-    // VA
-    va_size_bits = 32,
-    vpn_size_bits = 10,
-    // PTE
-    levels = 2,
-    log_pte_size_bytes = 2, // 4 Bytes
-    pte_msbs_lsb_index = 32,
-    pte_msbs_size_bits = 0,
-    pte_PPNs_lsb_index = 10,
-    pte_PPNs_size_bits = 22,
-    pte_PPN_j_size_bits = 10,
-  }
+let sv32_params : SV_Params = struct {
+  // VA
+  va_size_bits = 32,
+  vpn_size_bits = 10,
+  // PTE
+  levels = 2,
+  log_pte_size_bytes = 2, // 4 Bytes
+  pte_msbs_lsb_index = 32,
+  pte_msbs_size_bits = 0,
+  pte_PPNs_lsb_index = 10,
+  pte_PPNs_size_bits = 22,
+  pte_PPN_j_size_bits = 10,
+}
 
 // PRIVATE
-let sv39_params : SV_Params =
-  struct {
-    // VA
-    va_size_bits = 39,
-    vpn_size_bits = 9,
-    // PTE
-    levels = 3,
-    log_pte_size_bytes = 3, // 8 Bytes
-    pte_msbs_lsb_index = 54,
-    pte_msbs_size_bits = 10,
-    pte_PPNs_lsb_index = 10,
-    pte_PPNs_size_bits = 44,
-    pte_PPN_j_size_bits = 9,
-  }
+let sv39_params : SV_Params = struct {
+  // VA
+  va_size_bits = 39,
+  vpn_size_bits = 9,
+  // PTE
+  levels = 3,
+  log_pte_size_bytes = 3, // 8 Bytes
+  pte_msbs_lsb_index = 54,
+  pte_msbs_size_bits = 10,
+  pte_PPNs_lsb_index = 10,
+  pte_PPNs_size_bits = 44,
+  pte_PPN_j_size_bits = 9,
+}
 
 // PRIVATE
-let sv48_params : SV_Params =
-  struct {
-    // VA
-    va_size_bits = 48,
-    vpn_size_bits = 9,
-    // PTE
-    levels = 4,
-    log_pte_size_bytes = 3, // 8 Bytes
-    pte_msbs_lsb_index = 54,
-    pte_msbs_size_bits = 10,
-    pte_PPNs_lsb_index = 10,
-    pte_PPNs_size_bits = 44,
-    pte_PPN_j_size_bits = 9,
-  }
+let sv48_params : SV_Params = struct {
+  // VA
+  va_size_bits = 48,
+  vpn_size_bits = 9,
+  // PTE
+  levels = 4,
+  log_pte_size_bytes = 3, // 8 Bytes
+  pte_msbs_lsb_index = 54,
+  pte_msbs_size_bits = 10,
+  pte_PPNs_lsb_index = 10,
+  pte_PPNs_size_bits = 44,
+  pte_PPN_j_size_bits = 9,
+}
 
 // TODO; not currently used
 // PRIVATE
