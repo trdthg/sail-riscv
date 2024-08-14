@@ -305,9 +305,8 @@ function is_aligned(vaddr : xlenbits, width : word_width) -> bool = match width 
 }
 
 // Return true if the address is misaligned and we don't support misaligned access.
-function check_misaligned(vaddr : xlenbits, width : word_width) -> bool = not(plat_enable_misaligned_access()) & not(
-  is_aligned(vaddr, width),
-)
+function check_misaligned(vaddr : xlenbits, width : word_width) -> bool = not(plat_enable_misaligned_access())
+  & not(is_aligned(vaddr, width))
 
 function clause execute LOAD(imm, rs1, rd, is_unsigned, width, aq, rl) = {
   let offset : xlenbits = sign_extend(imm);

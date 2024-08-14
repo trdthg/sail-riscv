@@ -79,10 +79,8 @@ function is_CSR_defined csr : csreg -> bool = match csr {
 }
 
 val check_CSR_access : (csrRW, priv_level, Privilege, bool) -> bool
-function check_CSR_access(csrrw, csrpr, p, isWrite) =
-  not(isWrite == true & csrrw == 0b11) &
-    /* read/write */
-    (privLevel_to_bits(p) >=_u csrpr) /* privilege */
+function check_CSR_access(csrrw, csrpr, p, isWrite) = /* read/write */ not(isWrite == true & csrrw == 0b11)
+  & /* privilege */ (privLevel_to_bits(p) >=_u csrpr)
 
 function check_TVM_SATP(csr : csreg, p : Privilege) -> bool = not(csr == 0x180 & p == Supervisor & mstatus[TVM] == 0b1)
 
@@ -536,8 +534,8 @@ function init_sys () -> unit = {
   misa[D] =
     if sizeof(flen) >= 64
     then
-      bool_to_bits(sys_enable_fdext()) /* double-precision */
-
+      /* double-precision */
+      bool_to_bits(sys_enable_fdext())
     else 0b0;
 
   mstatus = set_mstatus_SXL(mstatus, misa[MXL]);

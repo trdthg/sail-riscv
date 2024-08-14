@@ -77,8 +77,7 @@ function phys_mem_read forall 'n, 0 < 'n <= max_mem_access.
     (match read_kind_of_flags(aq, rl, res) {
       Some(rk) => Some(read_ram(rk, paddr, width, meta)),
       None() => None(),
-    }) :
-      option((bits(8 * 'n), mem_meta));
+    }) : option((bits(8 * 'n), mem_meta));
   match (t, result) {
     (Execute(), None()) => MemException(E_Fetch_Access_Fault()),
     (Read(Data), None()) => MemException(E_Load_Access_Fault()),

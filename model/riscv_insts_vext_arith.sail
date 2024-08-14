@@ -208,8 +208,8 @@ function clause execute NVSTYPE(funct6, vm, vs2, vs1, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
-    not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
+  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen)
+    | not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
   then {
     handle_illegal();
     return RETIRE_FAIL
@@ -278,8 +278,8 @@ function clause execute NVTYPE(funct6, vm, vs2, vs1, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
-    not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
+  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen)
+    | not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
   then {
     handle_illegal();
     return RETIRE_FAIL
@@ -597,8 +597,8 @@ function clause execute NXSTYPE(funct6, vm, vs2, rs1, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
-    not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
+  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen)
+    | not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
   then {
     handle_illegal();
     return RETIRE_FAIL
@@ -667,8 +667,8 @@ function clause execute NXTYPE(funct6, vm, vs2, rs1, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
-    not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
+  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen)
+    | not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
   then {
     handle_illegal();
     return RETIRE_FAIL
@@ -1024,8 +1024,8 @@ function clause execute NISTYPE(funct6, vm, vs2, simm, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
-    not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
+  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen)
+    | not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
   then {
     handle_illegal();
     return RETIRE_FAIL
@@ -1094,8 +1094,8 @@ function clause execute NITYPE(funct6, vm, vs2, simm, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
-    not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
+  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen)
+    | not(valid_reg_overlap(vs2, vd, LMUL_pow_widen, LMUL_pow))
   then {
     handle_illegal();
     return RETIRE_FAIL
@@ -1667,8 +1667,8 @@ function clause execute WVTYPE(funct6, vm, vs2, vs1, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
-    not(valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen))
+  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen)
+    | not(valid_reg_overlap(vs1, vd, LMUL_pow, LMUL_pow_widen))
   then {
     handle_illegal();
     return RETIRE_FAIL
@@ -1856,8 +1856,8 @@ function clause execute VEXT4TYPE(funct6, vm, vs2, vd) = {
   let SEW_quart = SEW / 4;
   let LMUL_pow_quart = LMUL_pow - 2;
 
-  if illegal_variable_width(vd, vm, SEW_quart, LMUL_pow_quart) |
-    not(valid_reg_overlap(vs2, vd, LMUL_pow_quart, LMUL_pow))
+  if illegal_variable_width(vd, vm, SEW_quart, LMUL_pow_quart)
+    | not(valid_reg_overlap(vs2, vd, LMUL_pow_quart, LMUL_pow))
   then {
     handle_illegal();
     return RETIRE_FAIL
@@ -1917,8 +1917,8 @@ function clause execute VEXT8TYPE(funct6, vm, vs2, vd) = {
   let SEW_eighth = SEW / 8;
   let LMUL_pow_eighth = LMUL_pow - 3;
 
-  if illegal_variable_width(vd, vm, SEW_eighth, LMUL_pow_eighth) |
-    not(valid_reg_overlap(vs2, vd, LMUL_pow_eighth, LMUL_pow))
+  if illegal_variable_width(vd, vm, SEW_eighth, LMUL_pow_eighth)
+    | not(valid_reg_overlap(vs2, vd, LMUL_pow_eighth, LMUL_pow))
   then {
     handle_illegal();
     return RETIRE_FAIL
@@ -2294,8 +2294,8 @@ function clause execute WVXTYPE(funct6, vm, vs2, rs1, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
-    not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen))
+  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen)
+    | not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen))
   then {
     handle_illegal();
     return RETIRE_FAIL
@@ -2431,8 +2431,8 @@ function clause execute WMVXTYPE(funct6, vm, vs2, rs1, vd) = {
   let SEW_widen = SEW * 2;
   let LMUL_pow_widen = LMUL_pow + 1;
 
-  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen) |
-    not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen))
+  if illegal_variable_width(vd, vm, SEW_widen, LMUL_pow_widen)
+    | not(valid_reg_overlap(vs2, vd, LMUL_pow, LMUL_pow_widen))
   then {
     handle_illegal();
     return RETIRE_FAIL
