@@ -207,27 +207,44 @@ function get_mstatus_SXL(m : Mstatus) -> arch_xlen = {
   else m.bits[35 .. 34]
 }
 
-function set_mstatus_SXL(m : Mstatus, a : arch_xlen) -> Mstatus = {
-  if   sizeof(xlen) == 32
-  then m
-  else {
-    let m = vector_update_subrange(m.bits, 35, 34,  a);
-    Mk_Mstatus(m)
-  }
-}
-
 function get_mstatus_UXL(m : Mstatus) -> arch_xlen = {
   if   sizeof(xlen) == 32
   then arch_to_bits(RV32)
   else m.bits[33 .. 32]
 }
 
-function set_mstatus_UXL(m : Mstatus, a : arch_xlen) -> Mstatus = {
+function set_mstatus_SXL(m : Mstatus, a : arch_xlen) -> Mstatus = {
   if   sizeof(xlen) == 32
-  then m
-  else {
-    let m = vector_update_subrange(m.bits, 33, 32,  a);
-    Mk_Mstatus(m)
+  then {
+	assert(arch_xlen_to_len(get_mstatus_UXL(m)) == 32);
+	assert(arch_xlen_to_len(a) == 32);
+	m
+  } else {
+	let a = if not(have_privLevel(privLevel_to_bits(Supervisor))) then {
+		0b00
+	} else {
+		assert(arch_xlen_to_len(a) >= arch_xlen_to_len(get_mstatus_UXL(m)));
+		a
+	};
+	let m = vector_update_subrange(m.bits, 35, 34,  a);
+	Mk_Mstatus(m)
+  }
+}
+
+function set_mstatus_UXL(m : Mstatus, a : arch_xlen) -> Mstatus = {
+  if sizeof(xlen) == 32 then {
+	assert(arch_xlen_to_len(get_mstatus_SXL(m)) == 32);
+	assert(arch_xlen_to_len(a) == 32);
+    m
+  } else {
+	let a = if not(have_privLevel(privLevel_to_bits(User))) then {
+		0b00
+	} else {
+		assert(arch_xlen_to_len(get_mstatus_SXL(m)) >= arch_xlen_to_len(a));
+		a
+	};
+	let m = vector_update_subrange(m.bits, 33, 32, a);
+	Mk_Mstatus(m)
   }
 }
 

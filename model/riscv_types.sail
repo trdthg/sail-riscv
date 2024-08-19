@@ -59,6 +59,22 @@ type imm12  = bits(12)
 type imm20  = bits(20)
 type amo    = bits(1)  /* amo opcode flags */
 
+/* model-internal exceptions */
+
+union exception = {
+  Error_not_implemented : string,
+  Error_internal_error  : unit
+}
+
+val not_implemented : forall ('a : Type). string -> 'a
+function not_implemented message = throw(Error_not_implemented(message))
+
+val internal_error : forall ('a : Type). (string, int, string) -> 'a
+function internal_error(file, line, s) = {
+    assert (false, file ^ ":" ^ dec_str(line) ^ ": " ^ s);
+    throw Error_internal_error()
+}
+
 /* base architecture definitions */
 
 enum Architecture = {RV32, RV64, RV128}
@@ -78,22 +94,13 @@ function arch_to_bits(a : Architecture) -> arch_xlen =
     RV128 => 0b11
   }
 
-
-/* model-internal exceptions */
-
-union exception = {
-  Error_not_implemented : string,
-  Error_internal_error  : unit
-}
-
-val not_implemented : forall ('a : Type). string -> 'a
-function not_implemented message = throw(Error_not_implemented(message))
-
-val internal_error : forall ('a : Type). (string, int, string) -> 'a
-function internal_error(file, line, s) = {
-    assert (false, file ^ ":" ^ dec_str(line) ^ ": " ^ s);
-    throw Error_internal_error()
-}
+function arch_xlen_to_len(a : arch_xlen) -> int =
+  match a {
+	0b00 => internal_error(__FILE__, __LINE__, "Invalid arch_xlen"),
+    0b01 => 32,
+    0b10 => 64,
+    0b11 => 128
+  }
 
 /* privilege levels */
 
