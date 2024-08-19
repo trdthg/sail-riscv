@@ -111,6 +111,7 @@ function writeCSR(csr : csreg, value : xlenbits) -> unit = {
       Some(mstatus.bits)
     },
     (0x301, _) => {
+	  // misa reg
       misa = legalize_misa(misa, value);
       Some(misa.bits)
     },
@@ -328,6 +329,7 @@ function clause execute CSR(csr, rs1, rd, is_imm, op) = {
           CSRRS => csr_val | rs1_val,
           CSRRC => csr_val & ~(rs1_val),
         };
+		// write entry
         writeCSR(csr, new_val)
       };
       X(rd) = csr_val;

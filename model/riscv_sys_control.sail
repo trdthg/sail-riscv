@@ -508,6 +508,7 @@ function handle_interrupt(i : InterruptType, del_priv : Privilege) -> unit = set
   trap_handler(del_priv, true, interruptType_to_bits(i), PC, None(), None()),
 )
 
+// init
 /* state state initialization */
 function init_sys () -> unit = {
   cur_privilege = Machine;

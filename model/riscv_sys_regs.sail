@@ -250,25 +250,37 @@ function get_mstatus_SXL m : Mstatus -> arch_xlen = {
 }
 
 function set_mstatus_SXL(m : Mstatus, a : arch_xlen) -> Mstatus = {
-  if sizeof(xlen) == 32 then {
+  let m = if sizeof(xlen) == 32 then {
     m
+	assert(get_mstatus_SXL(m) >= get_mstatus_UXL(m));
   } else {
-    let m = vector_update_subrange(m.bits, 35, 34, a);
-    Mk_Mstatus(m)
-  }
+	let m = if not(haveSupMode()) then {
+		0
+		assert(get_mstatus_SXL(m) = get_mstatus_UXL(m));
+	} else {
+	    let m = vector_update_subrange(m.bits, 35, 34, a);
+    	Mk_Mstatus(m)
+		assert(get_mstatus_SXL(m) >= get_mstatus_UXL(m));
+	} in
+	m
+  } in
+  m
 }
 
 function get_mstatus_UXL m : Mstatus -> arch_xlen = {
-  if sizeof(xlen) == 32 then { arch_to_bits(RV32) } else { m.bits[33..32] }
+  if sizeof(xlen) == 32 then { arch_to_bits(RV32) } else { 
+	m.bits[33..32] }
 }
 
 function set_mstatus_UXL(m : Mstatus, a : arch_xlen) -> Mstatus = {
-  if sizeof(xlen) == 32 then {
+  let m = if sizeof(xlen) == 32 then {
     m
   } else {
     let m = vector_update_subrange(m.bits, 33, 32, a);
     Mk_Mstatus(m)
-  }
+  } in
+  assert(get_mstatus_SXL(m) >= get_mstatus_UXL(m));
+  m
 }
 
 function legalize_mstatus(o : Mstatus, v : xlenbits) -> Mstatus = {
