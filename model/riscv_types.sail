@@ -79,6 +79,14 @@ function internal_error(file, line, s) = {
   throw Error_internal_error()
 }
 
+function arch_xlen_to_len(a : arch_xlen) -> int =
+  match a {
+    0b01 => 32,
+    0b10 => 64,
+    0b11 => 128,
+	0b00 => 0
+  }
+
 /* privilege levels */
 type priv_level = bits(2)
 enum Privilege = { User, Supervisor, Machine }
