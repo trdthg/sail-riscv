@@ -32,6 +32,11 @@ bool sys_enable_fdext(unit u)
   return rv_enable_fdext;
 }
 
+bool sys_enable_ssqosid(unit u)
+{
+  return rv_enable_ssposid;
+}
+
 bool sys_enable_svinval(unit u)
 {
   return rv_enable_svinval;

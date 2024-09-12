@@ -84,6 +84,8 @@ val sys_enable_writable_misa = pure {c: "sys_enable_writable_misa", ocaml: "Plat
 val sys_enable_rvc = pure {c: "sys_enable_rvc", ocaml: "Platform.enable_rvc", _: "sys_enable_rvc"} : unit -> bool
 /* whether misa.{f,d} were enabled at boot */
 val sys_enable_fdext = pure {c: "sys_enable_fdext", ocaml: "Platform.enable_fdext", _: "sys_enable_fdext"} : unit -> bool
+/* whether Ssqosid was enabled at boot */
+val sys_enable_ssqosid = pure {c: "sys_enable_ssqosid", ocaml: "Platform.enable_ssqosid", _: "sys_enable_ssqosid"} : unit -> bool
 /* whether Svinval was enabled at boot */
 val sys_enable_svinval = pure {c: "sys_enable_svinval", ocaml: "Platform.enable_svinval", _: "sys_enable_svinval"} : unit -> bool
 /* whether Zcb was enabled at boot */
@@ -667,6 +669,14 @@ register sscratch : xlenbits
 register sepc     : xlenbits
 register scause   : Mcause
 register stval    : xlenbits
+
+bitfield Ssqosid : xlenbits = {
+  WPRI : 29 .. xlen - 1,
+  MCID : 16 .. 28,
+  WPRI : 12 .. 15,
+  RCID : 0 .. 11,
+}
+register ssqosid  : Ssqosid
 
 /*
  * S-mode address translation and protection (satp) layout.

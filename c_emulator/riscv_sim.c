@@ -54,6 +54,7 @@ enum {
   OPT_ENABLE_WRITABLE_FIOM,
   OPT_PMP_COUNT,
   OPT_PMP_GRAIN,
+  OPT_ENABLE_SSQOSID,
   OPT_ENABLE_SVINVAL,
   OPT_ENABLE_ZCB,
   OPT_ENABLE_ZICBOM,
@@ -155,6 +156,7 @@ static struct option options[] = {
     {"inst-limit",                  required_argument, 0, 'l'                     },
     {"enable-zfinx",                no_argument,       0, 'x'                     },
     {"enable-writable-fiom",        no_argument,       0, OPT_ENABLE_WRITABLE_FIOM},
+    {"enable-ssqosid",              no_argument,       0, OPT_ENABLE_SSQOSID      },
     {"enable-svinval",              no_argument,       0, OPT_ENABLE_SVINVAL      },
     {"enable-zcb",                  no_argument,       0, OPT_ENABLE_ZCB          },
     {"enable-zicbom",               no_argument,       0, OPT_ENABLE_ZICBOM       },
@@ -417,6 +419,10 @@ static int process_args(int argc, char **argv)
       break;
     case 'l':
       insn_limit = atoi(optarg);
+      break;
+    case OPT_ENABLE_SSQOSID:
+      fprintf(stderr, "enabling Ssqosid extension.\n");
+      rv_enable_ssqosid = true;
       break;
     case OPT_ENABLE_ZCB:
       fprintf(stderr, "enabling Zcb extension.\n");
