@@ -307,8 +307,15 @@ union clause ast = LOAD : (bits(12), regidx, regidx, bool, word_width, bool, boo
 mapping clause encdec = LOAD(imm, rs1, rd, is_unsigned, size, false, false) if (size_bytes(size) < xlen_bytes) | (not(is_unsigned) & size_bytes(size) <= xlen_bytes)
   <-> imm @ rs1 @ bool_bits(is_unsigned) @ size_enc(size) @ rd @ 0b0000011 if (size_bytes(size) < xlen_bytes) | (not(is_unsigned) & size_bytes(size) <= xlen_bytes)
 
-val extend_value : forall 'n, 0 < 'n <= xlen. (bool, bits('n)) -> xlenbits
-function extend_value(is_unsigned, value) = if is_unsigned then zero_extend(value) else sign_extend(value)
+val extend_value_raw : forall 'n, 0 < 'n <= xlen. (bool, bits('n)) -> xlenbits
+function extend_value_raw(is_unsigned, value) = if is_unsigned then zero_extend(value) else sign_extend(value)
+
+val extend_value_option : forall 'n, 0 < 'n <= xlen_bytes. (bool, MemoryOpResult(bits(8 * 'n))) -> MemoryOpResult(xlenbits)
+function extend_value_option(is_unsigned, value) = match (value) {
+  MemValue(v)     => MemValue(if is_unsigned then zero_extend(v) else sign_extend(v) : xlenbits),
+  MemException(e) => MemException(e)
+}
+overload extend_value = {extend_value_raw, extend_value_option}
 
 function is_aligned(vaddr : xlenbits, width : word_width) -> bool =
   match width {

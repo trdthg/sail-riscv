@@ -63,7 +63,7 @@ function ext_data_get_addr(base : regidx, offset : xlenbits, acc : AccessType(ex
    Extensions might override and add additional checks. */
 function ext_data_get_amo_addr(base : regidx, acc : AccessType(ext_access_type), width : amo_word_width)
          -> Ext_DataAddr_Check(ext_data_addr_error) =
-  let addr = X(base) in
+  let addr = virtaddr(X(base)) in
   Ext_DataAddr_OK(addr)
 
 function ext_handle_data_check_error(err : ext_data_addr_error) -> unit =
