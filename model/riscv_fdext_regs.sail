@@ -85,6 +85,8 @@ register f29 : fregtype
 register f30 : fregtype
 register f31 : fregtype
 
+// function sys_enable_fcsr = not(sys_enable_fext()) & sys_enable_zfinx() & sstateen0[FCSR] == 0
+
 function dirty_fd_context() -> unit = {
   assert(sys_enable_fdext());
   mstatus[FS] = extStatus_to_bits(Dirty);
@@ -244,7 +246,10 @@ function rF_or_X_H(i) = {
   assert(sys_enable_fdext() != sys_enable_zfinx());
   if   sys_enable_fdext()
   then F_H(i)
-  else X(i)[15..0]
+  else {
+    //    assert(sys_enable_zfinx() | sstateen0[FCSR] != 0);
+       X(i)[15..0]
+  }
 }
 
 val rF_or_X_S : regidx -> bits(32)
@@ -253,7 +258,10 @@ function rF_or_X_S(i) = {
   assert(sys_enable_fdext() != sys_enable_zfinx());
   if   sys_enable_fdext()
   then F_S(i)
-  else X(i)[31..0]
+  else {
+    //    assert(sys_enable_zfinx() | sstateen0[FCSR] != 0);
+       X(i)[31..0]
+  }
 }
 
 val rF_or_X_D : regidx -> bits(64)
@@ -283,6 +291,7 @@ val wF_or_X_S : (regidx, bits(32)) -> unit
 function wF_or_X_S(i, data) = {
   assert(flen >= 32);
   assert(sys_enable_fdext() != sys_enable_zfinx());
+//   assert(sys_enable_stateen() & misa[F] == 0 & sstateen0[FCSR] != 0);
   if   sys_enable_fdext()
   then F_S(i) = data
   else X(i) = sign_extend(data)

@@ -222,9 +222,9 @@ function legalize_hstateen0(h : Hstateen0, v : bits(64)) -> Hstateen0 = {
       CONTEXT = if mstateen0[CONTEXT] == 0b0 then v[CONTEXT] else 0b0,
       CTR     = if mstateen0[CTR]     == 0b0 then v[CTR]     else 0b0,
 
-      JVT     = if mstateen0[JVT]     == 0b0 then v[JVT] else 0b0,
+      JVT     = if mstateen0[JVT]     == 0b0 then v[JVT]     else 0b0,
       FCSR    = if mstateen0[FCSR] == 0b0 & misa[F] == 0b1 then v[FCSR] else 0b0,
-      C       = if mstateen0[C]       == 0b0 then v[C]   else 0b0,
+      C       = if mstateen0[C]       == 0b0 then v[C]       else 0b0,
     ]
   }
 }
