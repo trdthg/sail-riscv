@@ -5,6 +5,7 @@ bool sys_enable_rvc(unit);
 bool sys_enable_fdext(unit);
 bool sys_enable_svinval(unit);
 bool sys_enable_zcb(unit);
+bool sys_enable_pext(unit);
 bool sys_enable_zfinx(unit);
 bool sys_enable_writable_misa(unit);
 bool sys_enable_writable_fiom(unit);

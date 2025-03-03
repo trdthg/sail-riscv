@@ -5,6 +5,7 @@
 /* Settings of the platform implementation, with common defaults. */
 uint64_t rv_pmp_count = 0;
 uint64_t rv_pmp_grain = 0;
+bool rv_enable_pext                 = false;
 
 uint64_t rv_vector_vlen_exp = 0x9;
 uint64_t rv_vector_elen_exp = 0x6;

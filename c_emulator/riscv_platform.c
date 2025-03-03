@@ -37,6 +37,9 @@ bool sys_enable_zcb(unit u)
   return rv_enable_zcb;
 }
 
+bool sys_enable_pext(unit u)
+{ return rv_enable_pext; }
+
 bool sys_enable_zfinx(unit u)
 {
   return rv_enable_zfinx;

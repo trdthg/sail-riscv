@@ -33,7 +33,10 @@ SAIL_DEFAULT_INST += riscv_insts_fext.sail riscv_insts_zcf.sail
 SAIL_DEFAULT_INST += riscv_insts_dext.sail riscv_insts_zcd.sail
 
 SAIL_DEFAULT_INST += riscv_insts_svinval.sail
-
+SAIL_DEFAULT_INST += riscv_insts_pext_prelude.sail riscv_insts_pext_SIMD.sail riscv_insts_pext_partial_SIMD.sail riscv_insts_pext_non_SIMD.sail riscv_insts_pext_64bits_computation.sail
+ifeq ($(ARCH),RV64)
+SAIL_DEFAULT_INST += riscv_insts_pext_RV64_only.sail
+endif
 SAIL_DEFAULT_INST += riscv_insts_zba.sail
 SAIL_DEFAULT_INST += riscv_insts_zbb.sail
 SAIL_DEFAULT_INST += riscv_insts_zbc.sail
@@ -87,6 +90,8 @@ SAIL_SYS_SRCS += riscv_zicntr_control.sail
 SAIL_SYS_SRCS += riscv_softfloat_interface.sail riscv_fdext_regs.sail riscv_fdext_control.sail
 SAIL_SYS_SRCS += riscv_sys_control.sail     # general exception handling
 SAIL_SYS_SRCS += riscv_smcntrpmf.sail
+
+SAIL_SYS_SRCS += riscv_pext_regs.sail riscv_pext_control.sail
 
 SAIL_VM_SRCS += riscv_vmem_pte.sail
 SAIL_VM_SRCS += riscv_vmem_ptw.sail

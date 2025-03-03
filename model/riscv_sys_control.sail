@@ -323,6 +323,7 @@ function reset_misa() -> unit = {
 
   /* We currently support both F and D */
   misa[F]   = bool_to_bits(sys_enable_fdext());      /* single-precision */
+  misa[P]   = bool_to_bits(sys_enable_pext());
   misa[D]   = if   flen >= 64
               then bool_to_bits(sys_enable_fdext())  /* double-precision */
               else 0b0;

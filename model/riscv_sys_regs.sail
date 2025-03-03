@@ -109,6 +109,8 @@ val sys_writable_hpm_counters = pure "sys_writable_hpm_counters" : unit -> bits(
 
 /* whether misa.v was enabled at boot */
 val sys_enable_vext = pure "sys_enable_vext" : unit -> bool
+/* whether the P extension was enabled at boot */
+val sys_enable_pext = {c: "sys_enable_pext", ocaml: "Platform.enable_pext", _: "sys_enable_pext"} : unit -> bool
 
 /* whether misa.b was enabled at boot */
 val sys_enable_bext = pure "sys_enable_bext" : unit -> bool
