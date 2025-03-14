@@ -490,7 +490,8 @@ function rsqrt7 (v, sub) = {
   };
   assert(idx >= 0 & idx < 128);
   let out_sig = to_bits(s, table[(127 - idx)]) << (s - 7);
-  let out_exp = to_bits(e, (3 * (2 ^ (e - 1) - 1) - 1 - signed(normalized_exp)) / 2);
+  let tmp = (3 * (2 ^ (e - 1) - 1) - 1 - signed(normalized_exp));
+  let out_exp = to_bits(e, tmp / 2);
   zero_extend(64, sign @ out_exp @ out_sig)
 }
 

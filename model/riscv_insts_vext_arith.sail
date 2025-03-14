@@ -1292,13 +1292,17 @@ function clause execute(MVVTYPE(funct6, vm, vs2, vs1, vd)) = {
         MVV_VMULHU   => get_slice_int(SEW, unsigned(vs2_val[i]) * unsigned(vs1_val[i]), SEW),
         MVV_VMULHSU  => get_slice_int(SEW, signed(vs2_val[i]) * unsigned(vs1_val[i]), SEW),
         MVV_VDIVU    => {
-                          let q : int = if unsigned(vs1_val[i]) == 0 then -1 else quot_round_zero(unsigned(vs2_val[i]), unsigned(vs1_val[i]));
+                          let a = unsigned(vs2_val[i]);
+                          let b = unsigned(vs1_val[i]);
+                          let q : int = if b == 0 then -1 else a / b;
                           to_bits(SEW, q)
                         },
         MVV_VDIV     => {
                           let elem_max : int = 2 ^ (SEW - 1) - 1;
                           let elem_min : int = 0 - 2 ^ (SEW - 1);
-                          let q : int = if signed(vs1_val[i]) == 0 then -1 else quot_round_zero(signed(vs2_val[i]), signed(vs1_val[i]));
+                          let a = signed(vs2_val[i]);
+                          let b = signed(vs1_val[i]);
+                          let q : int = if b == 0 then -1 else a / b;
                           /* check for signed overflow */
                           let q' : int = if q > elem_max then elem_min else q;
                           to_bits(SEW, q')
@@ -1924,13 +1928,22 @@ function clause execute(MVXTYPE(funct6, vm, vs2, rs1, vd)) = {
         MVX_VMULHU       => get_slice_int(SEW, unsigned(vs2_val[i]) * unsigned(rs1_val), SEW),
         MVX_VMULHSU      => get_slice_int(SEW, signed(vs2_val[i]) * unsigned(rs1_val), SEW),
         MVX_VDIVU        => {
-                              let q : int = if unsigned(rs1_val) == 0 then -1 else quot_round_zero(unsigned(vs2_val[i]), unsigned(rs1_val));
+                              let b = unsigned(rs1_val);
+                              let q : int = if b == 0 then -1
+                              else {
+                                let a = unsigned(vs2_val[i]);
+                                a / b
+                              };
                               to_bits(SEW, q)
                             },
         MVX_VDIV         => {
                               let elem_max : int = 2 ^ (SEW - 1) - 1;
                               let elem_min : int = 0 - 2 ^ (SEW - 1);
-                              let q : int = if signed(rs1_val) == 0 then -1 else quot_round_zero(signed(vs2_val[i]), signed(rs1_val));
+                              let b = signed(rs1_val);
+                              let q : int = if b == 0 then -1 else {
+                                let a = signed(vs2_val[i]);
+                                a / b
+                              };
                               /* check for signed overflow */
                               let q' : int = if q > elem_max then elem_min else q;
                               to_bits(SEW, q')

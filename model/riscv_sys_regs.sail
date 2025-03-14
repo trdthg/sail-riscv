@@ -944,6 +944,15 @@ function get_vlenb() -> xlenbits = {
   to_bits(xlen, (2 ^ (get_vlen_pow()) / 8))
 }
 
+bitfield Vtype32  : xlenbits = {
+  vill      : xlen - 1,
+  reserved  : xlen - 2 .. 8,
+  vma       : 7,
+  vta       : 6,
+  vsew      : 5 .. 3,
+  vlmul     : 2 .. 0
+}
+
 bitfield Vtype  : xlenbits = {
   vill      : xlen - 1,
   reserved  : xlen - 2 .. 8,
@@ -967,6 +976,11 @@ function get_sew_pow() = {
   };
   SEW_pow
 }
+
+type Sew_pow('m) = 'm in {3, 4, 5, 6}
+type Sew('m) = 'm in {8, 16, 32, 64}
+type Sew_widen('m) = 'm in {1, 2, 4, 8, 16, 32, 64, 128}
+
 /* this returns the actual value of SEW */
 val get_sew : unit -> {8, 16, 32, 64}
 function get_sew() = {
