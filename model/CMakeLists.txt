@@ -1,3 +1,16 @@
+
+
+
+if (DUMP_JIB)
+    find_program(ISLA_SAIL_BIN "isla-sail")
+    if (ISLA_SAIL_BIN)
+        message(STATUS "Found isla-sail: ${ISLA_SAIL_BIN}")
+    else()
+        message(FATAL_ERROR "No isla-sail found. We recommend downloading Clang from https://github.com/llvm/llvm-project/releases")
+    endif()
+endif()
+
+
 foreach (xlen IN ITEMS 32 64)
     foreach (flen IN ITEMS 32 64)
         foreach (variant IN ITEMS "" "rvfi" "rocq" "rmem" "lean")
@@ -218,6 +231,64 @@ foreach (xlen IN ITEMS 32 64)
                     set(branch_info_file)
                     set(coverage_args)
                 endif()
+
+                message(STATUS "开始构建啦")
+
+                set(jib_out "${c_model_no_ext}.jib")
+                add_custom_command(
+                    DEPENDS ${sail_srcs}
+                    OUTPUT ${jib_out} ${branch_info_file}
+                    VERBATIM
+                    COMMENT "Building Jib from Sail model (${arch})"
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                    COMMAND
+                        ${ISLA_SAIL_BIN}
+                        --config /home/trdthg/repo/sail/sail-riscv/config/default.json
+                        # Output file (without extension).
+                        -o ${c_model_no_ext}
+                        # Generate a file containing information about all possible branches.
+                        # See https://github.com/rems-project/sail/blob/sail2/sailcov/README.md
+                        ${coverage_args}
+                        # Don't allow implicit var declaration (like Python). This is
+                        # deprecated because it is error-prone.
+                        --strict-var
+                        # bits('n) is only well-formed if 'n >= 0.
+                        --strict-bitvector
+                        # Minimum required Sail compiler version.
+                        --require-version ${SAIL_REQUIRED_VER}
+                        # Optimisations.
+                        -O --Oconstant-fold
+                        # Cache Z3 results in z3_problems file to speed up incremental compilation.
+                        --memo-z3
+                        # Don't generate a main() function.
+                        --c-no-main
+                        # Extra #include's.
+                        --c-include riscv_prelude.h
+                        --c-include riscv_platform.h
+                        # Don't dead-code eliminate these functions. These should match the
+                        # ones used from riscv_sail.h
+                        --c-preserve init_model
+                        --c-preserve step
+                        --c-preserve tick_clock
+                        --c-preserve tick_platform
+                        # Preserve RVFI functions.
+                        --c-preserve rvfi_set_instr_packet
+                        --c-preserve rvfi_get_cmd
+                        --c-preserve rvfi_get_insn
+                        --c-preserve rvfi_get_v2_trace_size
+                        --c-preserve rvfi_get_v2_support_packet
+                        --c-preserve rvfi_get_exec_packet_v1
+                        --c-preserve rvfi_get_exec_packet_v2
+                        --c-preserve rvfi_get_mem_data
+                        --c-preserve rvfi_get_int_data
+                        --c-preserve rvfi_zero_exec_packet
+                        --c-preserve rvfi_halt_exec_packet
+                        --c-preserve print_instr_packet
+                        --c-preserve print_rvfi_exec
+                        # Input files.
+                        ${sail_srcs}
+                )
+                add_custom_target(generated_model_jib_${arch} DEPENDS ${jib_out})
 
                 add_custom_command(
                     DEPENDS ${sail_srcs}
