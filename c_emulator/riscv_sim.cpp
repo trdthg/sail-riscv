@@ -562,7 +562,10 @@ void run_sail(void)
     exit(1);
   }
 
-  while (!zhtif_done && (insn_limit == 0 || total_insns < insn_limit)) {
+  while (
+      // !zuser_exit ||
+      (!zhtif_done && (insn_limit == 0 || total_insns < insn_limit))) {
+    printf("zuser_exit: %d\n", zuser_exit);
     if (rvfi) {
       switch (rvfi->pre_step(config_print_rvfi)) {
       case RVFI_prestep_continue:

@@ -46,6 +46,8 @@ extern mach_bits zphysaddrbits_len;
 extern mach_bits zVLEN;
 extern bool zhtif_done;
 extern mach_bits zhtif_exit_code;
+extern bool zuser_exit;
+extern mach_bits zuser_exit_code;
 extern bool have_exception;
 
 /* machine state */
