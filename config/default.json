@@ -232,6 +232,9 @@
     },
     "Sv57": {
       "supported": true
+    },
+    "XThead": {
+      "supported": true
     }
   }
 }
