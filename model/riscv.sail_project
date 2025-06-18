@@ -155,8 +155,13 @@ extensions {
 
   // Hypervisor
   H {
-    files
-      extensions/H/hext_insts.sail
+    H_core {
+      requires exceptions, core
+      before sys
+      files
+        extensions/H/hext_regs.sail,
+        extensions/H/hext_control.sail,
+    }
   }
 
   // Floating point (F and D extensions)

@@ -23,8 +23,8 @@ function prepare_trap_vector(p : Privilege, cause : Mcause) -> xlenbits = {
     Machine           => mtvec,
     Supervisor        => stvec,
     User              => internal_error(__FILE__, __LINE__, "Invalid privilege level"),
-    VirtualUser       => internal_error(__FILE__, __LINE__, "Hypervisor extension not supported"),
-    VirtualSupervisor => internal_error(__FILE__, __LINE__, "Hypervisor extension not supported"),
+    VirtualUser       => internal_error(__FILE__, __LINE__, "Invalid privilege level"),
+    VirtualSupervisor => vstvec,
   };
   match tvec_addr(tvec, cause) {
     Some(epc) => epc,
@@ -43,8 +43,8 @@ function get_xepc(p : Privilege) -> xlenbits =
     Machine           => align_pc(mepc),
     Supervisor        => align_pc(sepc),
     User              => internal_error(__FILE__, __LINE__, "Invalid privilege level"),
-    VirtualUser       => internal_error(__FILE__, __LINE__, "Hypervisor extension not supported"),
-    VirtualSupervisor => internal_error(__FILE__, __LINE__, "Hypervisor extension not supported"),
+    VirtualUser       => internal_error(__FILE__, __LINE__, "Invalid privilege level"),
+    VirtualSupervisor => align_pc(vsepc),
   }
 
 function set_xepc(p : Privilege, value : xlenbits) -> xlenbits = {
@@ -53,8 +53,8 @@ function set_xepc(p : Privilege, value : xlenbits) -> xlenbits = {
     Machine           => mepc = target,
     Supervisor        => sepc = target,
     User              => internal_error(__FILE__, __LINE__, "Invalid privilege level"),
-    VirtualUser       => internal_error(__FILE__, __LINE__, "Hypervisor extension not supported"),
-    VirtualSupervisor => internal_error(__FILE__, __LINE__, "Hypervisor extension not supported"),
+    VirtualUser       => internal_error(__FILE__, __LINE__, "Invalid privilege level"),
+    VirtualSupervisor => vsepc = target,
   };
   target
 }
