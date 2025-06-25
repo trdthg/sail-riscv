@@ -3,6 +3,10 @@
 #include <stdlib.h>
 #include <vector>
 #include <inttypes.h>
+#include <optional>
+#include "rvfi_dii.h"
+
+extern std::optional<rvfi_handler> rvfi;
 
 // Implementations of default callbacks for RVFI.
 // The model assumes that these functions do not change the state of the model.
@@ -10,7 +14,7 @@ void rvfi_callbacks::mem_write_callback(const char *, sbits paddr,
                                         uint64_t width, lbits value)
 {
   if (config_enable_rvfi) {
-    zrvfi_write(paddr, width, value);
+    rvfi->rvfi_write(paddr.bits, width, value);
   }
 }
 
@@ -18,18 +22,14 @@ void rvfi_callbacks::mem_read_callback(const char *, sbits paddr,
                                        uint64_t width, lbits value)
 {
   if (config_enable_rvfi) {
-    sail_int len;
-    CREATE(sail_int)(&len);
-    CONVERT_OF(sail_int, mach_int)(&len, width);
-    zrvfi_read(paddr, len, value);
-    KILL(sail_int)(&len);
+    rvfi->rvfi_read(paddr.bits, width, value);
   }
 }
 
 void rvfi_callbacks::mem_exception_callback(sbits paddr, uint64_t)
 {
   if (config_enable_rvfi) {
-    zrvfi_mem_exception(paddr);
+    rvfi->rvfi_mem_exception(paddr.bits);
   }
 }
 
@@ -37,7 +37,7 @@ void rvfi_callbacks::xreg_full_write_callback(const_sail_string, sbits reg,
                                               sbits value)
 {
   if (config_enable_rvfi) {
-    zrvfi_wX(reg.bits, value);
+    rvfi->rvfi_wX(reg.bits, value.bits);
   }
 }
 
@@ -58,6 +58,6 @@ void rvfi_callbacks::pc_write_callback(sbits) { }
 void rvfi_callbacks::trap_callback()
 {
   if (config_enable_rvfi) {
-    zrvfi_trap(UNIT);
+    rvfi->rvfi_trap();
   }
 }
