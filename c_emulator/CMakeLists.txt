@@ -36,6 +36,11 @@ add_library(riscv_model
     riscv_softfloat.c
     riscv_softfloat.h
     config_utils.h
+    mem_if.cpp
+    mem_if.h
+    riscv_syscall.cpp
+    riscv_syscall.h
+    byteorder.h
     config_utils.cpp
     sail_riscv_version.h
     "${CMAKE_CURRENT_BINARY_DIR}/sail_riscv_version.cpp"

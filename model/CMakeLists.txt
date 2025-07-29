@@ -265,6 +265,7 @@ foreach (variant IN ITEMS "" "smt" "rocq" "rmem" "lean" "lem" "isabelle")
                 --c-include riscv_prelude.h
                 --c-include riscv_platform.h
                 --c-include riscv_callbacks.h
+                --c-include riscv_syscall_sail.h
                 # Don't dead-code eliminate these functions.
                 --c-preserve init_model
                 --c-preserve try_step
@@ -292,6 +293,7 @@ foreach (variant IN ITEMS "" "smt" "rocq" "rmem" "lean" "lem" "isabelle")
                 --c-preserve rvfi_mem_exception
                 --c-preserve rvfi_wX
                 --c-preserve rvfi_trap
+                --c-preserve get_next_pc
                 # Input files.
                 ${sail_srcs}
         )

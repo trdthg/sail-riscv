@@ -292,6 +292,7 @@ function tick_clock() = {
 
 val plat_term_write = impure {c: "plat_term_write", lem: "plat_term_write"} : bits(8) -> unit
 val plat_term_read  = impure {c: "plat_term_read", lem: "plat_term_read"}  : unit -> bits(8)
+val dispatch_syscall = impure "dispatch_syscall" : bits(64) -> unit
 
 /* Spike's HTIF device interface, which multiplexes the above MMIO devices. */
 
@@ -372,6 +373,7 @@ function htif_store(Physaddr(paddr), width, data) = {
   /* Execute if there were repeated writes of the same payload without
    * a cmd (e.g. in riscv-tests), or we have a complete htif command.
    */
+  print("发生什么事了!");
   if   (((htif_cmd_write == bitone) & (unsigned(htif_payload_writes) > 0))
         | (unsigned(htif_payload_writes) > 2))
   then {
@@ -385,7 +387,9 @@ function htif_store(Physaddr(paddr), width, data) = {
              htif_done = true;
              htif_exit_code = (zero_extend(64, cmd[payload]) >> 1)
         }
-        else ()
+        else (
+             dispatch_syscall(zero_extend(cmd[payload]))
+        )
       },
       0x01 => { /* terminal */
         if   get_config_print_platform()

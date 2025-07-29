@@ -583,7 +583,9 @@ void run_sail(void)
     exit(EXIT_FAILURE);
   }
 
+  printf("[%s] Starting simulation\n", __func__);
   while (!zhtif_done && (insn_limit == 0 || total_insns < insn_limit)) {
+    printf("[%s] Step %ld, PC %ld\n", __func__, step_no, zget_next_pc(0).bits);
     if (rvfi) {
       switch (rvfi->pre_step(config_print_rvfi)) {
       case RVFI_prestep_continue:
