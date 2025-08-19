@@ -8,7 +8,8 @@
       "len": 32,
       "value": "0xFFFF_FFFF"
     },
-    "mtval_has_illegal_instruction_bits": false
+    "mtval_has_illegal_instruction_bits": false,
+    "xstatus_vs_is_read_only_zero_when_not_support_ext_v_and_support_ext_s": false
   },
   "memory": {
     "pmp": {
@@ -68,7 +69,8 @@
       "supported": true,
       "vlen_exp": 9,
       "elen_exp": 6,
-      "vl_use_ceil": false
+      "vl_use_ceil": false,
+      "xstatus_vs_is_read_only_zero_when_v_ext_not_supported": false
     },
     "B": {
       "supported": true

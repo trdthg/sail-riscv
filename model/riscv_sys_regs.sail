@@ -239,19 +239,23 @@ function legalize_mstatus(o : Mstatus, v : bits(64)) -> Mstatus = {
     MPRV = if currentlyEnabled(Ext_U) then v[MPRV] else 0b0,
     /* We don't have any extension context yet. */
     XS = extStatus_to_bits(Off),
-  /* FS is WARL, and making FS writable can support the M-mode emulation of an FPU
-   * to support code running in S/U-modes.  Spike does this, and for now, we match it,
-   * but only if Zfinx isn't enabled.
-   * FIXME: This should be made a platform parameter.
-   */
+    /* FS is WARL, and making FS writable can support the M-mode emulation of an FPU
+     * to support code running in S/U-modes.  Spike does this, and for now, we match it,
+     * but only if Zfinx isn't enabled.
+     * FIXME: This should be made a platform parameter.
+     */
     FS = if hartSupports(Ext_Zfinx) then extStatus_to_bits(Off) else v[FS],
     MPP = if have_privLevel(v[MPP]) then v[MPP] else privLevel_to_bits(lowest_supported_privLevel()),
     SPP = if currentlyEnabled(Ext_S) then v[SPP] else 0b0,
-    /* TODO: make this configurable
-     * If S-mode is implemented but the v registers are not, VS may optionally
-     * be read-only zero.
+    /*
+     * If S-mode is implemented but the v registers are not,
+     * VS may optionally be read-only zero.
      */
-    VS = if hartSupports(Ext_V) then v[VS] else 0b00,
+    VS = if      not(hartSupports(Ext_V) | hartSupports(Ext_S)) then 0b00
+         else if hartSupports(Ext_V) & hartSupports(Ext_S) then v[VS]
+         else if plat_xstatus_vs_is_read_only_zero_when_not_support_ext_v_and_support_ext_s then
+                 v[VS]
+         else    0b00,
     MPIE = v[MPIE],
     SPIE = if currentlyEnabled(Ext_S) then v[SPIE] else 0b0,
     MIE = v[MIE],

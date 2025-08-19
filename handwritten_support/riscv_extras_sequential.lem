@@ -192,6 +192,10 @@ val plat_mtval_has_illegal_inst_bits : unit -> bool
 let plat_mtval_has_illegal_inst_bits () = false
 declare ocaml target_rep function plat_mtval_has_illegal_inst_bits = `Platform.mtval_has_illegal_inst_bits`
 
+val plat_xstatus_vs_is_read_only_zero_when_not_support_ext_v_and_support_ext_s : unit -> bool
+let plat_xstatus_vs_is_read_only_zero_when_not_support_ext_v_and_support_ext_s () = false
+declare ocaml target_rep function plat_xstatus_vs_is_read_only_zero_when_not_support_ext_v_and_support_ext_s = `Platform.xstatus_vs_is_read_only_zero_when_not_support_ext_v_and_support_ext_s`
+
 val plat_insns_per_tick : unit -> integer
 let plat_insns_per_tick () = 1
 declare ocaml target_rep function plat_insns_per_tick = `Platform.insns_per_tick`
