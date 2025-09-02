@@ -61,6 +61,7 @@ variable {Register : Type} {RegisterType : Register → Type} [DecidableEq Regis
 
 axiom plat_term_write {α} : α → SailM Unit
 axiom plat_term_read : Unit → SailM String
+axiom dispatch_syscall : BitVec 64 → SailM Unit
 
 -- Reservations
 axiom load_reservation : Arch.pa → SailM Unit
