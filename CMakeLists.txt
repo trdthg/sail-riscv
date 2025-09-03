@@ -18,10 +18,10 @@ project(sail-riscv
   HOMEPAGE_URL "https://github.com/riscv/sail-riscv"
 )
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(SAIL_REQUIRED_VER 0.19.1)
-
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
 # Make users explicitly pick a build type so they don't get
 # surprised when the default gives a very slow emulator.
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -150,11 +150,16 @@ execute_process(
 message(STATUS "Sail library directory: ${sail_dir}")
 
 option(COVERAGE "Compile with Sail coverage collection enabled.")
+option(USE_SPIKE "Compile with Spike lockstep support.")
 
 include(GNUInstallDirs)
 
 # Third party dependencies.
 add_subdirectory("dependencies")
+# Spike wrapper.
+message("USE_SPIKE: ${USE_SPIKE}")
+add_subdirectory(libspike)
+message(STATUS "SPIKE_INCLUDE_DIRS: ${SPIKE_INCLUDE_DIRS}")
 
 # Sail C runtime.
 add_subdirectory("sail_runtime")

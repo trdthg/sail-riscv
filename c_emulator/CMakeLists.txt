@@ -21,6 +21,7 @@ message(STATUS "CXX compiler version: ${cxx_compiler_version}")
 configure_file(sail_riscv_version.cpp.in sail_riscv_version.cpp @ONLY)
 
 ## A library that contains the C model and support code.
+include_directories(/home/trdthg/riscv/include)
 
 add_library(riscv_model
     elf_loader.cpp
@@ -38,6 +39,12 @@ add_library(riscv_model
     riscv_sail.h
     riscv_softfloat.c
     riscv_softfloat.h
+    config_utils.h
+    sail_mem_if.cpp
+    sail_mem_if.h
+    riscv_syscall.cpp
+    riscv_syscall.h
+    byteorder.h
     config_utils.cpp
     config_utils.h
     symbol_table.cpp
@@ -46,6 +53,12 @@ add_library(riscv_model
     "${CMAKE_CURRENT_BINARY_DIR}/sail_riscv_version.cpp"
     "${CMAKE_BINARY_DIR}/sail_riscv_model.c"
     "${CMAKE_BINARY_DIR}/sail_riscv_model.h"
+    sim_utils.h
+    sim_utils.cpp
+    cosimulator.h
+    cosimulator.cpp
+    spike.h
+    spike.cpp
 )
 
 target_include_directories(riscv_model
@@ -88,8 +101,12 @@ set_source_files_properties(
 
 add_dependencies(sail_riscv_sim generated_sail_riscv_model)
 
+target_include_directories(sail_riscv_sim
+    INTERFACE ${fesvr_inc} ${riscv_inc}
+)
+message(STATUS "SPIKE_INCLUDE_DIRS: ${SPIKE_INCLUDE_DIRS}")
 target_link_libraries(sail_riscv_sim
-    PRIVATE riscv_model default_config
+    PRIVATE riscv_model spike default_config
 )
 
 # TODO: Enable warnings when we use the #include trick

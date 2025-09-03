@@ -1,0 +1,16 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "CMake Build", // 这个名字要与 launch.json 中的 preLaunchTask 匹配
+            "type": "shell",
+            "command": "cmake --build build", // 或者 'make -C build'
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "detail": "Runs CMake build in the 'build' directory"
+        }
+    ]
+}

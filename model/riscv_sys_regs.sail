@@ -160,6 +160,22 @@ function have_privLevel(priv : priv_level) -> bool =
     0b11 => true,
   }
 
+  
+// [run_sail] Step 106331, PC 2147497706
+// mem[X,0x00000000800036EA] -> 0x0073
+// mem[X,0x00000000800036EC] -> 0x3020
+// [106331] [M]: 0x00000000800036EA (0x30200073) mret
+// CSR mstatus (0x300) <- 0x8000000A00006080
+// ret-ing from M to S
+// CSR mstatus (0x300) <- 0x8000000A00006088
+// ret-ing from S to U
+// next_pc0xFFFFFFC0000002E8
+// sail_pc: ffffffc0000002e8 sail_next_pc: ffffffc0000002e8
+// CSR[0x300] mismatch: Sail:0x8000000a00006088 Spike:0x8000000a00006080 (xor:0x0000000000000008)
+// Mismatch between model and cosimulator, exiting.
+// core   0: 0x00000000800036ea (0x30200073) mret
+// PC: ffffffc0000002e8 == ffffffc0000002e8
+
 bitfield Mstatus : bits(64) = {
   SD   : xlen - 1,
 
@@ -247,7 +263,7 @@ function legalize_mstatus(o : Mstatus, v : bits(64)) -> Mstatus = {
     FS = if hartSupports(Ext_Zfinx) then extStatus_to_bits(Off) else v[FS],
     MPP = if have_privLevel(v[MPP]) then v[MPP] else privLevel_to_bits(lowest_supported_privLevel()),
     SPP = if currentlyEnabled(Ext_S) then v[SPP] else 0b0,
-    VS = v[VS],
+    VS = if hartSupports(Ext_V) then v[VS] else 0b00,
     MPIE = v[MPIE],
     SPIE = if currentlyEnabled(Ext_S) then v[SPIE] else 0b0,
     MIE = v[MIE],

@@ -192,6 +192,9 @@ function checked_mem_write forall 'n, 0 < 'n <= max_mem_access . (
       then mmio_write(paddr, width, data)
       else if within_phys_mem(paddr, width)
       then {
+        print_bits("Writing to physical memory: ", bits_of(paddr));
+        print_int("width: ", width);
+        print_bits("Data: ", data);
         let wk = write_kind_of_flags(aq, rl, con);
         phys_mem_write(wk, paddr, width, data, meta)
       } else Err(E_SAMO_Access_Fault())

@@ -62,6 +62,7 @@ variable {Register : Type} {RegisterType : Register → Type} [DecidableEq Regis
 
 def plat_term_write {α} : α → SailM Unit := λ _ => panic "TODO"
 def plat_term_read : Unit → SailM String := λ _ => panic "TODO"
+def dispatch_syscall : BitVec 64 → SailM Unit
 
 -- Reservations
 def load_reservation : Arch.pa → SailM Unit := λ _ => panic "TODO"

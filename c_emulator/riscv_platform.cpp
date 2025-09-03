@@ -78,6 +78,10 @@ mach_bits plat_htif_tohost(unit)
 {
   return rv_htif_tohost;
 }
+mach_bits plat_htif_fromhost(unit)
+{
+  return rv_htif_fromhost;
+}
 
 bool sys_enable_experimental_extensions(unit)
 {

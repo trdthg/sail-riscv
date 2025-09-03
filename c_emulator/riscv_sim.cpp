@@ -35,6 +35,9 @@
 #include "riscv_callbacks_if.h"
 #include "riscv_callbacks_log.h"
 #include "riscv_callbacks_rvfi.h"
+#include "sim_utils.h"
+#include "cosimulator.h"
+#include "spike.h"
 
 bool do_show_times = false;
 bool do_print_version = false;
@@ -49,6 +52,8 @@ std::string term_log;
 std::string trace_log_path;
 FILE *trace_log = NULL;
 std::string dtb_file;
+unsigned char *dtb = NULL;
+size_t dtb_len = 0;
 int rvfi_dii_port = 0;
 std::optional<rvfi_handler> rvfi;
 std::vector<std::string> elfs;
@@ -70,6 +75,36 @@ bool config_print_step = false;
 
 bool config_use_abi_names = false;
 bool config_enable_rvfi = false;
+Cosim_type cosim_type = Cosim_type::NOP;
+
+void set_config_print(char *var, bool val)
+{
+  if (var == NULL || strcmp("all", var) == 0) {
+    config_print_instr = val;
+    config_print_mem_access = val;
+    config_print_reg = val;
+    config_print_platform = val;
+    config_print_rvfi = val;
+  } else if (strcmp("instr", var) == 0) {
+    config_print_instr = val;
+  } else if (strcmp("reg", var) == 0) {
+    config_print_reg = val;
+  } else if (strcmp("abi", var) == 0) {
+    config_use_abi_names = val;
+  } else if (strcmp("mem", var) == 0) {
+    config_print_mem_access = val;
+  } else if (strcmp("rvfi", var) == 0) {
+    config_print_rvfi = val;
+  } else if (strcmp("platform", var) == 0) {
+    config_print_platform = val;
+  } else if (strcmp("step", var) == 0) {
+    config_print_step = val;
+  } else {
+    fprintf(stderr, "Unknown trace category: '%s' (should be %s)\n", var,
+            "instr|reg|mem|rvfi|platform|step|all");
+    exit(1);
+  }
+}
 
 struct timeval init_start, init_end, run_end;
 uint64_t total_insns = 0;
@@ -169,6 +204,19 @@ static void setup_options(CLI::App &app)
   app.add_option("--sailcov-file", sailcov_file, "Sail coverage output file")
       ->option_text("<file>");
 #endif
+  app.add_flag_callback(
+      "--enable-spike", [] { cosim_type = Cosim_type::SPIKE; }, "Enable spike");
+  //   case OPT_TRACE_OUTPUT:
+  //     trace_log_path = optarg;
+  //     fprintf(stderr, "using %s for trace output.\n", trace_log_path);
+  //     break;
+  //   case '?':
+  //     print_usage(argv[0], 1);
+  //     break;
+  //   }
+  // }
+  app.add_flag("--print-instr", config_print_instr,
+               "Enable instruction printing");
 
   app.add_flag("--trace-instr", config_print_instr,
                "Enable trace output for instruction execution");
@@ -380,7 +428,7 @@ void flush_logs(void)
   }
 }
 
-void run_sail(void)
+void run_sail(cosimulator &cosim)
 {
   bool is_waiting;
   bool exit_wait = true;
@@ -399,7 +447,16 @@ void run_sail(void)
     exit(EXIT_FAILURE);
   }
 
+  if (!cosim.check_init()) {
+    fprintf(
+        stderr,
+        "Mismatch in initial state between model and cosimulator, exiting.\n");
+    exit(1);
+  }
+
+  printf("[%s] Starting simulation\n", __func__);
   while (!zhtif_done && (insn_limit == 0 || total_insns < insn_limit)) {
+    printf("[%s] Step %ld, PC %ld\n", __func__, step_no, zget_next_pc(0).bits);
     if (rvfi) {
       switch (rvfi->pre_step(config_print_rvfi)) {
       case RVFI_prestep_continue:
@@ -417,6 +474,7 @@ void run_sail(void)
       sail_int sail_step;
       CREATE(sail_int)(&sail_step);
       CONVERT_OF(sail_int, mach_int)(&sail_step, step_no);
+      // fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
       is_waiting = ztry_step(sail_step, exit_wait);
       if (have_exception)
         goto step_exception;
@@ -425,6 +483,18 @@ void run_sail(void)
       if (rvfi) {
         rvfi->send_trace(config_print_rvfi);
       }
+      cosim.step();
+      // fprintf(stderr, "-------------------------------------\n");
+      // for (int i = 1; i < 32; i++) {
+      //   uint64_t sail_val = zrX(i).bits;
+      //   fprintf(stderr, "X%d: 0x%lx\n", i, sail_val);
+      // }
+      // fprintf(stderr, "misa: 0x%" PRIx64 "\n", zread_CSR(0x301).bits);
+      // if (!cosim.check_state()) {
+      //   fprintf(stderr, "Mismatch between model and cosimulator, exiting.\n");
+      //   exit(1);
+      // }
+      // fprintf(stderr, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n");
     }
     if (!is_waiting) {
       if (config_print_step) {
@@ -433,6 +503,16 @@ void run_sail(void)
       step_no++;
       insn_cnt++;
       total_insns++;
+    }
+    {
+      std::optional<int> exit_check = cosim.has_exited();
+      if (!zhtif_done && exit_check.has_value()) {
+        fprintf(stderr,
+                "Exit mismatch: model is running, but cosimulator has exited "
+                "with code %d.\n",
+                exit_check.value());
+        exit(1);
+      }
     }
 
     if (do_show_times && (total_insns & 0xfffff) == 0) {
@@ -461,6 +541,7 @@ void run_sail(void)
     if (insn_cnt == insns_per_tick) {
       insn_cnt = 0;
       ztick_clock(UNIT);
+      cosim.tick();
     }
   }
 
@@ -612,10 +693,17 @@ int inner_main(int argc, char **argv)
   }
 
   const std::string &initial_elf_file = elfs[0];
-  uint64_t entry = rvfi ? rvfi->get_entry()
-                        : load_sail(initial_elf_file, /*main_file=*/true);
-
+  uint64_t entry = rvfi
+      ? rvfi->get_entry()
+      : load_sail(initial_elf_file.c_str(), /*main_file=*/true);
   fprintf(stdout, "Entry point: 0x%" PRIx64 "\n", entry);
+  
+  cosimulator cosim(Cosim_type::SPIKE, is_32bit_model());
+
+  cosim.set_dtb(dtb, dtb_len);
+  cosim.set_verbose(true);
+
+  cosim.init_elf(initial_elf_file.c_str(), entry);
 
   /* Load any additional ELF files into memory */
   for (auto it = elfs.cbegin() + 1; it != elfs.cend(); it++) {
@@ -631,7 +719,7 @@ int inner_main(int argc, char **argv)
   }
 
   do {
-    run_sail();
+    run_sail(cosim);
     if (rvfi) {
       /* Reset for next test */
       reinit_sail(entry, config_file.c_str());

@@ -16,6 +16,7 @@ bool valid_reservation(unit);
 unit plat_term_write(mach_bits);
 
 mach_bits plat_htif_tohost(unit);
+mach_bits plat_htif_fromhost(unit);
 bool plat_enable_htif(unit);
 
 bool sys_enable_experimental_extensions(unit);

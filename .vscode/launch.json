@@ -1,0 +1,35 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Launch CMake Program",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/c_emulator/sail_riscv_sim", // <-- 修改这里
+            "args": [
+                "--inst-limit",
+                "113",
+                "--trace-all",
+                "${workspaceFolder}/pk"
+            ], // <-- 修改这里
+            "stopAtEntry": false, // 是否在程序入口处停止
+            "cwd": "${workspaceFolder}/build", // <-- 修改这里，设置工作目录
+            "environment": [],
+            "externalConsole": false, // 如果想在外部终端运行程序，改为 true
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "CMake Build" // <-- 可选：确保在启动调试前先构建
+        }
+    ]
+}
