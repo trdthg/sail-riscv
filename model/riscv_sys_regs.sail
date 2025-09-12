@@ -448,14 +448,17 @@ function is_fiom_active() -> bool = {
 /* interrupt processing state */
 
 bitfield Minterrupts : xlenbits = {
-  MEI : 11, /* external interrupts */
-  SEI : 9,
+  MEI   : 11, /* external interrupts */
+  VSEIP : 10,
+  SEI   : 9,
 
-  MTI : 7,  /* timers interrupts */
-  STI : 5,
+  MTI   : 7,  /* timers interrupts */
+  VSTIP : 6,
+  STI   : 5,
 
-  MSI : 3,  /* software interrupts */
-  SSI : 1,
+  MSI   : 3,  /* software interrupts */
+  VSSIP : 2,
+  SSI   : 1,
 }
 
 function legalize_mip(o : Minterrupts, v : xlenbits) -> Minterrupts = {
@@ -492,10 +495,15 @@ function legalize_mideleg(o : Minterrupts, v : xlenbits) -> Minterrupts = {
 /* exception processing state */
 
 bitfield Medeleg : bits(64) = {
+  SAMO_GPage_Fault  : 23,
+  Virtual_Instr     : 22,
+  Load_GPage_Fault  : 21,
+  Fetch_GPage_Fault : 20,
   SAMO_Page_Fault   : 15,
   Load_Page_Fault   : 13,
   Fetch_Page_Fault  : 12,
   MEnvCall          : 11,
+  VSEnvCall         : 10,
   SEnvCall          : 9,
   UEnvCall          : 8,
   SAMO_Access_Fault : 7,
@@ -784,7 +792,6 @@ mapping clause csr_name_map = 0x100  <-> "sstatus"
 function clause is_CSR_accessible(0x100, _, _) = currentlyEnabled(Ext_S) // sstatus
 function clause read_CSR(0x100) = lower_mstatus(mstatus).bits[xlen - 1 .. 0]
 function clause write_CSR(0x100, value) = { mstatus = legalize_sstatus(mstatus, value); Ok(lower_mstatus(mstatus).bits[xlen - 1 .. 0]) }
-
 
 bitfield Sinterrupts : xlenbits = {
   SEI : 9,  /* external interrupts */
