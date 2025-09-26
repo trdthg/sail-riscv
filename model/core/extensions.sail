@@ -70,7 +70,7 @@ function clause hartSupports(Ext_U) = config extensions.U.supported
 // Hypervisor
 enum clause extension = Ext_H
 mapping clause extensionName = Ext_H <-> "h"
-function clause hartSupports(Ext_H) = false
+function clause hartSupports(Ext_H) = config extensions.H.supported
 
 // Cache-Block Management Instructions
 enum clause extension = Ext_Zicbom
