@@ -329,6 +329,7 @@ function reset_misa() -> unit = {
   misa[B]   = bool_to_bits(hartSupports(Ext_B));   // Bit-manipulation
   misa[M]   = bool_to_bits(hartSupports(Ext_M));   // integer multiply/divide
   misa[U]   = bool_to_bits(hartSupports(Ext_U));   // user-mode
+  misa[H]   = bool_to_bits(hartSupports(Ext_H));   // user-mode
   misa[S]   = bool_to_bits(hartSupports(Ext_S));   // supervisor-mode
   misa[V]   = bool_to_bits(hartSupports(Ext_V));   // vector extension
 
