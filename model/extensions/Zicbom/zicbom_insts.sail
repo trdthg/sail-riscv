@@ -106,7 +106,7 @@ function process_clean_inval(rs1 : regidx, cbop : cbop_zicbom) -> ExecutionResul
             _ => None(),
           }
         },
-        Err(e, _) => Some(e)
+        Err((e, _), _) => Some(e)
       };
       // "If access to the cache block is not permitted, a cache-block management
       //  instruction raises a store page fault or store guest-page fault exception

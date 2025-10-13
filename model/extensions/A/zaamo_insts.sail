@@ -69,7 +69,7 @@ function clause execute AMO(op, aq, rl, rs2, rs1, width, rd) = {
       if not(is_aligned_addr(vaddr, width))
       then Memory_Exception(vaddr, E_SAMO_Addr_Align())
       else match translateAddr(vaddr, ReadWrite(Data, Data)) {
-        Err(e, _) => Memory_Exception(vaddr, e),
+        Err((e, _), _) => Memory_Exception(vaddr, e),
         Ok(addr, _) => {
           // AMOCAS.D for RV32 and AMOCAS.Q for RV64 operate on a pair of
           // registers. When the first register of a register pair is

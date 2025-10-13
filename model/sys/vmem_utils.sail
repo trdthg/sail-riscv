@@ -106,6 +106,58 @@ function misaligned_order(n) = {
   }
 }
 
+val vmem_write_addr : forall 'width, is_mem_width('width).
+  (virtaddr, int('width), bits(8 * 'width), AccessType(ext_access_type), bool, bool, bool)
+  -> result(bool, ExecutionResult)
+
+function vmem_write_addr(vaddr, width, data, acc, aq, rl, res) = {
+  // If the store is misaligned or an allowed misaligned access, split into `n`
+  // (single-copy-atomic) memory operations, each of `bytes` width. If the store is
+  // aligned, then `n` = 1 and bytes will remain unchanged.
+  let ('n, 'bytes) = split_misaligned(vaddr, width);
+
+  let (first, last, step) = misaligned_order(n);
+  var i : range(0, 'n - 1) = first;
+  var finished : bool = false;
+
+  var write_success : bool = true;
+  let vaddr = bits_of(vaddr);
+  repeat {
+    let offset = i;
+    let vaddr = vaddr + (offset * bytes);
+    match translateAddr(Virtaddr(vaddr), acc) {
+      Err((e, _), _) => return Err(Memory_Exception(Virtaddr(vaddr), e)),
+
+      // NOTE: Currently, we only announce the effective address if address translation is successful.
+      // This may need revisiting, particularly in the misaligned case.
+      Ok(paddr, _) => {
+        // If res is true, the load should be aligned, and this loop should only execute once
+        if res & not(match_reservation(bits_of(paddr))) then {
+          write_success = false
+        } else match mem_write_ea(paddr, bytes, aq, rl, res) {
+          Err(e) => return Err(Memory_Exception(Virtaddr(vaddr), e)),
+
+          Ok(()) => {
+            let write_value = data[(8 * (offset + 1) * bytes) - 1 .. 8 * offset * bytes];
+            match mem_write_value(paddr, bytes, write_value, aq, rl, res) {
+              Err(e) => return Err(Memory_Exception(Virtaddr(vaddr), e)),
+              Ok(s)  => write_success = write_success & s,
+            }
+          }
+        }
+      }
+    };
+
+    if offset == last then {
+      finished = true
+    } else {
+      i = offset + step
+    }
+  } until finished;
+
+  Ok(write_success)
+}
+
 // External API
 
 function check_misaligned(vaddr : virtaddr, width : word_width) -> bool = {
@@ -147,7 +199,7 @@ function vmem_read_addr(vaddr, offset, width, acc, aq, rl, res) = {
     let offset = i;
     let vaddr = vaddr + (offset * bytes);
     match translateAddr(Virtaddr(vaddr), acc) {
-      Err(e, _) => return Err(Memory_Exception(Virtaddr(vaddr), e)),
+      Err((e, _), _) => return Err(Memory_Exception(Virtaddr(vaddr), e)),
 
       Ok(paddr, _) => match mem_read(acc, paddr, bytes, aq, rl, res) {
         Err(e) => return Err(Memory_Exception(Virtaddr(vaddr), e)),

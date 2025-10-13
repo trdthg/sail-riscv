@@ -36,6 +36,7 @@ end execute
 end assembly
 end encdec
 end encdec_compressed
+end enc_transformed
 
 function print_insn(insn : instruction) -> string = assembly(insn)
 

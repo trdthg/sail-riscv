@@ -23,7 +23,7 @@ function rvfi_fetch() -> FetchResult = {
   then return F_Error(E_Fetch_Addr_Align(), PC);
 
   match translateAddr(Virtaddr(PC), InstructionFetch()) {
-    Err(e, _) => return F_Error(e, PC),
+    Err((e, c), _) => return F_Error(e, PC),
     Ok(_, _)  => (),
   };
 
@@ -40,7 +40,7 @@ function rvfi_fetch() -> FetchResult = {
   };
 
   match translateAddr(Virtaddr(PC_hi), InstructionFetch()) {
-    Err(e, _) => F_Error(e, PC),
+    Err((e, _), _) => F_Error(e, PC),
     Ok(_, _)  => F_Base(i)
   }
 }

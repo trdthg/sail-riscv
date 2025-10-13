@@ -99,6 +99,7 @@ function run_hart_active(step_no: nat) -> Step = {
         sail_instr_announce(h);
         let instbits : instbits = zero_extend(h);
         let instruction = ext_decode_compressed(h);
+        instbits_transformed = enc_transformed(instruction, zeros()); // BUG: Address offset may be nonzero for misaligned memory accesses
         if   get_config_print_instr()
         then {
           print_log_instr("[" ^ dec_str(step_no) ^ "] [" ^ to_str(cur_privilege) ^ "]: " ^ bits_str(PC) ^ " (" ^ bits_str(h) ^ ") " ^ to_str(instruction), zero_extend(PC));
@@ -122,6 +123,7 @@ function run_hart_active(step_no: nat) -> Step = {
         sail_instr_announce(w);
         let instbits : instbits = zero_extend(w);
         let instruction = ext_decode(w);
+        instbits_transformed = enc_transformed(instruction, zeros()); // BUG: Address offset may be nonzero for misaligned memory accesses
         if   get_config_print_instr()
         then {
           print_log_instr("[" ^ dec_str(step_no) ^ "] [" ^ to_str(cur_privilege) ^ "]: " ^ bits_str(PC) ^ " (" ^ bits_str(w) ^ ") " ^ to_str(instruction), zero_extend(PC));
@@ -193,17 +195,18 @@ function try_step(step_no : nat, exit_wait : bool) -> bool = {
   match step_val {
     Step_Pending_Interrupt(intr, priv) => {
       if   get_config_print_instr()
-      then print_bits("Handling interrupt: ", interruptType_bits(intr));
+      then print_log("Step_Pending_Interrupt: interrupt = " ^ interruptType_to_str(intr));
       handle_interrupt(intr, priv)
     },
     Step_Ext_Fetch_Failure(e) => ext_handle_fetch_check_error(e),
-    Step_Fetch_Failure(vaddr, e) => handle_exception(bits_of(vaddr), e),
+    Step_Fetch_Failure(vaddr, e) => handle_exception(e, mem_exception_context(zero_extend(bits_of(vaddr)), false)),
     Step_Waiting(_) => assert(hart_is_waiting(hart_state), "cannot be Waiting in a non-Wait state"),
     Step_Execute(Retire_Success(), _) => assert(hart_is_active(hart_state)),
     // standard errors
     Step_Execute(Trap(priv, ctl, pc), _) => set_next_pc(exception_handler(priv, ctl, pc)),
-    Step_Execute(Memory_Exception(vaddr, e), _) => handle_exception(bits_of(vaddr), e),
-    Step_Execute(Illegal_Instruction(), instbits) => handle_exception(zero_extend(instbits), E_Illegal_Instr()),
+    Step_Execute(Memory_Exception(vaddr, e), _) => handle_exception(e, mem_exception_context(zero_extend(bits_of(vaddr)), false)),
+    Step_Execute(Illegal_Instruction(), instbits) => handle_exception(E_Illegal_Instr(), instr_exception_context(zero_extend(instbits), false)),
+    Step_Execute(Virtual_Instruction(), instbits) => handle_exception(E_Virtual_Instr(), instr_exception_context(zero_extend(instbits), false)),
     Step_Execute(Enter_Wait(wr), instbits) => {
       if wait_is_nop(wr) then {
         // This is the same as the RETIRE_OK case.

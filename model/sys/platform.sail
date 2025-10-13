@@ -223,6 +223,7 @@ function tick_clock() -> unit = {
   if   should_inc_mcycle(cur_privilege)
   then mcycle = mcycle + 1;
 
+  // FIXME: mtime maybe increase too fast, intrupt may be triggered before loop which will cause infinite loop.
   mtime  = mtime  + 1;
   clint_dispatch()
 }

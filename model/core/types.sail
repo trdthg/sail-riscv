@@ -12,6 +12,7 @@ type half = bits(16)
 type word = bits(32)
 
 // Bit-vector of an uncompressed instruction.
+register instbits_transformed : bits(32)
 type instbits = bits(32)
 
 type pagesize_bits : Int = 12
@@ -75,10 +76,12 @@ mapping privLevel_bits : (nom_priv_bits, virt_mode_bit) <-> Privilege = {
   (0b01, 0b0) <-> Supervisor,
   (0b01, 0b1) <-> VirtualSupervisor,
   (0b11, 0b0) <-> Machine,
-  forwards _       => internal_error(__FILE__, __LINE__, "Invalid privilege level or virtual mode"),
+  forwards _   => internal_error(__FILE__, __LINE__, "Invalid privilege level or virtual mode"),
 }
 
 function privLevel_to_bits(p : Privilege) -> nom_priv_bits = { let (p, _) = privLevel_bits(p); p }
+
+function privLevel_to_virt_bits(p : Privilege) -> virt_mode_bit = { let (_, v) = privLevel_bits(p); v }
 
 function privLevel_is_virtual(p : Privilege) -> bool = { let (_, v) = privLevel_bits(p); v == 0b1 }
 
@@ -118,26 +121,54 @@ type is_mem_width('w) = 'w in {1, 2, 4, 8}
 enum InterruptType = {
   I_U_Software,
   I_S_Software,
+  I_VS_Software,
   I_M_Software,
   I_U_Timer,
   I_S_Timer,
+  I_VS_Timer,
   I_M_Timer,
   I_U_External,
   I_S_External,
-  I_M_External
+  I_VS_External,
+  I_M_External,
+  I_G_External,
 }
 
 mapping interruptType_bits : InterruptType <-> exc_code = {
-  I_U_Software <-> 0b000000, // 0
-  I_S_Software <-> 0b000001, // 1
-  I_M_Software <-> 0b000011, // 3
-  I_U_Timer    <-> 0b000100, // 4
-  I_S_Timer    <-> 0b000101, // 5
-  I_M_Timer    <-> 0b000111, // 7
-  I_U_External <-> 0b001000, // 8
-  I_S_External <-> 0b001001, // 9
-  I_M_External <-> 0b001011, // 11
+  I_U_Software  <-> 0b000000, // 0
+  I_S_Software  <-> 0b000001, // 1
+  I_VS_Software <-> 0b000010, // 2
+  I_M_Software  <-> 0b000011, // 3
+  I_U_Timer     <-> 0b000100, // 4
+  I_S_Timer     <-> 0b000101, // 5
+  I_VS_Timer    <-> 0b000110, // 6
+  I_M_Timer     <-> 0b000111, // 7
+  I_U_External  <-> 0b001000, // 8
+  I_S_External  <-> 0b001001, // 9
+  I_VS_External <-> 0b001010, // 10
+  I_M_External  <-> 0b001011, // 11
+  I_G_External  <-> 0b001100, // 12
 }
+
+val interruptType_to_str : InterruptType -> string
+function interruptType_to_str (i) =
+  match (i) {
+    I_U_Software  => "user-software-interrupt",
+    I_S_Software  => "supervisor-software-interrupt",
+    I_VS_Software => "virtual-supervisor-software-interrupt",
+    I_M_Software  => "machine-software-interrupt",
+    I_U_Timer     => "user-timer-interrupt",
+    I_S_Timer     => "supervisor-timer-interrupt",
+    I_VS_Timer    => "virtual-supervisor-timer-interrupt",
+    I_M_Timer     => "machine-timer-interrupt",
+    I_U_External  => "user-external-interrupt",
+    I_S_External  => "supervisor-external-interrupt",
+    I_VS_External => "virtual-supervisor-external-interrupt",
+    I_M_External  => "machine-external-interrupt",
+    I_G_External  => "guest-external-interrupt"
+  }
+
+overload to_str = {interruptType_to_str}
 
 // architectural exception definitions
 
@@ -152,7 +183,7 @@ union ExceptionType = {
   E_SAMO_Access_Fault  : unit,
   E_U_EnvCall          : unit,
   E_S_EnvCall          : unit,
-  E_Reserved_10        : unit,
+  E_VS_EnvCall         : unit,
   E_M_EnvCall          : unit,
   E_Fetch_Page_Fault   : unit,
   E_Load_Page_Fault    : unit,
@@ -161,8 +192,13 @@ union ExceptionType = {
   E_Reserved_16        : unit,
   E_Reserved_17        : unit,
   E_Software_Check     : unit,
+  E_Reserved_19        : unit,
+  E_Fetch_GPage_Fault  : unit,
+  E_Load_GPage_Fault   : unit,
+  E_Virtual_Instr      : unit,
+  E_SAMO_GPage_Fault   : unit,
 
-  // extensions
+  /* extensions */
   E_Extension          : ext_exc_type
 }
 
@@ -177,15 +213,20 @@ mapping exceptionType_bits : ExceptionType <-> exc_code = {
   E_SAMO_Access_Fault()  <-> 0b000111, // 7
   E_U_EnvCall()          <-> 0b001000, // 8
   E_S_EnvCall()          <-> 0b001001, // 9
-  E_Reserved_10()        <-> 0b001010, // 10
+  E_VS_EnvCall()         <-> 0b001010, // 9
   E_M_EnvCall()          <-> 0b001011, // 11
   E_Fetch_Page_Fault()   <-> 0b001100, // 12
   E_Load_Page_Fault()    <-> 0b001101, // 13
   E_Reserved_14()        <-> 0b001110, // 14
   E_SAMO_Page_Fault()    <-> 0b001111, // 15
-  E_Reserved_16()        <-> 0b010000, // 16
-  E_Reserved_17()        <-> 0b010001, // 17
+  E_Reserved_16()        <-> 0b010000, // TODO
+  E_Reserved_17()        <-> 0b010001,
   E_Software_Check()     <-> 0b010010, // 18
+  E_Reserved_19()        <-> 0b010011,
+  E_Fetch_GPage_Fault()  <-> 0b010100,
+  E_Load_GPage_Fault()   <-> 0b010101,
+  E_Virtual_Instr()      <-> 0b010110,
+  E_SAMO_GPage_Fault()   <-> 0b010111,
 
   // extensions
   E_Extension(e)         <-> ext_exc_type_bits(e)
@@ -199,19 +240,25 @@ function exceptionType_to_str(e : ExceptionType) -> string =
     E_Breakpoint()         => "breakpoint",
     E_Load_Addr_Align()    => "misaligned-load",
     E_Load_Access_Fault()  => "load-access-fault",
+    E_SAMO_Addr_Align()    => "misaliged-store/amo",
     E_SAMO_Addr_Align()    => "misaligned-store/amo",
     E_SAMO_Access_Fault()  => "store/amo-access-fault",
     E_U_EnvCall()          => "u-call",
     E_S_EnvCall()          => "s-call",
-    E_Reserved_10()        => "reserved-0",
+    E_VS_EnvCall()         => "vs-call",
     E_M_EnvCall()          => "m-call",
     E_Fetch_Page_Fault()   => "fetch-page-fault",
     E_Load_Page_Fault()    => "load-page-fault",
-    E_Reserved_14()        => "reserved-1",
+    E_Reserved_14()        => "reserved-14",
     E_SAMO_Page_Fault()    => "store/amo-page-fault",
-    E_Reserved_16()        => "reserved-2",
-    E_Reserved_17()        => "reserved-3",
+    E_Reserved_16()        => "reserved-16",
+    E_Reserved_17()        => "reserved-17",
     E_Software_Check()     => "software-check-fault",
+    E_Reserved_19()        => "reserved-19",
+    E_Fetch_GPage_Fault()  => "fetch-guest-page-fault",
+    E_Load_GPage_Fault()   => "load-guest-page-fault",
+    E_Virtual_Instr()      => "virtual-instruction",
+    E_SAMO_GPage_Fault()   => "store/amo-guest-page-fault",
 
     // extensions
     E_Extension(e)         => ext_exc_type_to_str(e)
@@ -226,6 +273,90 @@ function sw_check_code_to_bits (c : SWCheckCodes) -> xlenbits =
   match (c) {
     LANDING_PAD_FAULT  => zero_extend(0b010),
   }
+
+/*
+ * Update exception type with a given memory access type.
+ *
+ * Note: could probably be modeled in a nicer, more intuitive manner
+ */
+
+val E_Addr_Align_of_AccessType : forall 'a . (AccessType('a)) -> ExceptionType
+function E_Addr_Align_of_AccessType(a) =
+  match a {
+    Read(_)      => E_Load_Addr_Align(),
+    Write(_)     => E_SAMO_Addr_Align(),
+    ReadWrite(_) => E_SAMO_Addr_Align(),
+    InstructionFetch(_)   => E_Fetch_Addr_Align(),
+  }
+
+val E_Access_Fault_of_AccessType : forall 'a . (AccessType('a)) -> ExceptionType
+function E_Access_Fault_of_AccessType(a) =
+  match a {
+    Read(_)      => E_Load_Access_Fault(),
+    Write(_)     => E_SAMO_Access_Fault(),
+    ReadWrite(_) => E_SAMO_Access_Fault(),
+    InstructionFetch(_)   => E_Fetch_Access_Fault(),
+  }
+
+val E_Page_Fault_of_AccessType : forall 'a . (AccessType('a)) -> ExceptionType
+function E_Page_Fault_of_AccessType(a) =
+  match a {
+    Read(_)      => E_Load_Page_Fault(),
+    Write(_)     => E_SAMO_Page_Fault(),
+    ReadWrite(_) => E_SAMO_Page_Fault(),
+    InstructionFetch(_)   => E_Fetch_Page_Fault(),
+  }
+
+val E_GPage_Fault_of_AccessType : forall 'a . (AccessType('a)) -> ExceptionType
+function E_GPage_Fault_of_AccessType(a) =
+  match a {
+    Read(_)      => E_Load_GPage_Fault(),
+    Write(_)     => E_SAMO_GPage_Fault(),
+    ReadWrite(_) => E_SAMO_GPage_Fault(),
+    InstructionFetch(_)   => E_Fetch_GPage_Fault(),
+  }
+
+val exceptionType_update_AccessType : forall 'a . (ExceptionType, AccessType('a)) -> ExceptionType
+function exceptionType_update_AccessType(e, a) =
+match(e) {
+  E_Fetch_Addr_Align()   => E_Addr_Align_of_AccessType(a),
+  E_Load_Addr_Align()    => E_Addr_Align_of_AccessType(a),
+  E_SAMO_Addr_Align()    => E_Addr_Align_of_AccessType(a),
+  E_Fetch_Access_Fault() => E_Access_Fault_of_AccessType(a),
+  E_Load_Access_Fault()  => E_Access_Fault_of_AccessType(a),
+  E_SAMO_Access_Fault()  => E_Access_Fault_of_AccessType(a),
+  E_Fetch_Page_Fault()   => E_Page_Fault_of_AccessType(a),
+  E_Load_Page_Fault()    => E_Page_Fault_of_AccessType(a),
+  E_SAMO_Page_Fault()    => E_Page_Fault_of_AccessType(a),
+  E_Fetch_GPage_Fault()  => E_GPage_Fault_of_AccessType(a),
+  E_Load_GPage_Fault()   => E_GPage_Fault_of_AccessType(a),
+  E_SAMO_GPage_Fault()   => E_GPage_Fault_of_AccessType(a),
+  _ => e /* Other exceptions are not access type specific */
+}
+
+// An architectural trap can be caused by either an interrupt or an exception
+
+union TrapCause = {
+  Interrupt : InterruptType,
+  Exception : ExceptionType,
+}
+
+mapping trapCause_bits : TrapCause <-> exc_code = {
+  Interrupt(i) <-> interruptType_bits(i),
+  Exception(e) <-> exceptionType_bits(e),
+}
+
+function trapCause_is_interrupt(t : TrapCause) -> bool = match t {
+  Interrupt(_) => true,
+  Exception(_) => false,
+}
+
+function trapCause_to_str(t : TrapCause) -> string = match t {
+  Interrupt(i) => "int#" ^ interruptType_to_str(i),
+  Exception(e) => "exc#" ^ exceptionType_to_str(e),
+}
+
+overload to_str = {trapCause_to_str}
 
 // trap modes
 
@@ -258,18 +389,86 @@ mapping extStatus_bits : ExtStatus <-> ext_status = {
 function extStatus_to_bits(e : ExtStatus) -> ext_status = extStatus_bits(e)
 function extStatus_of_bits(b : ext_status) -> ExtStatus = extStatus_bits(b)
 
+/* address translation stages & modes */
+
+/*
+ * We model 3 stages:
+ *   - Stage_S:  va --> pa  (V=0)
+ *   - Stage_VS: va --> gpa (V=1)
+ *   - Stage_G:  gpa -> spa (V=1)
+ */
+enum AddressTranslationStage = {Stage_S, Stage_VS, Stage_G}
+
+function AddressTranslationStage_to_str(s : AddressTranslationStage) -> string =
+  match s {
+    Stage_S  => "S",
+    Stage_VS => "VS",
+    Stage_G  => "G"
+  }
+
+overload to_str = {AddressTranslationStage_to_str}
+
+type atp64_mode = bits(4)
+type atp32_mode = bits(4)
+
 // supervisor-level address translation modes
 
 type satp_mode = bits(4)
-enum SATPMode = {Bare, Sv32, Sv39, Sv48, Sv57}
+enum XATPMode = {Bare, Sv32, Sv39, Sv48, Sv57, Sv32x4, Sv39x4, Sv48x4, Sv57x4}
 
-function satpMode_of_bits(a : Architecture, m : satp_mode) -> option(SATPMode) =
+function is_satp_mode(m : XATPMode) -> bool =
+  match m {
+    Bare => true,
+    Sv32 => true,
+    Sv39 => true,
+    Sv48 => true,
+    Sv57 => true,
+    _    => false,
+  }
+
+function is_hgatp_mode(m : XATPMode) -> bool =
+  match m {
+    Bare => true,
+    Sv32x4 => true,
+    Sv39x4 => true,
+    Sv48x4 => true,
+    Sv57x4 => true,
+    _      => false,
+  }
+
+mapping XATPMode_str : XATPMode <-> string = {
+  Bare <-> "Bare",
+  Sv32 <-> "Sv32",
+  Sv39 <-> "Sv39",
+  Sv48 <-> "Sv48",
+  Sv57 <-> "Sv57",
+  Sv32x4 <-> "Sv32x4",
+  Sv39x4 <-> "Sv39x4",
+  Sv48x4 <-> "Sv48x4",
+  Sv57x4 <-> "Sv57x4"
+}
+
+function XATPMode_to_str(m : XATPMode) -> string = XATPMode_str(m)
+
+overload to_str = {XATPMode_to_str}
+
+function satpMode_of_bits(a : Architecture, m : atp64_mode) -> option(XATPMode) =
   match (a, m) {
     (_,    0x0) => Some(Bare),
     (RV32, 0x1) => Some(Sv32),
     (RV64, 0x8) => Some(Sv39),
     (RV64, 0x9) => Some(Sv48),
     (RV64, 0xA) => Some(Sv57),
+    (_, _)      => None()
+  }
+
+function hgatp64Mode_of_bits(a : Architecture, m : atp64_mode) -> option(XATPMode) =
+  match (a, m) {
+    (_,    0x0) => Some(Bare),
+    (RV32, 0x1) => Some(Sv32x4),
+    (RV64, 0x8) => Some(Sv39x4),
+    (RV64, 0x9) => Some(Sv48x4),
+    (RV64, 0xA) => Some(Sv57x4),
     (_, _)      => None()
   }
 
@@ -323,4 +522,18 @@ mapping width_mnemonic_wide : word_width_wide <-> string = {
   4  <-> "w",
   8  <-> "d",
   16 <-> "q",
+}
+
+/*!
+ * Raise an internal error reporting that width w is invalid for access kind, k,
+ * and current xlen. The file name and line number should be passed in as the
+ * first two arguments using the __FILE__ and __LINE__ built-in macros.
+ * This is mainly used to supress Sail warnings about incomplete matches and
+ * should be unreachable. See https://github.com/riscv/sail-riscv/issues/194
+ * and https://github.com/riscv/sail-riscv/pull/197 .
+ */
+val report_invalid_width : forall ('a : Type). (string, int, word_width, string) -> 'a
+function report_invalid_width(f , l, w, k) -> 'a = {
+  internal_error(f, l, "Invalid width, " ^ width_mnemonic(w) ^ ", for " ^ k ^
+     " with xlen=" ^ dec_str(xlen))
 }

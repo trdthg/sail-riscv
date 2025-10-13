@@ -27,9 +27,11 @@ function fetch() -> FetchResult = {
   if   (PC[0] != bitzero | (PC[1] != bitzero & not(currentlyEnabled(Ext_Zca))))
   then return F_Error(E_Fetch_Addr_Align(), PC);
 
+  // print_bits("translateAddr::begin");
   match translateAddr(Virtaddr(PC), InstructionFetch()) {
-    Err(e, _)    => F_Error(e, PC),
+    Err((e, _), _)    => F_Error(e, PC),
     Ok(ppclo, _) => {
+    // print_bits("translateAddr::Ok");
       // split instruction fetch into 16-bit granules to handle RVC, as
       // well as to generate precise fault addresses in any fetch
       // exceptions.
@@ -47,7 +49,7 @@ function fetch() -> FetchResult = {
             };
 
             match translateAddr(Virtaddr(PC_hi), InstructionFetch()) {
-              Err(e, _)    => F_Error(e, PC_hi),
+              Err((e, _), _)    => F_Error(e, PC_hi),
               Ok(ppchi, _) =>
                 match mem_read(InstructionFetch(), ppchi, 2, false, false, false) {
                   Err(e)  => F_Error(e, PC_hi),

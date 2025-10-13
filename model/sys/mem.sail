@@ -37,6 +37,8 @@
 // A helper to check address alignment is also provided in the external API.
 //
 //   is_aligned_addr - checks for alignment of a physical or virtual address
+function is_aligned_vaddr2(addr : bits(64), width : nat1) -> bool =
+  unsigned(addr) % width == 0
 
 function is_aligned_paddr(Physaddr(addr) : physaddr, width : nat1) -> bool =
   unsigned(addr) % width == 0
@@ -44,7 +46,7 @@ function is_aligned_paddr(Physaddr(addr) : physaddr, width : nat1) -> bool =
 function is_aligned_vaddr(Virtaddr(addr) : virtaddr, width : nat1) -> bool =
   unsigned(addr) % width == 0
 
-overload is_aligned_addr = {is_aligned_paddr, is_aligned_vaddr}
+overload is_aligned_addr = {is_aligned_paddr, is_aligned_vaddr, is_aligned_vaddr2}
 
 function read_kind_of_flags (aq : bool, rl : bool, res : bool) -> option(read_kind) =
   match (aq, rl, res) {

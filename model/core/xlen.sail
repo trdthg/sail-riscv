@@ -35,3 +35,6 @@ let asidlen = sizeof(asidlen)
 
 type xlenbits = bits(xlen)
 type asidbits = bits(asidlen)
+
+type xxidbits = bits(16)
+

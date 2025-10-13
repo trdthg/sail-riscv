@@ -25,6 +25,10 @@ scattered mapping encdec
 val encdec_compressed : instruction <-> bits(16)
 scattered mapping encdec_compressed
 
+/* Function for transformed instructions as defined in the hypervisor extension */
+val enc_transformed : (instruction, bits(5)) -> bits(32)
+scattered function enc_transformed
+
 // We declare the ILLEGAL/C_ILLEGAL instruction clauses here instead of in
 // insts_end, so that model extensions can make use of them.
 // However, the encdec mapping must come last to ensure that all

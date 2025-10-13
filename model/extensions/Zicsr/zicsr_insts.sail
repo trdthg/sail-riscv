@@ -29,11 +29,22 @@ mapping clause encdec = CSRImm(csr, imm, rd, op)
   when currentlyEnabled(Ext_Zicsr)
 
 function doCSR(csr : csreg, rs1_val : xlenbits, rd : regidx, op : csrop, is_CSR_Write: bool) -> ExecutionResult = {
+  print_bits("doCSR", csr);
+  print_bits("doCSR::check_CSR", encdec_csrop(op));
   if not(check_CSR(csr, cur_privilege, is_CSR_Write))
-  then Illegal_Instruction()
+  then {
+    print_bits("doCSR::check_Hext", csr);
+    // if currentlyEnabled(Ext_H) & (privLevel_to_bits(p) == 0b01 & privLevel_to_virt_bits(p) == 0b0) then {
+    // 0b10 >=_u csrPriv(csr);
+    if currentlyEnabled(Ext_H) & csr_access_raises_virtual_instr(csr, cur_privilege, is_CSR_Write)
+    then Virtual_Instruction()
+    else Illegal_Instruction()
+  }
   else if not(ext_check_CSR(csr, cur_privilege, is_CSR_Write))
   then Ext_CSR_Check_Failure()
   else {
+    print_bits("doCSR::do_read_or_write_CSR", csr);
+
     // CSRRW should not generate read side-effects if rd == 0
     let is_CSR_Read = not(op == CSRRW & rd == zreg);
     let csr_val : xlenbits = if is_CSR_Read then read_CSR(csr) else zeros();

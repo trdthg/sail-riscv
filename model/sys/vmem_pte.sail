@@ -131,11 +131,22 @@ function check_PTE_permission(ac        : AccessType(ext_access_type),
     // loads and stores; not instruction fetch.
     Supervisor => not(pte_U) | (do_sum & is_load_store(ac)),
     Machine    => internal_error(__FILE__, __LINE__, "m-mode mem perm check"),
-    VirtualUser => internal_error(__FILE__, __LINE__, "Hypervisor extension not supported"),
-    VirtualSupervisor => internal_error(__FILE__, __LINE__, "Hypervisor extension not supported"),
+    VirtualUser => pte_U,
+    VirtualSupervisor => not(pte_U) | (do_sum & is_load_store(ac)),
   };
 
-  if access_ok & priv_ok then PTE_Check_Success(()) else PTE_Check_Failure((), ())
+  if access_ok & priv_ok then PTE_Check_Success(()) else {
+    print_log("check_PTE_permission " ^ 
+      "priv = "
+       ^ to_str(priv)
+      ^ " pte_U = " ^ bits_str(pte_flags[U]) 
+      ^ " pte_R = " ^ bits_str(pte_flags[R]) 
+      ^ " pte_W = " ^ bits_str(pte_flags[W]) 
+      ^ " pte_X = " ^ bits_str(pte_flags[X]) 
+      ^ " ac = " ^ to_str(ac)
+    );
+    PTE_Check_Failure((), ())
+  }
 }
 
 // Update PTE bits if needed; return new PTE if updated
