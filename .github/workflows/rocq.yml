@@ -1,6 +1,6 @@
 name: Rocq
 
-on: [push, pull_request, workflow_dispatch]
+on: []
 
 jobs:
   build:

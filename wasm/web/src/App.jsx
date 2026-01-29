@@ -1,8 +1,39 @@
+import { atom, useAtom } from 'jotai';
+import { loadable } from 'jotai/utils';
 import { useState } from 'react';
 
-const CONFIGS = [
-  { label: 'rv64d_v128_e64 (default)', path: '/rv64d_v128_e64.json' },
-];
+const configsAtom = atom(async () => {
+  const resp = await fetch(`/config/configs.json?${Date.now()}`);
+  if (!resp.ok) {
+    throw new Error(`config list: ${resp.status} ${resp.statusText}`);
+  }
+  const list = await resp.json();
+  if (!Array.isArray(list) || list.length === 0) {
+    throw new Error('config list is empty');
+  }
+  return list;
+});
+
+const configsLoadableAtom = loadable(configsAtom);
+
+const selectedConfigAtom = atom(null);
+const configPathAtom = atom(
+  (get) => {
+    const configsState = get(configsLoadableAtom);
+    if (configsState.state !== 'hasData' || !Array.isArray(configsState.data)) {
+      return '';
+    }
+    const configs = configsState.data;
+    if (configs.length === 0) return '';
+    const selected = get(selectedConfigAtom);
+    if (selected) return selected;
+    const defaultItem = configs.find((cfg) => cfg.default);
+    return (defaultItem || configs[0]).path;
+  },
+  (_get, set, next) => {
+    set(selectedConfigAtom, next);
+  },
+);
 
 const loadSailModule = async ({ cacheBust, jsPath }) => {
   return new Promise((resolve, reject) => {
@@ -23,7 +54,8 @@ const loadSailModule = async ({ cacheBust, jsPath }) => {
 
 function App() {
   const [output, setOutput] = useState('');
-  const [configPath, setConfigPath] = useState(CONFIGS[0].path);
+  const [configsState] = useAtom(configsLoadableAtom);
+  const [configPath, setConfigPath] = useAtom(configPathAtom);
   const [hexInput, setHexInput] = useState('');
   const [decodeMode, setDecodeMode] = useState('auto');
 
@@ -31,10 +63,14 @@ function App() {
   const clearOutput = () => setOutput('');
 
   const runTool = async (args, banner) => {
+    if (!configPath) {
+      append('No config available. Please refresh or check /config/configs.json.');
+      return;
+    }
     const cacheBust = `v=${Date.now()}`;
     const createSailModule = await loadSailModule({
       cacheBust,
-      jsPath: '/sail_riscv_web.js',
+      jsPath: '/wasm/sail_riscv_web.js',
     });
     console.log('createSailModule type:', typeof createSailModule);
     const Module = await createSailModule({
@@ -45,7 +81,7 @@ function App() {
       onExit: (code) => console.log('onExit:', code),
       locateFile: (path) => {
         if (path.endsWith('.wasm')) {
-          return `/sail_riscv_web.wasm?${cacheBust}`;
+          return `/wasm/sail_riscv_web.wasm?${cacheBust}`;
         }
         return path;
       },
@@ -116,10 +152,20 @@ function App() {
       <div className="card" style={{ display: 'grid', gap: '12px' }}>
         <label>
           Config
-          <select value={configPath} onChange={(e) => setConfigPath(e.target.value)}>
-            {CONFIGS.map((cfg) => (
+          <select
+            value={configPath}
+            onChange={(e) => setConfigPath(e.target.value)}
+            disabled={configsState.state !== 'hasData'}
+          >
+            {configsState.state === 'hasData' && configsState.data.map((cfg) => (
               <option key={cfg.path} value={cfg.path}>{cfg.label}</option>
             ))}
+            {configsState.state === 'loading' && (
+              <option value="">Loading configs...</option>
+            )}
+            {configsState.state === 'hasError' && (
+              <option value="">Failed to load configs</option>
+            )}
           </select>
         </label>
         <label>

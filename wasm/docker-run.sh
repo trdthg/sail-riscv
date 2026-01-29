@@ -8,67 +8,29 @@ SAIL_VERSION="${SAIL_VERSION:-0.20.1}"
 SAIL_URL="${SAIL_URL:-https://github.com/rems-project/sail/releases/download/${SAIL_VERSION}/sail-Linux-x86_64.tar.gz}"
 
 gmp_dist_host="${GMP_WASM_DIST:-${repo_root}/wasm/gmp-wasm/binding/gmp/dist}"
-if [[ ! -f "${gmp_dist_host}/lib/libgmp.a" ]]; then
-  echo "error: GMP_WASM_DIST not found at ${gmp_dist_host}" >&2
-  echo "hint: build gmp-wasm on host (wasm/gmp-wasm/binding/build-gmp.sh) or set GMP_WASM_DIST." >&2
-  exit 1
-fi
+[[ -f "${gmp_dist_host}/lib/libgmp.a" ]] || { echo "error: GMP_WASM_DIST not found at ${gmp_dist_host}" >&2; exit 1; }
 
 image="${EMSDK_IMAGE:-emscripten/emsdk:latest}"
 
-gmp_dist_container="${gmp_dist_host}"
-case "${gmp_dist_host}" in
-  "${repo_root}"/*)
-    gmp_dist_container="/work${gmp_dist_host#${repo_root}}"
-    ;;
-esac
+gmp_dist_container="/work${gmp_dist_host#${repo_root}}"
 
-docker_mounts=(
-  -v "${repo_root}:/work"
-)
 
-docker_envs=(
-  -e GMP_WASM_DIST="${gmp_dist_container}"
-)
-
-# Optional: mount a prebuilt Sail release (untarred), and prepend its bin to PATH.
-# Default to repo-local wasm/sail if present, otherwise download it.
-if [[ -z "${SAIL_HOST_DIR:-}" ]]; then
-  if [[ -x "${repo_root}/wasm/sail/bin/sail" ]]; then
-    SAIL_HOST_DIR="${repo_root}/wasm/sail"
-  else
-    echo "Sail not found; downloading ${SAIL_VERSION}..." >&2
-    tmp_dir="$(mktemp -d)"
-    archive="${tmp_dir}/sail.tar.gz"
-    if command -v curl >/dev/null 2>&1; then
-      curl -L "${SAIL_URL}" -o "${archive}"
-    elif command -v wget >/dev/null 2>&1; then
-      wget -O "${archive}" "${SAIL_URL}"
-    else
-      echo "error: neither curl nor wget is available to download Sail." >&2
-      exit 1
-    fi
-    sail_top="$(tar -tzf "${archive}" | head -1 | cut -d/ -f1)"
-    tar -xzf "${archive}" -C "${tmp_dir}"
-    rm -rf "${repo_root}/wasm/sail"
-    mv "${tmp_dir}/${sail_top}" "${repo_root}/wasm/sail"
-    rm -rf "${tmp_dir}"
-    SAIL_HOST_DIR="${repo_root}/wasm/sail"
-  fi
-fi
-if [[ -n "${SAIL_HOST_DIR:-}" ]]; then
-  if [[ ! -x "${SAIL_HOST_DIR}/bin/sail" ]]; then
-    echo "error: SAIL_HOST_DIR does not contain bin/sail: ${SAIL_HOST_DIR}" >&2
-    exit 1
-  fi
-  docker_mounts+=(-v "${SAIL_HOST_DIR}:/sail")
-  docker_envs+=(-e SAIL_BIN="/sail/bin/sail")
+# Use repo-local wasm/sail if present, otherwise download.
+sail_dir="${repo_root}/wasm/sail"
+if [[ ! -x "${sail_dir}/bin/sail" ]]; then
+  echo "Sail not found; downloading ${SAIL_VERSION}..." >&2
+  archive="/tmp/sail.tar.gz"
+  curl -L "${SAIL_URL}" -o "${archive}"
+  tar -xzf "${archive}" -C "${repo_root}/wasm"
 fi
 
-docker run --rm -it \
-  "${docker_mounts[@]}" \
+docker run --rm -i \
+  -u "$(id -u):$(id -g)" \
+  -v "${repo_root}:/work" \
   -w /work \
-  "${docker_envs[@]}" \
+  -e GMP_WASM_DIST="${gmp_dist_container}" \
+  -v "${sail_dir}:/sail" \
+  -e SAIL_BIN="/sail/bin/sail" \
   "${image}" \
   bash -lc "
     set -euo pipefail
@@ -91,9 +53,41 @@ docker run --rm -it \
 
     cmake --build \"\${build_dir}\" --target sail_riscv_web -j
 
-    mkdir -p \"\${web_public}\"
-    cp -f \"\${build_dir}/c_emulator/sail_riscv_web.js\" \"\${web_public}/sail_riscv_web.js\"
-    cp -f \"\${build_dir}/c_emulator/sail_riscv_web.wasm\" \"\${web_public}/sail_riscv_web.wasm\"
-    echo \"built: \${web_public}/sail_riscv_web.js\"
-    echo \"built: \${web_public}/sail_riscv_web.wasm\"
   "
+
+# Organize public assets for the web build.
+mkdir -p "${repo_root}/wasm/web/public/wasm" "${repo_root}/wasm/web/public/config"
+cp -f "${repo_root}/build-emscripten/c_emulator/sail_riscv_web.js" "${repo_root}/wasm/web/public/sail_riscv_web.js"
+cp -f "${repo_root}/build-emscripten/c_emulator/sail_riscv_web.wasm" "${repo_root}/wasm/web/public/sail_riscv_web.wasm"
+echo "built: ${repo_root}/wasm/web/public/sail_riscv_web.js"
+echo "built: ${repo_root}/wasm/web/public/sail_riscv_web.wasm"
+cp -f "${repo_root}/wasm/web/public/"*.wasm "${repo_root}/wasm/web/public/"*.js "${repo_root}/wasm/web/public/wasm/"
+config_src="${repo_root}/build-emscripten/config"
+if compgen -G "${config_src}/*.json" > /dev/null; then
+  cp -f "${config_src}/"*.json "${repo_root}/wasm/web/public/config/"
+  configs_json="${repo_root}/wasm/web/public/config/configs.json"
+  tmp_configs="${configs_json}.tmp"
+  default_name="rv64d_v128_e64"
+  {
+    echo '['
+    first=1
+    for f in $(ls "${config_src}"/*.json | sort); do
+      name="$(basename "${f}" .json)"
+      label="${name}"
+      is_default=false
+      if [[ "${name}" == "${default_name}" ]]; then
+        label="${name} (default)"
+        is_default=true
+      fi
+      if [[ ${first} -eq 1 ]]; then
+        first=0
+      else
+        echo ','
+      fi
+      printf '  {"label":"%s","path":"/config/%s.json","default":%s}' "${label}" "${name}" "${is_default}"
+    done
+    echo
+    echo ']'
+  } > "${tmp_configs}"
+  mv -f "${tmp_configs}" "${configs_json}"
+fi
