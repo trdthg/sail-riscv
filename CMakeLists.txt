@@ -97,7 +97,26 @@ endif()
 # These are the main requirements.
 # Don't use `REQUIRED` so that we can print custom help messages.
 option(DOWNLOAD_GMP "Download libgmp and build the library locally instead of using a system installation" OFF)
-if (DOWNLOAD_GMP)
+
+# For WASM/WASI builds it's often easier to point at a prebuilt, target-compatible GMP.
+# Expected layout:
+#   <dist>/include/gmp.h
+#   <dist>/lib/libgmp.a
+set(GMP_WASM_DIST "" CACHE PATH "Path to a prebuilt GMP 'dist' prefix (include/ + lib/libgmp.a), e.g. wasm/gmp-wasm/binding/gmp/dist")
+
+if (GMP_WASM_DIST)
+    if (NOT EXISTS "${GMP_WASM_DIST}/include/gmp.h")
+        message(FATAL_ERROR "GMP_WASM_DIST is set but ${GMP_WASM_DIST}/include/gmp.h does not exist.")
+    endif()
+    if (NOT EXISTS "${GMP_WASM_DIST}/lib/libgmp.a")
+        message(FATAL_ERROR "GMP_WASM_DIST is set but ${GMP_WASM_DIST}/lib/libgmp.a does not exist.")
+    endif()
+    add_library(GMP::GMP STATIC IMPORTED GLOBAL)
+    set_target_properties(GMP::GMP PROPERTIES
+        IMPORTED_LOCATION "${GMP_WASM_DIST}/lib/libgmp.a"
+        INTERFACE_INCLUDE_DIRECTORIES "${GMP_WASM_DIST}/include"
+    )
+elseif (DOWNLOAD_GMP)
     include(ExternalProject)
     ExternalProject_Add(
         gmp

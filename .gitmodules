@@ -1,0 +1,3 @@
+[submodule "wasm/gmp-wasm"]
+	path = wasm/gmp-wasm
+	url = https://github.com/trdthg/gmp-wasm.git
