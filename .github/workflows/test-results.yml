@@ -1,10 +1,6 @@
 name: Publish test results
 
-on:
-  workflow_run:
-    workflows: ["CI"]
-    types:
-      - completed
+on: []
 
 jobs:
   publish-test-results:
