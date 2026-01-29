@@ -61,6 +61,11 @@ target_link_libraries(riscv_model
     PUBLIC elfio softfloat sail_runtime jsoncons default_config
 )
 
+if (EMSCRIPTEN)
+    target_compile_options(riscv_model PRIVATE -fexceptions)
+    target_link_options(riscv_model PRIVATE -fexceptions)
+endif()
+
 add_dependencies(riscv_model generated_sail_riscv_model generated_config_schema)
 
 ## A binary that can load an ELF file into the model and run it.
@@ -94,16 +99,18 @@ target_link_libraries(sail_riscv_sim
 )
 
 # After the emulator is built, use it to validate the generated config files.
-foreach (config_filename IN LISTS generated_config_filenames)
-    add_custom_command(
-        TARGET sail_riscv_sim
-        POST_BUILD
-        COMMAND $<TARGET_FILE:sail_riscv_sim>
-                    --validate-config
-                    --config ${config_filename}
-        VERBATIM
-    )
-endforeach()
+if (NOT EMSCRIPTEN)
+    foreach (config_filename IN LISTS generated_config_filenames)
+        add_custom_command(
+            TARGET sail_riscv_sim
+            POST_BUILD
+            COMMAND $<TARGET_FILE:sail_riscv_sim>
+                        --validate-config
+                        --config ${config_filename}
+            VERBATIM
+        )
+    endforeach()
+endif()
 
 target_compile_options(sail_riscv_sim PRIVATE
   -Wall
@@ -131,5 +138,30 @@ if (COVERAGE)
 endif()
 
 install(TARGETS sail_riscv_sim
+    RUNTIME DESTINATION "bin"
+)
+
+## A minimal CLI for web-friendly decode/encode helpers.
+
+add_executable(sail_riscv_web
+    riscv_web.cpp
+)
+
+add_dependencies(sail_riscv_web generated_sail_riscv_model generated_config_schema)
+
+target_link_libraries(sail_riscv_web
+    PRIVATE CLI11 riscv_model
+)
+
+target_compile_options(sail_riscv_web PRIVATE -fexceptions)
+target_link_options(sail_riscv_web PRIVATE -fexceptions)
+
+target_compile_options(sail_riscv_web PRIVATE
+  -Wall
+  -Wextra
+  -Wno-unused-parameter
+)
+
+install(TARGETS sail_riscv_web
     RUNTIME DESTINATION "bin"
 )
