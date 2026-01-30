@@ -107,6 +107,9 @@ add_custom_command(
         --c-preserve config_is_valid
         --c-preserve dtb_within_configured_pma_memory
         --c-preserve generate_canonical_isa_string
+        --c-preserve assemble
+        --c-preserve assembly_backwards
+        --c-preserve assembly_backwards_matches
         # Preserve RVFI functions.
         --c-preserve rvfi_set_instr_packet
         --c-preserve rvfi_get_cmd
