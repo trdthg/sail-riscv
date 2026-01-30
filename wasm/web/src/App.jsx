@@ -90,8 +90,16 @@ const binToHex = (binValue) => {
   return BigInt(`0b${padded}`).toString(16).padStart(paddedLen / 4, '0');
 };
 
+const BASE_PATH = import.meta.env.BASE_URL || '/';
+const withBase = (path) => {
+  const base = BASE_PATH.endsWith('/') ? BASE_PATH.slice(0, -1) : BASE_PATH;
+  const cleaned = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${cleaned}`;
+};
+const maybeWithBase = (path) => (path.startsWith('http') ? path : withBase(path));
+
 const configsAtom = atom(async () => {
-  const resp = await fetch(`/config/configs.json?${Date.now()}`);
+  const resp = await fetch(`${withBase('/config/configs.json')}?${Date.now()}`);
   if (!resp.ok) {
     throw new Error(`config list: ${resp.status} ${resp.statusText}`);
   }
@@ -107,7 +115,7 @@ const configContentAtom = atom(async (get) => {
   const configsState = get(configsLoadableAtom);
   const currentPath = get(configPathAtom);
   if (!currentPath || configsState.state !== 'hasData') return '';
-  const resp = await fetch(`${currentPath}?${Date.now()}`);
+  const resp = await fetch(`${maybeWithBase(currentPath)}?${Date.now()}`);
   if (!resp.ok) {
     throw new Error(`config: ${resp.status} ${resp.statusText}`);
   }
@@ -174,7 +182,7 @@ const getRuntimeModule = async () => {
   if (!runtimeModulePromise) {
     runtimeModulePromise = loadSailModule({
       cacheBust: MODULE_BUST,
-      jsPath: '/wasm/sail_riscv_web.js',
+      jsPath: withBase('/wasm/sail_riscv_web.js'),
     }).then((createSailModule) =>
       createSailModule({
         noInitialRun: true,
@@ -191,7 +199,7 @@ const getRuntimeModule = async () => {
         },
         locateFile: (path) => {
           if (path.endsWith('.wasm')) {
-            return `/wasm/sail_riscv_web.wasm?${MODULE_BUST}`;
+            return `${withBase('/wasm/sail_riscv_web.wasm')}?${MODULE_BUST}`;
           }
           return path;
         },
@@ -207,7 +215,7 @@ const isaAtom = atom(async (get) => {
   const configsState = get(configsLoadableAtom);
   const currentPath = get(configPathAtom);
   if (!currentPath || configsState.state !== 'hasData') return '';
-  const configResp = await fetch(`${currentPath}?${Date.now()}`);
+  const configResp = await fetch(`${maybeWithBase(currentPath)}?${Date.now()}`);
   if (!configResp.ok) {
     throw new Error(`config: ${configResp.status} ${configResp.statusText}`);
   }
@@ -296,7 +304,7 @@ function App() {
     if (configPath === '/config.json' && configEditor.trim()) {
       configText = configEditor;
     } else {
-      const configResp = await fetch(configPath);
+      const configResp = await fetch(maybeWithBase(configPath));
       if (!configResp.ok) {
         append(`Failed to load config: ${configResp.status} ${configResp.statusText}`);
         return;
