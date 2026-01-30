@@ -1,0 +1,14 @@
+[
+  {"label":"rv32d_v128_e32","path":"/config/rv32d_v128_e32.json","default":false},
+  {"label":"rv32d_v128_e64","path":"/config/rv32d_v128_e64.json","default":false},
+  {"label":"rv32d_v256_e32","path":"/config/rv32d_v256_e32.json","default":false},
+  {"label":"rv32d_v256_e64","path":"/config/rv32d_v256_e64.json","default":false},
+  {"label":"rv32d_v512_e32","path":"/config/rv32d_v512_e32.json","default":false},
+  {"label":"rv32d_v512_e64","path":"/config/rv32d_v512_e64.json","default":false},
+  {"label":"rv64d_v128_e32","path":"/config/rv64d_v128_e32.json","default":false},
+  {"label":"rv64d_v128_e64 (default)","path":"/config/rv64d_v128_e64.json","default":true},
+  {"label":"rv64d_v256_e32","path":"/config/rv64d_v256_e32.json","default":false},
+  {"label":"rv64d_v256_e64","path":"/config/rv64d_v256_e64.json","default":false},
+  {"label":"rv64d_v512_e32","path":"/config/rv64d_v512_e32.json","default":false},
+  {"label":"rv64d_v512_e64","path":"/config/rv64d_v512_e64.json","default":false}
+]
