@@ -1,6 +1,15 @@
-import { atom, useAtom } from 'jotai';
-import { loadable } from 'jotai/utils';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useAtom } from 'jotai';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+
+import { BinaryInput } from './components/BinaryInput.jsx';
+import { buildFieldMap, buildSegments, matchEncoding } from './lib/bits.js';
+import { encodeWithUdb } from './lib/encoder.js';
+import { maybeWithBase } from './lib/paths.js';
+import { getRuntimeModule } from './lib/sailRuntime.js';
+import { udbIndexLoadableAtom } from './lib/udbIndex.js';
+import { configEditorAtom, configPathAtom, configsLoadableAtom } from './state/configAtoms.js';
+import { isaLoadableAtom, isaRefreshAtom } from './state/isaAtoms.js';
 
 const MAX_BITS = 32;
 const MAX_HEX = MAX_BITS / 4;
@@ -9,7 +18,16 @@ const normalizeHex = (value) => value.trim().toLowerCase().replace(/^0x/, '').re
 const isHex = (value) => /^[0-9a-f]+$/i.test(value);
 const normalizeBin = (value) => value.replace(/[\s_]+/g, '');
 const isBin = (value) => /^[01]+$/.test(value);
-const formatBin = (value) => value.replace(/(.{4})/g, '$1 ').trim();
+  const formatBin = (value) => value.replace(/(.{4})/g, '$1 ').trim();
+const formatBinWithCursor = (raw, cursorPos) => {
+  const clean = normalizeBin(raw).replace(/[^01]/g, '').slice(0, MAX_BITS);
+  const display = formatBin(clean);
+  const bitsBefore = normalizeBin(raw.slice(0, cursorPos)).replace(/[^01]/g, '').length;
+  if (bitsBefore <= 0) return { display, cursor: 0 };
+  const maxSpaces = Math.max(0, Math.floor((clean.length - 1) / 4));
+  const spacesBefore = Math.min(Math.floor(bitsBefore / 4), maxSpaces);
+  return { display, cursor: bitsBefore + spacesBefore };
+};
 const clampHex = (value) => {
   const clean = normalizeHex(value).replace(/[^0-9a-f]/gi, '');
   return clean.slice(0, MAX_HEX);
@@ -59,17 +77,11 @@ const parseToolLines = (lines) => {
   return { hex, bin, width, asm, error, type: jsonType };
 };
 
-let outputSink = null;
-let suppressOutput = false;
-const moduleOutputLines = [];
-const pushModuleLine = (line) => {
-  moduleOutputLines.push(line);
-  if (moduleOutputLines.length > 2000) {
-    moduleOutputLines.shift();
+const getOutputLines = () => {
+  if (!window.__sailOutputLines) {
+    window.__sailOutputLines = [];
   }
-  if (outputSink && !suppressOutput) {
-    outputSink(line);
-  }
+  return window.__sailOutputLines;
 };
 
 const hexToBin = (hexValue) => {
@@ -90,158 +102,6 @@ const binToHex = (binValue) => {
   return BigInt(`0b${padded}`).toString(16).padStart(paddedLen / 4, '0');
 };
 
-const BASE_PATH = import.meta.env.BASE_URL || '/';
-const withBase = (path) => {
-  const base = BASE_PATH.endsWith('/') ? BASE_PATH.slice(0, -1) : BASE_PATH;
-  const cleaned = path.startsWith('/') ? path : `/${path}`;
-  return `${base}${cleaned}`;
-};
-const maybeWithBase = (path) => (path.startsWith('http') ? path : withBase(path));
-
-const configsAtom = atom(async () => {
-  const resp = await fetch(`${withBase('/config/configs.json')}?${Date.now()}`);
-  if (!resp.ok) {
-    throw new Error(`config list: ${resp.status} ${resp.statusText}`);
-  }
-  const list = await resp.json();
-  if (!Array.isArray(list) || list.length === 0) {
-    throw new Error('config list is empty');
-  }
-  return list;
-});
-
-const configsLoadableAtom = loadable(configsAtom);
-const configContentAtom = atom(async (get) => {
-  const configsState = get(configsLoadableAtom);
-  const currentPath = get(configPathAtom);
-  if (!currentPath || configsState.state !== 'hasData') return '';
-  const resp = await fetch(`${maybeWithBase(currentPath)}?${Date.now()}`);
-  if (!resp.ok) {
-    throw new Error(`config: ${resp.status} ${resp.statusText}`);
-  }
-  return await resp.text();
-});
-const configContentLoadableAtom = loadable(configContentAtom);
-
-const selectedConfigAtom = atom(null);
-const configPathAtom = atom(
-  (get) => {
-    const configsState = get(configsLoadableAtom);
-    if (configsState.state !== 'hasData' || !Array.isArray(configsState.data)) {
-      return '';
-    }
-    const configs = configsState.data;
-    if (configs.length === 0) return '';
-    const selected = get(selectedConfigAtom);
-    if (selected) return selected;
-    const defaultItem = configs.find((cfg) => cfg.default);
-    return (defaultItem || configs[0]).path;
-  },
-  (_get, set, next) => {
-    set(selectedConfigAtom, next);
-  },
-);
-
-const configEditorMapAtom = atom({});
-const configEditorAtom = atom(
-  (get) => {
-    const path = get(configPathAtom);
-    const map = get(configEditorMapAtom);
-    if (path && map[path] !== undefined) return map[path];
-    const contentState = get(configContentLoadableAtom);
-    if (contentState.state === 'hasData') return contentState.data;
-    return '';
-  },
-  (get, set, next) => {
-    const path = get(configPathAtom);
-    if (!path) return;
-    set(configEditorMapAtom, (prev) => ({ ...prev, [path]: next }));
-  },
-);
-
-const loadSailModule = async ({ cacheBust, jsPath }) => {
-  return new Promise((resolve, reject) => {
-    if (window.createSailModule && window.__sailModulePath === jsPath) {
-      resolve(window.createSailModule);
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = `${jsPath}?${cacheBust}`;
-    script.onload = () => {
-      window.__sailModulePath = jsPath;
-      resolve(window.createSailModule);
-    };
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-};
-
-const MODULE_BUST = `v=${Date.now()}`;
-let runtimeModulePromise = null;
-const getRuntimeModule = async () => {
-  if (!runtimeModulePromise) {
-    runtimeModulePromise = loadSailModule({
-      cacheBust: MODULE_BUST,
-      jsPath: withBase('/wasm/sail_riscv_web.js'),
-    }).then((createSailModule) =>
-      createSailModule({
-        noInitialRun: true,
-        noExitRuntime: true,
-        print: (text) => {
-          const line = String(text);
-          console.log(`[stdout] ${line}`);
-          pushModuleLine(line);
-        },
-        printErr: (text) => {
-          const line = String(text);
-          console.error(`[stderr] ${line}`);
-          pushModuleLine(line);
-        },
-        locateFile: (path) => {
-          if (path.endsWith('.wasm')) {
-            return `${withBase('/wasm/sail_riscv_web.wasm')}?${MODULE_BUST}`;
-          }
-          return path;
-        },
-      })
-    );
-  }
-  return runtimeModulePromise;
-};
-
-const isaRefreshAtom = atom(0);
-const isaAtom = atom(async (get) => {
-  get(isaRefreshAtom);
-  const configsState = get(configsLoadableAtom);
-  const currentPath = get(configPathAtom);
-  if (!currentPath || configsState.state !== 'hasData') return '';
-  const configResp = await fetch(`${maybeWithBase(currentPath)}?${Date.now()}`);
-  if (!configResp.ok) {
-    throw new Error(`config: ${configResp.status} ${configResp.statusText}`);
-  }
-  const configText = await configResp.text();
-  const Module = await getRuntimeModule();
-  if (!Module.FS || !Module.FS.writeFile) {
-    return '';
-  }
-  Module.FS.writeFile('/config.json', configText);
-  moduleOutputLines.length = 0;
-  const prevSuppress = suppressOutput;
-  const prevSink = outputSink;
-  suppressOutput = true;
-  outputSink = null;
-  try {
-    if (typeof Module.callMain === 'function') {
-      Module.callMain(['--config', '/config.json', '--print-isa-string']);
-    }
-  } finally {
-    suppressOutput = prevSuppress;
-    outputSink = prevSink;
-  }
-  const cleaned = moduleOutputLines.map((line) => line.trim()).filter(Boolean);
-  return cleaned.length ? cleaned[cleaned.length - 1] : '';
-});
-const isaLoadableAtom = loadable(isaAtom);
 
 const assemblyStatusStyles = {
   waiting: 'border-slate-200 bg-slate-50 text-slate-500',
@@ -257,11 +117,16 @@ function App() {
   const [configPath, setConfigPath] = useAtom(configPathAtom);
   const [isaState] = useAtom(isaLoadableAtom);
   const [, refreshIsa] = useAtom(isaRefreshAtom);
+  const [udbState] = useAtom(udbIndexLoadableAtom);
   const [hexInput, setHexInput] = useState('');
   const [binInput, setBinInput] = useState('');
   const [assemblyInput, setAssemblyInput] = useState('');
   const [assemblyStatus, setAssemblyStatus] = useState('waiting');
   const [assemblyMessage, setAssemblyMessage] = useState('');
+  const [asmOpen, setAsmOpen] = useState(false);
+  const [asmHighlight, setAsmHighlight] = useState(0);
+  const [asmDropdownPos, setAsmDropdownPos] = useState(null);
+  const [asmFocused, setAsmFocused] = useState(false);
   const [configEditor, setConfigEditor] = useAtom(configEditorAtom);
   const [configEditorStatus, setConfigEditorStatus] = useState('');
   const [decodeMode, setDecodeMode] = useState('auto');
@@ -269,6 +134,9 @@ function App() {
   const decodeTimerRef = useRef(null);
   const assembleTimerRef = useRef(null);
   const lastEditedRef = useRef('');
+  const asmInputRef = useRef(null);
+  const binInputRef = useRef(null);
+  const asmSuppressOpenRef = useRef(false);
 
   const append = useCallback((line) => {
     setOutput((prev) => (prev ? `${prev}\n${line}` : line));
@@ -276,10 +144,10 @@ function App() {
   const setStatus = (text) => setConfigEditorStatus(text);
 
   useEffect(() => {
-    outputSink = append;
+    window.__sailOutputSink = append;
     return () => {
-      if (outputSink === append) {
-        outputSink = null;
+      if (window.__sailOutputSink === append) {
+        window.__sailOutputSink = null;
       }
     };
   }, [append]);
@@ -320,7 +188,8 @@ function App() {
 
     try {
       if (typeof Module.callMain === 'function') {
-        moduleOutputLines.length = 0;
+        const lines = getOutputLines();
+        lines.length = 0;
         Module.callMain(['--config', fsConfigPath, ...args]);
       } else {
         append('No callMain exported from module');
@@ -335,7 +204,7 @@ function App() {
         append(`Program exited: ${String(e)}`);
       }
     }
-    return [...moduleOutputLines];
+    return [...getOutputLines()];
   }, [append, configEditor, configPath]);
 
   const runPrintIsa = useCallback(async () => {
@@ -368,9 +237,264 @@ function App() {
     }
   }, [append, decodeMode, hexInput, runTool]);
 
+  const bitLayout = useMemo(() => {
+    if (udbState.state !== 'hasData') return null;
+    const binClean = binInput ? normalizeBin(binInput) : '';
+    const fallbackHex = normalizeHex(hexInput);
+    const resolvedBin = binClean
+      ? binClean
+      : (fallbackHex && isHex(fallbackHex) ? normalizeBin(hexToBin(hexInput) || '') : '');
+    if (resolvedBin.length !== 32) return null;
+
+    const mnemonic = assemblyInput.trim().split(/\s+/)[0]?.toLowerCase();
+    const entries = udbState.data;
+    const nameFiltered = mnemonic
+      ? entries.filter((inst) => inst.name.toLowerCase() === mnemonic)
+      : entries;
+
+    const findEncoding = (list) => {
+      for (const inst of list) {
+        for (const enc of inst.encodings) {
+          if (enc.match.length !== resolvedBin.length) continue;
+          if (matchEncoding(enc.match, resolvedBin)) return enc;
+        }
+      }
+      return null;
+    };
+
+    let encoding = findEncoding(nameFiltered);
+    if (!encoding && nameFiltered !== entries) {
+      encoding = findEncoding(entries);
+    }
+    if (!encoding) return null;
+
+    const fieldMap = buildFieldMap(encoding, resolvedBin.length);
+    for (let i = 0; i < 7; i += 1) {
+      if (!fieldMap[resolvedBin.length - 1 - i]) fieldMap[resolvedBin.length - 1 - i] = 'opcode';
+    }
+    for (let i = 12; i <= 14; i += 1) {
+      if (!fieldMap[resolvedBin.length - 1 - i]) fieldMap[resolvedBin.length - 1 - i] = 'funct3';
+    }
+    for (let i = 25; i <= 31; i += 1) {
+      if (!fieldMap[resolvedBin.length - 1 - i]) fieldMap[resolvedBin.length - 1 - i] = 'funct7';
+    }
+    const segments = buildSegments(resolvedBin, fieldMap);
+    return { segments, bin: resolvedBin, fieldMap };
+  }, [assemblyInput, binInput, hexInput, udbState]);
+
+  const currentInstruction = useMemo(() => {
+    if (udbState.state !== 'hasData') return null;
+    const entries = udbState.data;
+    const binClean = binInput ? normalizeBin(binInput) : '';
+    const fallbackHex = normalizeHex(hexInput);
+    const resolvedBin = binClean
+      ? binClean
+      : (fallbackHex && isHex(fallbackHex) ? normalizeBin(hexToBin(hexInput) || '') : '');
+
+    const mnemonic = assemblyInput.trim().split(/\s+/)[0]?.toLowerCase();
+    if (resolvedBin.length === 32) {
+      const nameFiltered = mnemonic
+        ? entries.filter((inst) => inst.name.toLowerCase() === mnemonic)
+        : entries;
+      for (const inst of nameFiltered) {
+        for (const enc of inst.encodings) {
+          if (enc.match.length !== resolvedBin.length) continue;
+          if (matchEncoding(enc.match, resolvedBin)) return { inst, encoding: enc, bin: resolvedBin };
+        }
+      }
+      if (nameFiltered !== entries) {
+        for (const inst of entries) {
+          for (const enc of inst.encodings) {
+            if (enc.match.length !== resolvedBin.length) continue;
+            if (matchEncoding(enc.match, resolvedBin)) return { inst, encoding: enc, bin: resolvedBin };
+          }
+        }
+      }
+    }
+
+    if (mnemonic) {
+      const inst = entries.find((item) => item.name.toLowerCase() === mnemonic);
+      if (inst) return { inst, encoding: inst.encodings?.[0] || null, bin: resolvedBin || null };
+    }
+    return null;
+  }, [assemblyInput, binInput, hexInput, udbState]);
+
+  const renderUdbValue = (value) => {
+    if (!value) return null;
+    if (typeof value === 'string') return value;
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
+    }
+  };
+
+  const asmNames = useMemo(() => {
+    if (udbState.state !== 'hasData') return [];
+    const set = new Set(udbState.data.map((inst) => inst.name));
+    return Array.from(set).sort();
+  }, [udbState]);
+
+  const asmTemplates = useMemo(() => {
+    if (udbState.state !== 'hasData') return new Map();
+    const defaults = new Map();
+    const defaultForVar = (name) => {
+      const key = name.toLowerCase();
+      if (key === 'vm') return 'v0.t';
+      if (key === 'rm') return 'rne';
+      if (key === 'pred' || key === 'succ') return 'rwx';
+      if (key === 'aq' || key === 'rl') return '0';
+      if (key === 'csr' || key === 'zimm') return '0';
+      if (/(^|_)imm\b/.test(key) || key.includes('imm') || key.includes('offset') || key.includes('shamt')) return '0';
+      if (/^(xd|rd)$/.test(key)) return 'x1';
+      if (/^(xs1|rs1)$/.test(key)) return 'x2';
+      if (/^(xs2|rs2)$/.test(key)) return 'x3';
+      if (/^(xs3|rs3)$/.test(key)) return 'x4';
+      if (/^(rdp|rs1p)$/.test(key)) return 'x8';
+      if (/^(rs2p)$/.test(key)) return 'x9';
+      if (/^(rs3p)$/.test(key)) return 'x10';
+      if (/^(fd)$/.test(key)) return 'f1';
+      if (/^(fs1)$/.test(key)) return 'f2';
+      if (/^(fs2)$/.test(key)) return 'f3';
+      if (/^(fs3)$/.test(key)) return 'f4';
+      if (/^(vd)$/.test(key)) return 'v1';
+      if (/^(vs1)$/.test(key)) return 'v2';
+      if (/^(vs2)$/.test(key)) return 'v3';
+      if (/^(vs3)$/.test(key)) return 'v4';
+      return '0';
+    };
+
+    for (const inst of udbState.data) {
+      if (defaults.has(inst.name)) continue;
+      const template = (inst.assembly || '').trim();
+      if (!template) {
+        defaults.set(inst.name, inst.name);
+        continue;
+      }
+      const varNames = new Set();
+      for (const encoding of inst.encodings || []) {
+        for (const variable of encoding.variables || []) {
+          if (variable?.name) varNames.add(variable.name.toLowerCase());
+        }
+      }
+      const rendered = template.replace(/\b[A-Za-z][A-Za-z0-9_]*\b/g, (word) => {
+        const key = word.toLowerCase();
+        if (!varNames.has(key)) return word;
+        return defaultForVar(key);
+      });
+      defaults.set(inst.name, `${inst.name} ${rendered}`);
+    }
+    return defaults;
+  }, [udbState]);
+
+  const registerSuggestions = useMemo(() => {
+    const xRegs = Array.from({ length: 32 }, (_, i) => `x${i}`);
+    const fRegs = Array.from({ length: 32 }, (_, i) => `f${i}`);
+    const vRegs = Array.from({ length: 32 }, (_, i) => `v${i}`);
+    const abi = [
+      'zero', 'ra', 'sp', 'gp', 'tp',
+      't0', 't1', 't2', 't3', 't4', 't5', 't6',
+      's0', 's1', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 's9', 's10', 's11',
+      'a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7',
+      'ft0', 'ft1', 'ft2', 'ft3', 'ft4', 'ft5', 'ft6', 'ft7',
+      'fs0', 'fs1', 'fs2', 'fs3', 'fs4', 'fs5', 'fs6', 'fs7', 'fs8', 'fs9', 'fs10', 'fs11',
+      'fa0', 'fa1', 'fa2', 'fa3', 'fa4', 'fa5', 'fa6', 'fa7',
+      'ft8', 'ft9', 'ft10', 'ft11',
+    ];
+    return [...xRegs, ...fRegs, ...vRegs, ...abi];
+  }, []);
+
+  const asmSuggestions = useMemo(() => {
+    const trimmed = assemblyInput;
+    const parts = trimmed.trim().split(/\s+/);
+    const mnemonic = parts[0]?.toLowerCase();
+    if (!mnemonic) return [];
+    const hasOperands = trimmed.trim().includes(' ');
+    if (!hasOperands) {
+      return asmNames
+        .filter((name) => name.toLowerCase().startsWith(mnemonic))
+        .slice(0, 10)
+        .map((name) => ({
+          type: 'mnemonic',
+          label: asmTemplates.get(name) || name,
+          insert: asmTemplates.get(name) || name,
+        }));
+    }
+    const lastToken = trimmed.split(/[\s,()]+/).filter(Boolean).pop() || '';
+    const lower = lastToken.toLowerCase();
+    if (!lower) return [];
+    return registerSuggestions
+      .filter((name) => name.toLowerCase().startsWith(lower))
+      .slice(0, 10)
+      .map((name) => ({ type: 'reg', label: name, insert: name }));
+  }, [assemblyInput, asmNames, registerSuggestions, asmTemplates]);
+
+  useEffect(() => {
+    if (!asmFocused) {
+      setAsmOpen(false);
+      setAsmHighlight(0);
+      return;
+    }
+    if (!asmSuggestions.length) {
+      setAsmOpen(false);
+      setAsmHighlight(0);
+      return;
+    }
+    if (asmSuppressOpenRef.current) {
+      asmSuppressOpenRef.current = false;
+      setAsmOpen(false);
+      setAsmHighlight(0);
+      return;
+    }
+    setAsmOpen(true);
+    setAsmHighlight(0);
+  }, [asmSuggestions]);
+
+  useLayoutEffect(() => {
+    if (!asmOpen || !asmInputRef.current) {
+      setAsmDropdownPos(null);
+      return;
+    }
+    const update = () => {
+      const rect = asmInputRef.current.getBoundingClientRect();
+      setAsmDropdownPos({
+        left: rect.left,
+        top: rect.bottom + 6,
+        width: rect.width,
+      });
+    };
+    update();
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [asmOpen, asmSuggestions.length]);
+
+  const applyAsmSuggestion = (suggestion) => {
+    asmSuppressOpenRef.current = true;
+    const trimmed = assemblyInput;
+    const hasOperands = trimmed.trim().includes(' ');
+    if (!hasOperands || suggestion.type === 'mnemonic') {
+      setAssemblyInput(suggestion.insert);
+    } else {
+      const raw = assemblyInput;
+      const match = raw.match(/^(.*?)([^\s,()]+)\s*$/);
+      const prefix = match ? match[1] : raw;
+      const separator = prefix.endsWith(' ') || prefix.endsWith(',') || prefix.endsWith('(') ? '' : ' ';
+      setAssemblyInput(`${prefix}${separator}${suggestion.insert}`);
+    }
+    setAsmOpen(false);
+  };
+
+
   useEffect(() => {
     if (decodeTimerRef.current) {
       clearTimeout(decodeTimerRef.current);
+    }
+    if (lastEditedRef.current === 'asm') {
+      return;
     }
     const trimmed = normalizeHex(hexInput);
     if (!trimmed || !isHex(trimmed)) {
@@ -395,46 +519,50 @@ function App() {
       return;
     }
     assembleTimerRef.current = setTimeout(async () => {
-      const lines = await runTool(['--assemble', trimmed]);
-      if (!lines || !lines.length) {
-        setAssemblyStatus('error');
-        setAssemblyMessage('Assemble returned no output.');
+      if (udbState.state === 'loading') {
+        setAssemblyStatus('updating');
+        setAssemblyMessage('Loading Unified-DB index...');
         return;
       }
-      const parsed = parseToolLines(lines);
-      if (parsed.error) {
+      if (udbState.state === 'hasError') {
+        const message = udbState.error?.message ? `Unified-DB load failed: ${udbState.error.message}` : 'Unified-DB index not loaded.';
         setAssemblyStatus('error');
-        setAssemblyMessage(parsed.error);
+        setAssemblyMessage(message);
         return;
       }
-      const widthBits = parsed.width ? parseInt(parsed.width, 10) : 0;
-      if (parsed.asm) {
-        setAssemblyInput(parsed.asm);
+      if (udbState.state !== 'hasData') {
+        setAssemblyStatus('error');
+        setAssemblyMessage('Unified-DB index not loaded.');
+        return;
       }
-      if (parsed.hex) {
-        let hexValue = parsed.hex;
-        if (widthBits && /^0x/i.test(hexValue)) {
-          const raw = hexValue.replace(/^0x/i, '');
-          const padded = raw.padStart(widthBits / 4, '0');
-          hexValue = `0x${padded}`;
-        }
-        setHexInput(hexValue);
+      const isa = isaState.state === 'hasData' ? isaState.data.toLowerCase() : '';
+      const xlen = isa.startsWith('rv32') ? 32 : 64;
+      const result = encodeWithUdb(trimmed, udbState.data, xlen);
+      if (result.error) {
+        setAssemblyStatus('error');
+        setAssemblyMessage(result.error);
+        return;
+      }
+      let hexValue = result.hex;
+      if (result.width && /^0x/i.test(hexValue)) {
+        const raw = hexValue.replace(/^0x/i, '');
+        const padded = raw.padStart(result.width / 4, '0');
+        hexValue = `0x${padded}`;
+      }
+      setHexInput(hexValue);
+      if (result.bin) {
+        setBinInput(formatBin(result.bin));
+      } else {
         const nextBin = hexToBin(hexValue);
         if (nextBin !== null) {
           setBinInput(nextBin);
-        }
-      } else if (parsed.bin) {
-        setBinInput(formatBin(parsed.bin));
-        const nextHex = binToHex(parsed.bin);
-        if (nextHex !== null) {
-          setHexInput(nextHex ? `0x${nextHex}` : '');
         }
       }
       setAssemblyStatus('updated');
       setAssemblyMessage('');
     }, 1000);
     return () => clearTimeout(assembleTimerRef.current);
-  }, [assemblyInput, configPath, runTool]);
+  }, [assemblyInput, isaState, udbState]);
 
   const applyConfigToRuntime = async () => {
     if (!configEditor.trim()) {
@@ -527,7 +655,7 @@ function App() {
                 </select>
               </label>
 
-              <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
+              <label className="relative space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
                 Hex instruction
                 <input
                   type="text"
@@ -550,30 +678,28 @@ function App() {
                 />
               </label>
 
-              <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
-                Binary instruction
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  placeholder="e.g. 0000 0000 0000 0000 1000 0000 0110 0111"
-                  value={binInput}
-                  onChange={(e) => {
-                    lastEditedRef.current = 'bin';
-                    const clamped = clampBin(e.target.value);
-                    const display = formatBin(clamped);
-                    setBinInput(display);
-                    const nextHex = binToHex(display);
-                    if (nextHex !== null) {
-                      setHexInput(nextHex ? `0x${nextHex}` : '');
+              <BinaryInput
+                binInput={binInput}
+                bitLayout={bitLayout}
+                inputRef={binInputRef}
+                onChange={(e) => {
+                  lastEditedRef.current = 'bin';
+                  const { value, selectionStart = 0 } = e.target;
+                  const { display, cursor } = formatBinWithCursor(value, selectionStart);
+                  setBinInput(display);
+                  const nextHex = binToHex(display);
+                  if (nextHex !== null) {
+                    setHexInput(nextHex ? `0x${nextHex}` : '');
+                  }
+                  requestAnimationFrame(() => {
+                    if (binInputRef.current) {
+                      binInputRef.current.setSelectionRange(cursor, cursor);
                     }
-                  }}
-                  maxLength={MAX_BITS + Math.floor((MAX_BITS - 1) / 4)}
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                />
-              </label>
+                  });
+                }}
+              />
 
-              <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
+              <label className="relative z-30 space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
                 <div className="flex items-center justify-between">
                   <span>Assembly</span>
                   <span
@@ -583,6 +709,7 @@ function App() {
                   </span>
                 </div>
                 <input
+                  ref={asmInputRef}
                   value={assemblyInput}
                   placeholder="e.g. addi x1, x2, 4"
                   onChange={(e) => {
@@ -590,8 +717,65 @@ function App() {
                     setAssemblyMessage('');
                     setAssemblyInput(e.target.value);
                   }}
+                  onFocus={() => {
+                    setAsmFocused(true);
+                    if (asmSuggestions.length) setAsmOpen(true);
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => {
+                      setAsmFocused(false);
+                      setAsmOpen(false);
+                    }, 100);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!asmOpen || asmSuggestions.length === 0) return;
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      setAsmHighlight((idx) => (idx + 1) % asmSuggestions.length);
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      setAsmHighlight((idx) => (idx - 1 + asmSuggestions.length) % asmSuggestions.length);
+                    } else if (e.key === 'Enter') {
+                      e.preventDefault();
+                      applyAsmSuggestion(asmSuggestions[asmHighlight]);
+                    } else if (e.key === 'Escape') {
+                      setAsmOpen(false);
+                    }
+                  }}
                   className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-xs text-slate-900 shadow-sm focus:outline-none"
                 />
+                {asmOpen && asmSuggestions.length > 0 && asmDropdownPos &&
+                  createPortal(
+                    <div
+                      className="max-h-56 overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg"
+                      style={{
+                        position: 'fixed',
+                        left: asmDropdownPos.left,
+                        top: asmDropdownPos.top,
+                        width: asmDropdownPos.width,
+                        zIndex: 1000,
+                      }}
+                    >
+                      {asmSuggestions.map((suggestion, idx) => (
+                        <button
+                          key={`${suggestion.type}-${suggestion.label}`}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            applyAsmSuggestion(suggestion);
+                          }}
+                          className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs ${
+                            idx === asmHighlight
+                              ? 'bg-slate-100 text-slate-900'
+                              : 'text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span className="font-mono">{suggestion.label}</span>
+                        </button>
+                      ))}
+                    </div>,
+                    document.body
+                  )}
                 {assemblyMessage && (
                   <p className="text-xs text-rose-600">{assemblyMessage}</p>
                 )}
@@ -607,12 +791,28 @@ function App() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white/70 p-5 text-sm text-slate-600 shadow-sm animate-rise animate-rise-delay-2">
+            <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-white/70 p-5 text-sm text-slate-600 shadow-sm animate-rise animate-rise-delay-2">
+              <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-slate-400">
+                <span>ISA string</span>
+                <button
+                  onClick={runPrintIsa}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300"
+                >
+                  Refresh
+                </button>
+              </div>
+              <div className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 whitespace-pre-wrap break-all">
+                {isaState.state === 'loading' && 'Loading...'}
+                {isaState.state === 'hasError' && 'Failed to load'}
+                {isaState.state === 'hasData' && (isaState.data || 'Not loaded')}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white/70 p-5 text-sm text-slate-600 shadow-sm animate-rise animate-rise-delay-3">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Runtime</p>
               <p className="mt-2 text-lg font-semibold text-slate-900">WASM + Sail</p>
               <p className="mt-2 text-sm">Modules are loaded on demand to keep the UI responsive.</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white/70 p-5 text-sm text-slate-600 shadow-sm animate-rise animate-rise-delay-3">
+            <div className="rounded-2xl border border-slate-200 bg-white/70 p-5 text-sm text-slate-600 shadow-sm animate-rise animate-rise-delay-4">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Configs</p>
               <p className="mt-2 text-lg font-semibold text-slate-900">Auto-indexed</p>
               <p className="mt-2 text-sm">Generated from build outputs at <code className="text-slate-800">/config</code>.</p>
@@ -621,23 +821,89 @@ function App() {
         </section>
 
         <aside className="space-y-6">
-          <div className="rounded-3xl border border-slate-200 bg-white/80 p-6 text-sm text-slate-600 shadow-sm animate-rise animate-rise-delay-1">
+          <div className="rounded-3xl border border-slate-200 bg-white/80 p-6 text-sm text-slate-600 shadow-sm animate-rise animate-rise-delay-2">
             <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-slate-400">
-              <span>ISA string</span>
-              <button
-                onClick={runPrintIsa}
-                className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300"
-              >
-                Refresh
-              </button>
+              <span>Instruction</span>
+              {currentInstruction?.inst?.definedBy?.extension?.name && (
+                <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                  {currentInstruction.inst.definedBy.extension.name}
+                </span>
+              )}
             </div>
-            <div className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 whitespace-pre-wrap break-all">
-              {isaState.state === 'loading' && 'Loading...'}
-              {isaState.state === 'hasError' && 'Failed to load'}
-              {isaState.state === 'hasData' && (isaState.data || 'Not loaded')}
-            </div>
+            {currentInstruction?.inst ? (
+              <div className="mt-4 space-y-3 text-xs text-slate-700">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">{currentInstruction.inst.name}</p>
+                  {currentInstruction.inst.longName && (
+                    <p className="text-xs text-slate-500">{currentInstruction.inst.longName}</p>
+                  )}
+                </div>
+                {currentInstruction.inst.assembly && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Assembly</p>
+                    <p className="mt-1 font-mono text-xs text-slate-800">{currentInstruction.inst.name} {currentInstruction.inst.assembly}</p>
+                  </div>
+                )}
+                {renderUdbValue(currentInstruction.inst.description) && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Description</p>
+                    <p className="mt-1 whitespace-pre-wrap text-xs text-slate-700">{renderUdbValue(currentInstruction.inst.description)}</p>
+                  </div>
+                )}
+                {renderUdbValue(currentInstruction.inst.access) && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Access</p>
+                    <pre className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-700 whitespace-pre-wrap">
+                      {renderUdbValue(currentInstruction.inst.access)}
+                    </pre>
+                  </div>
+                )}
+                {renderUdbValue(currentInstruction.inst.operation) && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Operation</p>
+                    <pre className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-[11px] text-slate-700 whitespace-pre-wrap">
+                      {renderUdbValue(currentInstruction.inst.operation)}
+                    </pre>
+                  </div>
+                )}
+                {renderUdbValue(currentInstruction.inst.pseudoinstructions) && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Pseudoinstructions</p>
+                    <pre className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-700 whitespace-pre-wrap">
+                      {renderUdbValue(currentInstruction.inst.pseudoinstructions)}
+                    </pre>
+                  </div>
+                )}
+                {currentInstruction.encoding && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Encoding</p>
+                    <pre className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-[11px] text-slate-700 whitespace-pre-wrap">
+                      {renderUdbValue(currentInstruction.encoding)}
+                    </pre>
+                  </div>
+                )}
+                {currentInstruction.inst.encodingRaw && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Encoding Raw</p>
+                    <pre className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-700 whitespace-pre-wrap">
+                      {renderUdbValue(currentInstruction.inst.encodingRaw)}
+                    </pre>
+                  </div>
+                )}
+                {currentInstruction.inst.full && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">YAML (Full)</p>
+                    <pre className="mt-1 max-h-64 overflow-auto rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-700 whitespace-pre-wrap">
+                      {renderUdbValue(currentInstruction.inst.full)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="mt-4 text-xs text-slate-500">No instruction matched yet. Enter assembly or binary.</p>
+            )}
           </div>
-          <div className="min-h-[560px] rounded-3xl border border-slate-200 bg-white/80 p-6 text-sm text-slate-600 shadow-sm animate-rise animate-rise-delay-2 flex flex-col">
+          <div className="min-h-[560px] rounded-3xl border border-slate-200 bg-white/80 p-6 text-sm text-slate-600 shadow-sm animate-rise animate-rise-delay-3 flex flex-col">
             <h3 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl font-serif">Config editor</h3>
             <p className="mt-2 text-sm text-slate-600">
               Load an existing config and save it as a new file.

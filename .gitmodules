@@ -1,3 +1,6 @@
 [submodule "wasm/gmp-wasm"]
 	path = wasm/gmp-wasm
 	url = https://github.com/trdthg/gmp-wasm.git
+[submodule "wasm/riscv-unified-db"]
+	path = wasm/riscv-unified-db
+	url = https://github.com/riscv/riscv-unified-db.git
