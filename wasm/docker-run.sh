@@ -51,7 +51,7 @@ docker run --rm -i \
       -DCMAKE_EXE_LINKER_FLAGS=\"\${link_flags}\" \\
       -DCMAKE_CROSSCOMPILING_EMULATOR=\"/bin/true\"
 
-    cmake --build \"\${build_dir}\" --target sail_riscv_web -j
+    cmake --build \"\${build_dir}\" --target sail_riscv_web sail_riscv_sim -j
 
   "
 
@@ -59,8 +59,12 @@ docker run --rm -i \
 mkdir -p "${repo_root}/wasm/web/public/wasm" "${repo_root}/wasm/web/public/config"
 cp -f "${repo_root}/build-emscripten/c_emulator/sail_riscv_web.js" "${repo_root}/wasm/web/public/sail_riscv_web.js"
 cp -f "${repo_root}/build-emscripten/c_emulator/sail_riscv_web.wasm" "${repo_root}/wasm/web/public/sail_riscv_web.wasm"
+cp -f "${repo_root}/build-emscripten/c_emulator/sail_riscv_sim.js" "${repo_root}/wasm/web/public/sail_riscv_sim.js"
+cp -f "${repo_root}/build-emscripten/c_emulator/sail_riscv_sim.wasm" "${repo_root}/wasm/web/public/sail_riscv_sim.wasm"
 echo "built: ${repo_root}/wasm/web/public/sail_riscv_web.js"
 echo "built: ${repo_root}/wasm/web/public/sail_riscv_web.wasm"
+echo "built: ${repo_root}/wasm/web/public/sail_riscv_sim.js"
+echo "built: ${repo_root}/wasm/web/public/sail_riscv_sim.wasm"
 cp -f "${repo_root}/wasm/web/public/"*.wasm "${repo_root}/wasm/web/public/"*.js "${repo_root}/wasm/web/public/wasm/"
 config_src="${repo_root}/build-emscripten/config"
 if compgen -G "${config_src}/*.json" > /dev/null; then

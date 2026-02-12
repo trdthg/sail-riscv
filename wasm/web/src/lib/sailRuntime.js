@@ -31,13 +31,19 @@ const loadSailModule = async ({ cacheBust, jsPath }) => {
 };
 
 const MODULE_BUST = `v=${Date.now()}`;
-let runtimeModulePromise = null;
+const runtimeModulePromises = new Map();
 
-export const getRuntimeModule = async () => {
-  if (!runtimeModulePromise) {
-    runtimeModulePromise = loadSailModule({
+const runtimeFiles = {
+  web: { js: '/wasm/sail_riscv_web.js', wasm: '/wasm/sail_riscv_web.wasm' },
+  sim: { js: '/wasm/sail_riscv_sim.js', wasm: '/wasm/sail_riscv_sim.wasm' },
+};
+
+export const getRuntimeModule = async (target = 'web') => {
+  const files = runtimeFiles[target] || runtimeFiles.web;
+  if (!runtimeModulePromises.has(target)) {
+    const modulePromise = loadSailModule({
       cacheBust: MODULE_BUST,
-      jsPath: withBase('/wasm/sail_riscv_web.js'),
+      jsPath: withBase(files.js),
     }).then((createSailModule) =>
       createSailModule({
         noInitialRun: true,
@@ -54,12 +60,13 @@ export const getRuntimeModule = async () => {
         },
         locateFile: (path) => {
           if (path.endsWith('.wasm')) {
-            return `${withBase('/wasm/sail_riscv_web.wasm')}?${MODULE_BUST}`;
+            return `${withBase(files.wasm)}?${MODULE_BUST}`;
           }
           return path;
         },
       })
     );
+    runtimeModulePromises.set(target, modulePromise);
   }
-  return runtimeModulePromise;
+  return runtimeModulePromises.get(target);
 };

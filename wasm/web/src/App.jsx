@@ -130,6 +130,8 @@ function App() {
   const [configEditor, setConfigEditor] = useAtom(configEditorAtom);
   const [configEditorStatus, setConfigEditorStatus] = useState('');
   const [decodeMode, setDecodeMode] = useState('auto');
+  const [elfFile, setElfFile] = useState(null);
+  const [elfRunStatus, setElfRunStatus] = useState('');
   const applyTimerRef = useRef(null);
   const decodeTimerRef = useRef(null);
   const assembleTimerRef = useRef(null);
@@ -142,6 +144,40 @@ function App() {
     setOutput((prev) => (prev ? `${prev}\n${line}` : line));
   }, []);
   const setStatus = (text) => setConfigEditorStatus(text);
+
+  const parsedRuntimeOutput = useMemo(() => {
+    const lines = output ? output.split('\n').filter((line) => line.length > 0) : [];
+    let programText = '';
+    const traceLines = [];
+    const runtimeLines = [];
+
+    const tracePattern = /^(\[\d+\]|mem\[|x\d+\s<-|f\d+\s<-|v\d+\s<-|clint |htif\[|htif-syscall-proxy|pma|ptw|exception|interrupt)/i;
+    const htifCmdPattern = /htif-syscall-proxy cmd:\s*0x([0-9a-fA-F]+)/i;
+
+    for (const line of lines) {
+      const cmd = line.match(htifCmdPattern);
+      if (cmd) {
+        try {
+          const value = BigInt(`0x${cmd[1]}`);
+          const ch = Number(value & 0xffn);
+          if (ch === 10) {
+            programText += '\n';
+          } else if (ch >= 32 && ch <= 126) {
+            programText += String.fromCharCode(ch);
+          }
+        } catch {
+          // ignore malformed htif cmd lines
+        }
+      }
+      if (tracePattern.test(line.trim())) {
+        traceLines.push(line);
+      } else {
+        runtimeLines.push(line);
+      }
+    }
+
+    return { programText, traceLines, runtimeLines, allLines: lines };
+  }, [output]);
 
   useEffect(() => {
     window.__sailOutputSink = append;
@@ -160,14 +196,11 @@ function App() {
     };
   }, []);
 
-  const runTool = useCallback(async (args) => {
+  const resolveConfigText = useCallback(async () => {
     if (!configPath) {
       append('No config available. Please refresh or check /config/configs.json.');
-      return;
+      return null;
     }
-    setAssemblyStatus('updating');
-    const Module = await getRuntimeModule();
-
     let configText = '';
     if (configPath === '/config.json' && configEditor.trim()) {
       configText = configEditor;
@@ -175,10 +208,18 @@ function App() {
       const configResp = await fetch(maybeWithBase(configPath));
       if (!configResp.ok) {
         append(`Failed to load config: ${configResp.status} ${configResp.statusText}`);
-        return;
+        return null;
       }
       configText = await configResp.text();
     }
+    return configText;
+  }, [append, configEditor, configPath]);
+
+  const runTool = useCallback(async (args) => {
+    setAssemblyStatus('updating');
+    const Module = await getRuntimeModule('web');
+    const configText = await resolveConfigText();
+    if (!configText) return;
     const fsConfigPath = '/config.json';
     if (!Module.FS || !Module.FS.writeFile) {
       append('Emscripten FS is not available');
@@ -205,7 +246,53 @@ function App() {
       }
     }
     return [...getOutputLines()];
-  }, [append, configEditor, configPath]);
+  }, [append, resolveConfigText]);
+
+  const runElf = useCallback(async () => {
+    if (!elfFile) {
+      setElfRunStatus('Please choose an ELF file.');
+      return;
+    }
+    setOutput('');
+    setElfRunStatus(`Running ${elfFile.name}...`);
+    const Module = await getRuntimeModule('sim');
+    const configText = await resolveConfigText();
+    if (!configText) {
+      setElfRunStatus('Config not available.');
+      return;
+    }
+    if (!Module.FS || !Module.FS.writeFile) {
+      setElfRunStatus('Emscripten FS is not available.');
+      return;
+    }
+
+    const fsConfigPath = '/config.json';
+    const fsElfPath = `/tmp/${elfFile.name.replace(/[^A-Za-z0-9._-]/g, '_') || 'program.elf'}`;
+    const bytes = new Uint8Array(await elfFile.arrayBuffer());
+    Module.FS.writeFile(fsConfigPath, configText);
+    Module.FS.writeFile(fsElfPath, bytes);
+
+    const lines = getOutputLines();
+    lines.length = 0;
+    append(`Running: --trace-all --config ${fsConfigPath} ${fsElfPath}`);
+    try {
+      Module.callMain(['--trace-all', '--config', fsConfigPath, fsElfPath]);
+      setElfRunStatus(`Run finished: ${elfFile.name}`);
+    } catch (e) {
+      if (typeof e === 'number') {
+        append(`ExitStatus (number): ${e}`);
+        setElfRunStatus(`Run failed with exit code ${e}`);
+      } else if (e && typeof e.status === 'number') {
+        append(`ExitStatus: ${e.status}`);
+        setElfRunStatus(`Run failed with exit code ${e.status}`);
+      } else {
+        append(`Program exited: ${String(e)}`);
+        setElfRunStatus(`Run failed: ${String(e)}`);
+      }
+    } finally {
+      setOutput([...getOutputLines()].join('\n'));
+    }
+  }, [append, elfFile, resolveConfigText]);
 
   const runPrintIsa = useCallback(async () => {
     refreshIsa((value) => value + 1);
@@ -780,6 +867,65 @@ function App() {
                   <p className="text-xs text-rose-600">{assemblyMessage}</p>
                 )}
               </label>
+
+              <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="flex-1 min-w-[220px] text-xs font-medium text-slate-700">
+                    ELF file
+                    <input
+                      type="file"
+                      accept=".elf,application/octet-stream"
+                      onChange={(e) => setElfFile(e.target.files?.[0] || null)}
+                      className="mt-2 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={runElf}
+                    disabled={!elfFile}
+                    className="h-10 rounded-lg border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Run ELF
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  {elfFile ? `Selected: ${elfFile.name}` : 'No ELF selected.'}
+                </p>
+                {elfRunStatus && (
+                  <p className="mt-1 text-xs text-slate-600">{elfRunStatus}</p>
+                )}
+              </div>
+
+              <div className="md:col-span-2 rounded-xl border border-slate-200 bg-white p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">Runtime Console</p>
+                  <button
+                    type="button"
+                    onClick={() => setOutput('')}
+                    className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600 hover:border-slate-300"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Program Output (HTIF)</p>
+                    <pre className="h-28 overflow-auto rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-[11px] leading-relaxed text-slate-800 whitespace-pre-wrap">
+                      {parsedRuntimeOutput.programText || '(no decoded program output)'}
+                    </pre>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Runtime Summary</p>
+                    <pre className="h-28 overflow-auto rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-[11px] leading-relaxed text-slate-800 whitespace-pre-wrap">
+                      {parsedRuntimeOutput.runtimeLines.join('\n') || '(no runtime summary)'}
+                    </pre>
+                  </div>
+                </div>
+                <p className="mt-3 mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Sail Trace</p>
+                <pre className="h-48 overflow-auto rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-[11px] leading-relaxed text-slate-800 whitespace-pre-wrap">
+                  {parsedRuntimeOutput.traceLines.join('\n') || '(no trace lines)'}
+                </pre>
+              </div>
             </div>
 
 
