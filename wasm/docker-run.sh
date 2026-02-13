@@ -43,7 +43,7 @@ docker run --rm -i \
     build_dir=\"\${repo_root}/build-emscripten\"
     GMP_WASM_DIST=\"\${GMP_WASM_DIST:-\${gmp_dist_default}}\"
 
-    link_flags=\"-s MODULARIZE=1 -s EXPORT_NAME=createSailModule -s INVOKE_RUN=0 -s EXIT_RUNTIME=0 -s ALLOW_MEMORY_GROWTH=1 -s EXPORTED_RUNTIME_METHODS=callMain,FS -s DISABLE_EXCEPTION_CATCHING=0 -s LEGALIZE_JS_FFI=1 -s EMULATE_FUNCTION_POINTER_CASTS=1 -s ASSERTIONS=2 -s STACK_SIZE=4194304\"
+    link_flags=\"-s MODULARIZE=1 -s EXPORT_NAME=createSailModule -s INVOKE_RUN=0 -s EXIT_RUNTIME=0 -s ALLOW_MEMORY_GROWTH=1 -s EXPORTED_RUNTIME_METHODS=callMain,FS -s DISABLE_EXCEPTION_CATCHING=0 -s WASM_BIGINT=1 -s EMULATE_FUNCTION_POINTER_CASTS=1 -s ASSERTIONS=2 -s STACK_SIZE=4194304\"
 
     emcmake cmake -S \"\${repo_root}\" -B \"\${build_dir}\" \\
       -DCMAKE_BUILD_TYPE=Release \\

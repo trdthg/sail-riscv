@@ -283,13 +283,13 @@ function htif_store(Physaddr(paddr), width, data) = {
   then    { if   data == htif_tohost[31 .. 0]
             then htif_payload_writes = htif_payload_writes + 1
             else htif_payload_writes = 0x1;
-            htif_tohost = vector_update_subrange(htif_tohost, 31, 0, data) }
+            htif_tohost = htif_tohost[63 .. 32] @ data }
   else if width == 4 & paddr == base + 4
   then    { if   data[15 .. 0] == htif_tohost[47 .. 32]
             then htif_payload_writes = htif_payload_writes + 1
             else htif_payload_writes = 0x1;
             htif_cmd_write = 0b1;
-            htif_tohost = vector_update_subrange(htif_tohost, 63, 32, data) }
+            htif_tohost = data @ htif_tohost[31 .. 0] }
   else return Err(E_SAMO_Access_Fault());
 
   // Execute if there were repeated writes of the same payload without

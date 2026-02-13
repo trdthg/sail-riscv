@@ -20,6 +20,13 @@ target_include_directories(sail_runtime
 target_compile_options(sail_runtime PRIVATE -Wno-extra -Wno-unused)
 target_link_libraries(sail_runtime PUBLIC GMP::GMP)
 
+if (CMAKE_SIZEOF_LONG LESS 8)
+    target_compile_options(sail_runtime PRIVATE
+        -include
+        "${CMAKE_CURRENT_SOURCE_DIR}/mpz_u64_compat.h"
+    )
+endif()
+
 if (COVERAGE)
     find_package(Threads REQUIRED)
 
