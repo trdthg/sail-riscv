@@ -73,12 +73,15 @@ echo "built: ${repo_root}/wasm/web/public/sail_riscv_debug.wasm"
 binutils_public="${repo_root}/wasm/web/public/binutils"
 gas_src="${repo_root}/wasm/binutils-wasm/packages/gas/build/dist/cjs/riscv64-linux-gnu.js"
 ld_src="${repo_root}/wasm/binutils-wasm/packages/binutils/build/dist/cjs/ld.js"
+readelf_src="${repo_root}/wasm/binutils-wasm/packages/binutils/build/dist/cjs/readelf.js"
 mkdir -p "${binutils_public}"
-if [[ -f "${gas_src}" && -f "${ld_src}" ]]; then
+if [[ -f "${gas_src}" && -f "${ld_src}" && -f "${readelf_src}" ]]; then
   cp -f "${gas_src}" "${binutils_public}/riscv64-linux-gnu.js"
   cp -f "${ld_src}" "${binutils_public}/ld.js"
+  cp -f "${readelf_src}" "${binutils_public}/readelf.js"
   echo "built: ${binutils_public}/riscv64-linux-gnu.js"
   echo "built: ${binutils_public}/ld.js"
+  echo "built: ${binutils_public}/readelf.js"
 else
   echo "warn: binutils wasm assets not found; run:" >&2
   echo "  pnpm -C wasm/binutils-wasm/packages/gas run build:wasm" >&2

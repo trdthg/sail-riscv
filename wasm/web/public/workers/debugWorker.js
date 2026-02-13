@@ -5,6 +5,9 @@ let debugModulePromise = null;
 let debugSessionReady = false;
 let gasFactory = null;
 let ldFactory = null;
+let readelfFactory = null;
+let debugLineEntries = null;
+let debugLineFile = '';
 
 let outputLines = [];
 let emittedLineCount = 0;
@@ -136,6 +139,18 @@ const getLdFactory = ({ baseUrl, cacheBust }) => {
   return ldFactory;
 };
 
+const getReadelfFactory = ({ baseUrl, cacheBust }) => {
+  if (!readelfFactory) {
+    readelfFactory = loadToolFactory({
+      baseUrl,
+      cacheBust,
+      relativePath: 'binutils/readelf.js',
+      label: 'readelf',
+    });
+  }
+  return readelfFactory;
+};
+
 const getDebugModule = async (baseUrl, cacheBust) => {
   if (debugModuleInstance) {
     return debugModuleInstance;
@@ -190,7 +205,7 @@ const initDebugSessionWithElf = ({ requestId, Module, configText, elfBytes }) =>
   debugSessionReady = true;
   flushOutput(requestId, true);
   return {
-    state: readDebugState(Module),
+    state: augmentStateWithSourceLine(readDebugState(Module)),
     committed: 0,
   };
 };
@@ -201,6 +216,7 @@ const runBinutilsModule = async ({
   label,
   args,
   preRun,
+  silent = false,
 }) => {
   const stdoutLines = [];
   const stderrLines = [];
@@ -217,16 +233,121 @@ const runBinutilsModule = async ({
     print: (text) => {
       const line = String(text);
       stdoutLines.push(line);
-      pushOutputLine(`[${label}] ${line}`);
+      if (!silent) {
+        pushOutputLine(`[${label}] ${line}`);
+      }
     },
     printErr: (text) => {
       const line = String(text);
       stderrLines.push(line);
-      pushOutputLine(`[${label}] ${line}`);
+      if (!silent) {
+        pushOutputLine(`[${label}] ${line}`);
+      }
     },
   });
-  flushOutput(requestId, false);
+  if (!silent) {
+    flushOutput(requestId, false);
+  }
   return { module, stdoutLines, stderrLines };
+};
+
+const parseReadelfDecodedLine = (lines) => {
+  const entries = [];
+  let sourceFile = '';
+  for (const rawLine of lines) {
+    const line = String(rawLine || '');
+    const match = line.match(/^\s*(.+?)\s+(-|\d+)\s+0x([0-9a-fA-F]+)\b/);
+    if (!match) {
+      continue;
+    }
+    const file = match[1].trim();
+    const lineText = match[2];
+    const address = Number.parseInt(match[3], 16);
+    if (!Number.isFinite(address)) {
+      continue;
+    }
+    if (!sourceFile) {
+      sourceFile = file;
+    }
+    entries.push({
+      file,
+      line: lineText === '-' ? null : Number.parseInt(lineText, 10),
+      address,
+    });
+  }
+  entries.sort((left, right) => left.address - right.address);
+  return {
+    sourceFile,
+    entries,
+  };
+};
+
+const lookupSourceLineByPc = (pcValue) => {
+  if (!Array.isArray(debugLineEntries) || debugLineEntries.length === 0) {
+    return null;
+  }
+  const pc = Number(pcValue);
+  if (!Number.isFinite(pc)) {
+    return null;
+  }
+  let left = 0;
+  let right = debugLineEntries.length - 1;
+  let best = -1;
+  while (left <= right) {
+    const mid = (left + right) >> 1;
+    const address = debugLineEntries[mid].address;
+    if (address <= pc) {
+      best = mid;
+      left = mid + 1;
+    } else {
+      right = mid - 1;
+    }
+  }
+  while (best >= 0) {
+    const entry = debugLineEntries[best];
+    if (entry && Number.isInteger(entry.line) && entry.line > 0) {
+      return entry.line;
+    }
+    best -= 1;
+  }
+  return null;
+};
+
+const augmentStateWithSourceLine = (state) => {
+  if (!state || typeof state !== 'object') {
+    return state;
+  }
+  const pc = typeof state.pc === 'string' ? Number.parseInt(state.pc, 16) : Number(state.pc);
+  const sourceLine = lookupSourceLineByPc(pc);
+  if (sourceLine !== null) {
+    state.sourceLine = sourceLine;
+  }
+  if (debugLineFile) {
+    state.sourceFile = debugLineFile;
+  }
+  return state;
+};
+
+const refreshLineMapFromElf = async ({ requestId, baseUrl, cacheBust, elfBytes }) => {
+  debugLineEntries = null;
+  debugLineFile = '';
+  const factory = getReadelfFactory({ baseUrl, cacheBust });
+  const readelf = await runBinutilsModule({
+    requestId,
+    factory,
+    label: 'readelf',
+    args: ['--debug-dump=decodedline', '/tmp/program.elf'],
+    preRun: (module) => {
+      module.FS.writeFile('/tmp/program.elf', new Uint8Array(elfBytes));
+    },
+    silent: true,
+  });
+  const parsed = parseReadelfDecodedLine(readelf.stdoutLines);
+  if (parsed.entries.length > 0) {
+    debugLineEntries = parsed.entries;
+    debugLineFile = parsed.sourceFile;
+  }
+  return parsed.entries.length;
 };
 
 const requireSession = (Module) => {
@@ -241,6 +362,7 @@ const requireSession = (Module) => {
 const startSession = async ({ requestId, baseUrl, cacheBust, configText, elfBytes }) => {
   const Module = await getDebugModule(baseUrl, cacheBust);
   clearOutput();
+  await refreshLineMapFromElf({ requestId, baseUrl, cacheBust, elfBytes });
   return initDebugSessionWithElf({
     requestId,
     Module,
@@ -277,6 +399,7 @@ const assembleAndStartSession = async ({
   const linkerFactory = getLdFactory({ baseUrl, cacheBust });
 
   const gasArgs = [
+    '-g',
     `-march=${String(gasMarch || 'rv64imac')}`,
     `-mabi=${String(gasAbi || 'lp64')}`,
     '-o',
@@ -347,6 +470,17 @@ const assembleAndStartSession = async ({
   pushOutputLine(`ld: produced /tmp/program.elf (${elfBytes.length} bytes)`);
   flushOutput(requestId, false);
 
+  const lineCount = await refreshLineMapFromElf({
+    requestId,
+    baseUrl,
+    cacheBust,
+    elfBytes,
+  });
+  if (lineCount > 0) {
+    pushOutputLine(`readelf: loaded ${lineCount} debug line entries`);
+    flushOutput(requestId, false);
+  }
+
   return {
     ...(initDebugSessionWithElf({
       requestId,
@@ -355,6 +489,7 @@ const assembleAndStartSession = async ({
       elfBytes,
     })),
     elfSize: elfBytes.length,
+    lineMapEntries: lineCount,
   };
 };
 
@@ -369,7 +504,7 @@ const stepSession = async ({ requestId, steps = 1 }) => {
 
   flushOutput(requestId, false);
   return {
-    state: readDebugState(Module),
+    state: augmentStateWithSourceLine(readDebugState(Module)),
     committed,
   };
 };
@@ -401,7 +536,7 @@ const runSession = async ({ requestId, chunk = 5000, watchdogMs = 15000 }) => {
 
   flushOutput(requestId, true);
   return {
-    state: readDebugState(Module),
+    state: augmentStateWithSourceLine(readDebugState(Module)),
     committed: committedTotal,
   };
 };
@@ -411,6 +546,8 @@ const resetSession = async () => {
     debugModuleInstance._debug_reset();
   }
   debugSessionReady = false;
+  debugLineEntries = null;
+  debugLineFile = '';
   clearOutput();
   return { state: null, committed: 0 };
 };
@@ -431,7 +568,7 @@ const sendError = (requestId, error) => {
     ok: false,
     requestId,
     error: messageText,
-    state: debugModuleInstance ? readDebugState(debugModuleInstance) : null,
+    state: debugModuleInstance ? augmentStateWithSourceLine(readDebugState(debugModuleInstance)) : null,
   });
 };
 
@@ -484,7 +621,7 @@ self.onmessage = async (event) => {
         break;
       case 'state':
         result = {
-          state: debugModuleInstance ? readDebugState(debugModuleInstance) : null,
+          state: debugModuleInstance ? augmentStateWithSourceLine(readDebugState(debugModuleInstance)) : null,
           committed: 0,
         };
         break;

@@ -17,6 +17,10 @@ const sources = [
     from: path.resolve(wasmRoot, 'binutils-wasm', 'packages', 'binutils', 'build', 'dist', 'cjs', 'ld.js'),
     to: path.join(publicDir, 'ld.js'),
   },
+  {
+    from: path.resolve(wasmRoot, 'binutils-wasm', 'packages', 'binutils', 'build', 'dist', 'cjs', 'readelf.js'),
+    to: path.join(publicDir, 'readelf.js'),
+  },
 ];
 
 fs.mkdirSync(publicDir, { recursive: true });

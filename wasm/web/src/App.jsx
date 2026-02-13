@@ -223,6 +223,7 @@ function App() {
   const lastEditedRef = useRef('');
   const asmInputRef = useRef(null);
   const binInputRef = useRef(null);
+  const asmSourceRef = useRef(null);
   const asmSuppressOpenRef = useRef(false);
   const debugWorkerRef = useRef(null);
   const debugWorkerCacheBustRef = useRef('');
@@ -344,7 +345,7 @@ function App() {
 
     const tracePattern = /^(\[\d+\]|mem\[|x\d+\s<-|f\d+\s<-|v\d+\s<-|clint |csr |htif\[|htif-(?:syscall-proxy|term|debug)|pma|ptw|exception|interrupt)/i;
     const traceInlinePattern = /(\[\d+\]|mem\[|x\d+\s<-|f\d+\s<-|v\d+\s<-|clint |csr |htif\[|htif-(?:syscall-proxy|term|debug)|pma|ptw|exception|interrupt)/i;
-    const runtimePattern = /^(running|run watchdog|run timed out|run finished|selected:|htif located|entry point|success|failure:|program exited|committed steps:|exitstatus|debug error:|gas:|ld:|\[gas\]|\[ld\])/i;
+    const runtimePattern = /^(running|run watchdog|run timed out|run finished|selected:|htif located|entry point|success|failure:|program exited|committed steps:|exitstatus|debug error:|gas:|ld:|readelf:|\[gas\]|\[ld\]|\[readelf\])/i;
     const htifTermCmdPattern = /htif-(?:term|syscall-proxy)\s+cmd:\s*0x([0-9a-fA-F]+)/i;
     const htifTermCompatPattern = /htif-term compat byte:\s*0x([0-9a-fA-F]+)/i;
     const hasCompatTrace = lines.some((line) => htifTermCompatPattern.test(line));
@@ -542,7 +543,8 @@ function App() {
       applyDebugState(result.state, { resetDiff: true });
       setDebugReady(true);
       const elfSize = Number.isFinite(result.elfSize) ? Number(result.elfSize) : 0;
-      setElfRunStatus(`Built + initialized from assembly (${elfSize} bytes).`);
+      const lineEntries = Number.isFinite(result.lineMapEntries) ? Number(result.lineMapEntries) : 0;
+      setElfRunStatus(`Built + initialized from assembly (${elfSize} bytes, ${lineEntries} line entries).`);
       return true;
     } catch (error) {
       setDebugReady(false);
@@ -764,6 +766,48 @@ function App() {
       changed: Boolean(changedXRegs[index]),
     }));
   }, [changedFRegs, changedXRegs, debugState, registerView]);
+
+  const activeSourceLine = useMemo(() => {
+    const value = Number(debugState?.sourceLine);
+    if (!Number.isInteger(value) || value <= 0) {
+      return null;
+    }
+    return value;
+  }, [debugState?.sourceLine]);
+
+  const sourcePreviewRows = useMemo(() => {
+    const rows = asmSourceInput.split('\n');
+    const width = Math.max(2, String(rows.length).length);
+    return rows.map((text, index) => ({
+      key: index,
+      lineNo: index + 1,
+      gutter: String(index + 1).padStart(width, ' '),
+      text,
+    }));
+  }, [asmSourceInput]);
+
+  useEffect(() => {
+    if (!activeSourceLine || !asmSourceRef.current) {
+      return;
+    }
+    const lineIdx = activeSourceLine - 1;
+    const rows = asmSourceInput.split('\n');
+    if (lineIdx < 0 || lineIdx >= rows.length) {
+      return;
+    }
+    let selectionStart = 0;
+    for (let i = 0; i < lineIdx; i += 1) {
+      selectionStart += rows[i].length + 1;
+    }
+    const selectionEnd = selectionStart + rows[lineIdx].length;
+    const textarea = asmSourceRef.current;
+    textarea.setSelectionRange(selectionStart, selectionEnd);
+    const lineHeight = Number.parseFloat(window.getComputedStyle(textarea).lineHeight || '16') || 16;
+    const targetTop = Math.max(0, (lineIdx - 2) * lineHeight);
+    if (Math.abs(textarea.scrollTop - targetTop) > lineHeight) {
+      textarea.scrollTop = targetTop;
+    }
+  }, [activeSourceLine, asmSourceInput]);
 
   const renderUdbValue = (value) => {
     if (!value) return null;
@@ -1248,6 +1292,7 @@ function App() {
                     <label className="space-y-1 text-[11px] font-medium text-slate-600">
                       Program (.S)
                       <textarea
+                        ref={asmSourceRef}
                         value={asmSourceInput}
                         onChange={(event) => setAsmSourceInput(event.target.value)}
                         spellCheck={false}
@@ -1263,6 +1308,25 @@ function App() {
                         className="h-48 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-[11px] text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
                       />
                     </label>
+                  </div>
+                  <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
+                    <div className="mb-1 flex items-center justify-between text-[11px] text-slate-500">
+                      <span>Assembly line map (from DWARF)</span>
+                      <span className="font-mono">
+                        {activeSourceLine ? `active line ${activeSourceLine}` : 'no active line'}
+                      </span>
+                    </div>
+                    <div className="max-h-40 overflow-auto rounded border border-slate-200 bg-white font-mono text-[11px] leading-5 text-slate-700">
+                      {sourcePreviewRows.map((row) => (
+                        <div
+                          key={row.key}
+                          className={`flex px-2 ${activeSourceLine === row.lineNo ? 'bg-amber-100 text-amber-900' : ''}`}
+                        >
+                          <span className="mr-2 shrink-0 text-slate-400">{row.gutter}</span>
+                          <span className="whitespace-pre-wrap break-all">{row.text || ' '}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <label className="text-[11px] text-slate-600">
@@ -1382,12 +1446,18 @@ function App() {
                   </div>
                   {debugState ? (
                     <>
-                      <div className="mt-2 grid gap-2 text-[11px] text-slate-700 md:grid-cols-4">
+                      <div className="mt-2 grid gap-2 text-[11px] text-slate-700 md:grid-cols-5">
                         <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono">pc: {debugState.pc || '-'}</div>
                         <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono">step: {debugState.step ?? '-'}</div>
                         <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono">halted: {String(Boolean(debugState.halted))}</div>
                         <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono">exit: {debugState.exitCode ?? '-'}</div>
+                        <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono">line: {debugState.sourceLine ?? '-'}</div>
                       </div>
+                      {debugState.sourceFile && (
+                        <div className="mt-2 rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-[11px] text-slate-700">
+                          source: {debugState.sourceFile}
+                        </div>
+                      )}
                       <div className="mt-2 rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-[11px] text-slate-700">
                         {`inst: [${debugState.instWidth ?? '-'}] ${debugState.instHex || '-'}  ${debugState.disasm || '-'}`}
                       </div>
