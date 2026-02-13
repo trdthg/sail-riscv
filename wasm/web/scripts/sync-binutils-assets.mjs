@@ -21,6 +21,10 @@ const sources = [
     from: path.resolve(wasmRoot, 'binutils-wasm', 'packages', 'binutils', 'build', 'dist', 'cjs', 'readelf.js'),
     to: path.join(publicDir, 'readelf.js'),
   },
+  {
+    from: path.resolve(wasmRoot, 'binutils-wasm', 'packages', 'binutils', 'build', 'dist', 'cjs', 'objdump.js'),
+    to: path.join(publicDir, 'objdump.js'),
+  },
 ];
 
 fs.mkdirSync(publicDir, { recursive: true });

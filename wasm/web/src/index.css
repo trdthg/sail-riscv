@@ -38,16 +38,6 @@ h3 {
     }
   }
 
-  @keyframes drift {
-    0%,
-    100% {
-      transform: translateY(0) translateX(0);
-    }
-    50% {
-      transform: translateY(-10px) translateX(8px);
-    }
-  }
-
   .animate-rise {
     animation: rise-in 0.7s ease forwards;
   }
@@ -64,11 +54,7 @@ h3 {
     animation-delay: 360ms;
   }
 
-.animate-drift {
-  animation: drift 8s ease-in-out infinite;
-}
-
-.debug-active-line {
-  background-color: rgba(245, 158, 11, 0.18);
-}
+  .debug-active-line {
+    background-color: rgba(245, 158, 11, 0.18);
+  }
 }

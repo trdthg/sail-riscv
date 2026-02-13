@@ -6,12 +6,15 @@ let debugSessionReady = false;
 let gasFactory = null;
 let ldFactory = null;
 let readelfFactory = null;
+let objdumpFactory = null;
 let debugLineEntries = null;
 let debugLineFile = '';
 let debugSectionAddresses = {};
 let expandedSourceEntries = null;
 let expandedSourceText = '';
 let expandedSourceFile = '';
+let debugDisassemblyText = '';
+let debugDisassemblyEntries = null;
 
 let outputLines = [];
 let emittedLineCount = 0;
@@ -153,6 +156,18 @@ const getReadelfFactory = ({ baseUrl, cacheBust }) => {
     });
   }
   return readelfFactory;
+};
+
+const getObjdumpFactory = ({ baseUrl, cacheBust }) => {
+  if (!objdumpFactory) {
+    objdumpFactory = loadToolFactory({
+      baseUrl,
+      cacheBust,
+      relativePath: 'binutils/objdump.js',
+      label: 'objdump',
+    });
+  }
+  return objdumpFactory;
 };
 
 const getDebugModule = async (baseUrl, cacheBust) => {
@@ -486,6 +501,59 @@ const lookupExpandedSourceByPc = (pcValue) => {
   return entry;
 };
 
+const parseObjdumpAddressMap = (text) => {
+  const lines = String(text || '').split(/\r?\n/);
+  const entries = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const match = line.match(/^\s*([0-9a-fA-F]+):\s+([0-9a-fA-F]{2}(?:\s+[0-9a-fA-F]{2})*|[0-9a-fA-F]{4,})\s+\S/);
+    if (!match) {
+      continue;
+    }
+    const address = Number.parseInt(match[1], 16);
+    if (!Number.isFinite(address)) {
+      continue;
+    }
+    entries.push({
+      address,
+      line: index + 1,
+    });
+  }
+  entries.sort((left, right) => left.address - right.address);
+  return entries;
+};
+
+const lookupUploadDisasmLineByPc = (pcValue) => {
+  if (!Array.isArray(debugDisassemblyEntries) || debugDisassemblyEntries.length === 0) {
+    return null;
+  }
+  const pc = Number(pcValue);
+  if (!Number.isFinite(pc)) {
+    return null;
+  }
+  let left = 0;
+  let right = debugDisassemblyEntries.length - 1;
+  let best = -1;
+  while (left <= right) {
+    const mid = (left + right) >> 1;
+    const address = debugDisassemblyEntries[mid].address;
+    if (address <= pc) {
+      best = mid;
+      left = mid + 1;
+    } else {
+      right = mid - 1;
+    }
+  }
+  if (best < 0) {
+    return null;
+  }
+  const entry = debugDisassemblyEntries[best];
+  if (!entry || !Number.isInteger(entry.line) || entry.line <= 0) {
+    return null;
+  }
+  return entry.line;
+};
+
 const augmentStateWithSourceLine = (state) => {
   if (!state || typeof state !== 'object') {
     return state;
@@ -506,6 +574,10 @@ const augmentStateWithSourceLine = (state) => {
   }
   if (expandedSourceFile) {
     state.expandedSourceFile = expandedSourceFile;
+  }
+  const uploadDisasmLine = lookupUploadDisasmLineByPc(pc);
+  if (uploadDisasmLine !== null) {
+    state.uploadDisasmLine = uploadDisasmLine;
   }
   return state;
 };
@@ -550,6 +622,11 @@ const clearExpandedSourceMap = () => {
   expandedSourceFile = '';
 };
 
+const clearDisassemblyText = () => {
+  debugDisassemblyText = '';
+  debugDisassemblyEntries = null;
+};
+
 const refreshExpandedSourceMapFromListing = (listingText) => {
   clearExpandedSourceMap();
   const parsed = parseListingAddressMap(listingText, debugSectionAddresses);
@@ -565,7 +642,32 @@ const expandedSourcePayload = () => ({
   expandedSourceText,
   expandedSourceFile,
   expandedSourceEntries: Array.isArray(expandedSourceEntries) ? expandedSourceEntries.length : 0,
+  disassemblyText: debugDisassemblyText,
 });
+
+const refreshDisassemblyFromElf = async ({ requestId, baseUrl, cacheBust, elfBytes }) => {
+  clearDisassemblyText();
+  let factory = null;
+  try {
+    factory = getObjdumpFactory({ baseUrl, cacheBust });
+  } catch {
+    return '';
+  }
+  const result = await runBinutilsModule({
+    requestId,
+    factory,
+    label: 'objdump',
+    args: ['-d', '-M', 'no-aliases', '/tmp/program.elf'],
+    preRun: (module) => {
+      module.FS.writeFile('/tmp/program.elf', new Uint8Array(elfBytes));
+    },
+    silent: true,
+  });
+  const text = result.stdoutLines.join('\n');
+  debugDisassemblyText = text;
+  debugDisassemblyEntries = parseObjdumpAddressMap(text);
+  return text;
+};
 
 const requireSession = (Module) => {
   if (!debugSessionReady) {
@@ -580,7 +682,9 @@ const startSession = async ({ requestId, baseUrl, cacheBust, configText, elfByte
   const Module = await getDebugModule(baseUrl, cacheBust);
   clearOutput();
   clearExpandedSourceMap();
+  clearDisassemblyText();
   await refreshLineMapFromElf({ requestId, baseUrl, cacheBust, elfBytes });
+  await refreshDisassemblyFromElf({ requestId, baseUrl, cacheBust, elfBytes });
   return {
     ...(initDebugSessionWithElf({
       requestId,
@@ -613,6 +717,7 @@ const assembleAndStartSession = async ({
   }
 
   clearOutput();
+  clearDisassemblyText();
   pushOutputLine('Running in worker: assembling /tmp/program.S');
   flushOutput(requestId, false);
 
@@ -705,6 +810,12 @@ const assembleAndStartSession = async ({
     cacheBust,
     elfBytes,
   });
+  await refreshDisassemblyFromElf({
+    requestId,
+    baseUrl,
+    cacheBust,
+    elfBytes,
+  });
   const expandedCount = refreshExpandedSourceMapFromListing(listingText);
   if (lineCount > 0) {
     pushOutputLine(`readelf: loaded ${lineCount} debug line entries`);
@@ -786,6 +897,7 @@ const resetSession = async () => {
   debugLineFile = '';
   debugSectionAddresses = {};
   clearExpandedSourceMap();
+  clearDisassemblyText();
   clearOutput();
   return { state: null, committed: 0, ...expandedSourcePayload() };
 };

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { buildFieldMap, buildSegments, matchEncoding } from './lib/bits.js';
 import { encodeWithUdb } from './lib/encoder.js';
 import { maybeWithBase } from './lib/paths.js';
+import { parseRuntimeOutputLines } from './lib/runtimeLogs.js';
 import { ExplorerPage } from './pages/ExplorerPage.jsx';
 import { RuntimePage } from './pages/RuntimePage.jsx';
 import { getRuntimeModule } from './lib/sailRuntime.js';
@@ -218,9 +219,11 @@ function App() {
     if (typeof window === 'undefined') return 'light';
     return window.localStorage.getItem('sail-theme') === 'dark' ? 'dark' : 'light';
   });
+  const [runtimeInputMode, setRuntimeInputMode] = useState('edit');
   const [activeEditorTab, setActiveEditorTab] = useState('program');
   const [asmSourceInput, setAsmSourceInput] = useState(DEFAULT_DEBUG_ASM_SOURCE);
   const [expandedAsmSourceInput, setExpandedAsmSourceInput] = useState('');
+  const [uploadDisasmInput, setUploadDisasmInput] = useState('');
   const [linkerScriptInput, setLinkerScriptInput] = useState(DEFAULT_DEBUG_LINKER_SCRIPT);
   const [gasMarchInput, setGasMarchInput] = useState('rv64imac');
   const [gasAbiInput, setGasAbiInput] = useState('lp64');
@@ -350,56 +353,7 @@ function App() {
 
   const parsedRuntimeOutput = useMemo(() => {
     const lines = output ? output.split('\n').filter((line) => line.length > 0) : [];
-    let programText = '';
-    const traceLines = [];
-    const runtimeLines = [];
-
-    const tracePattern = /^(\[\d+\]|mem\[|x\d+\s<-|f\d+\s<-|v\d+\s<-|clint |csr |htif\[|htif-(?:syscall-proxy|term|debug)|pma|ptw|exception|interrupt)/i;
-    const traceInlinePattern = /(\[\d+\]|mem\[|x\d+\s<-|f\d+\s<-|v\d+\s<-|clint |csr |htif\[|htif-(?:syscall-proxy|term|debug)|pma|ptw|exception|interrupt)/i;
-    const runtimePattern = /^(running|run watchdog|run timed out|run finished|selected:|htif located|entry point|success|failure:|program exited|committed steps:|exitstatus|debug error:|gas:|ld:|readelf:|\[gas\]|\[ld\]|\[readelf\])/i;
-    const htifTermCmdPattern = /htif-(?:term|syscall-proxy)\s+cmd:\s*0x([0-9a-fA-F]+)/i;
-    const htifTermCompatPattern = /htif-term compat byte:\s*0x([0-9a-fA-F]+)/i;
-    const hasCompatTrace = lines.some((line) => htifTermCompatPattern.test(line));
-
-    for (const line of lines) {
-      const termCompat = line.match(htifTermCompatPattern);
-      const termCmd = line.match(htifTermCmdPattern);
-      const payloadHex = hasCompatTrace ? termCompat?.[1] ?? null : termCompat?.[1] ?? termCmd?.[1] ?? null;
-      let decodedFromLine = false;
-      if (payloadHex) {
-        try {
-          const value = BigInt(`0x${payloadHex}`);
-          const ch = Number(value & 0xffn);
-          if (ch === 10) {
-            programText += '\n';
-          } else if (ch >= 32 && ch <= 126) {
-            programText += String.fromCharCode(ch);
-          }
-          decodedFromLine = true;
-        } catch {
-          // ignore malformed htif cmd lines
-        }
-      }
-      const trimmed = line.trim();
-      if (tracePattern.test(trimmed)) {
-        traceLines.push(line);
-      } else if (runtimePattern.test(trimmed)) {
-        runtimeLines.push(line);
-      } else {
-        const inline = line.match(traceInlinePattern);
-        if (inline && typeof inline.index === 'number' && inline.index > 0) {
-          const prefix = line.slice(0, inline.index);
-          if (prefix && !decodedFromLine) {
-            programText = programText ? `${programText}\n${prefix}` : prefix;
-          }
-          traceLines.push(line.slice(inline.index));
-        } else {
-          programText = programText ? `${programText}\n${line}` : line;
-        }
-      }
-    }
-
-    return { programText, traceLines, runtimeLines, allLines: lines };
+    return parseRuntimeOutputLines(lines);
   }, [output]);
 
   const displayedProgramOutput = useMemo(() => {
@@ -418,6 +372,22 @@ function App() {
     }
     return displayedProgramOutput || '(no decoded program output)';
   }, [displayedProgramOutput, parsedRuntimeOutput.runtimeLines, parsedRuntimeOutput.traceLines, runtimeLogTab]);
+
+  const runtimeLogStats = useMemo(() => {
+    const safeLineCount = (text) => {
+      if (!text || text.startsWith('(no ')) {
+        return 0;
+      }
+      return text.split('\n').length;
+    };
+    return {
+      tab: runtimeLogTab,
+      currentLines: safeLineCount(runtimeLogText),
+      programLines: safeLineCount(displayedProgramOutput),
+      summaryLines: parsedRuntimeOutput.runtimeLines.length,
+      traceLines: parsedRuntimeOutput.traceLines.length,
+    };
+  }, [displayedProgramOutput, parsedRuntimeOutput.runtimeLines.length, parsedRuntimeOutput.traceLines.length, runtimeLogTab, runtimeLogText]);
 
   useEffect(() => {
     window.__sailOutputSink = append;
@@ -515,8 +485,9 @@ function App() {
     return [...getOutputLines()];
   }, [append, resolveConfigText]);
 
-  const initElfDebug = useCallback(async () => {
-    if (!elfFile) {
+  const initElfDebug = useCallback(async (overrideElfFile = null) => {
+    const targetElfFile = overrideElfFile || elfFile;
+    if (!targetElfFile) {
       setElfRunStatus('Please choose an ELF file.');
       return false;
     }
@@ -526,14 +497,17 @@ function App() {
       return false;
     }
 
-    const bytes = new Uint8Array(await elfFile.arrayBuffer());
+    const bytes = new Uint8Array(await targetElfFile.arrayBuffer());
+    setElfFile(targetElfFile);
     setDebugBusy(true);
     setDebugReady(false);
     setOutput('');
-    setActiveEditorTab('program');
+    setRuntimeInputMode('upload');
+    setActiveEditorTab('upload-disasm');
     setExpandedAsmSourceInput('');
+    setUploadDisasmInput('');
     resetDebugDiff();
-    setElfRunStatus(`Initializing ${elfFile.name}...`);
+    setElfRunStatus(`Initializing ${targetElfFile.name}...`);
 
     try {
       const result = await callDebugWorker(
@@ -546,8 +520,9 @@ function App() {
       );
       applyDebugState(result.state, { resetDiff: true });
       setExpandedAsmSourceInput(typeof result.expandedSourceText === 'string' ? result.expandedSourceText : '');
+      setUploadDisasmInput(typeof result.disassemblyText === 'string' ? result.disassemblyText : '');
       setDebugReady(true);
-      setElfRunStatus(`Initialized: ${elfFile.name}`);
+      setElfRunStatus(`Initialized: ${targetElfFile.name}`);
       return true;
     } catch (error) {
       setDebugReady(false);
@@ -557,6 +532,16 @@ function App() {
       setDebugBusy(false);
     }
   }, [applyDebugState, callDebugWorker, elfFile, resetDebugDiff, resolveConfigText]);
+
+  const onUploadElf = useCallback((file) => {
+    if (!file) {
+      return;
+    }
+    setRuntimeInputMode('upload');
+    setActiveEditorTab('upload-disasm');
+    setElfFile(file);
+    void initElfDebug(file);
+  }, [initElfDebug]);
 
   const buildAsmAndInitDebug = useCallback(async () => {
     const configText = await resolveConfigText();
@@ -576,7 +561,10 @@ function App() {
     setDebugBusy(true);
     setDebugReady(false);
     setOutput('');
+    setRuntimeInputMode('edit');
+    setActiveEditorTab('program');
     setExpandedAsmSourceInput('');
+    setUploadDisasmInput('');
     resetDebugDiff();
     setElfRunStatus('Assembling + linking in worker...');
 
@@ -590,6 +578,7 @@ function App() {
       });
       applyDebugState(result.state, { resetDiff: true });
       setExpandedAsmSourceInput(typeof result.expandedSourceText === 'string' ? result.expandedSourceText : '');
+      setUploadDisasmInput(typeof result.disassemblyText === 'string' ? result.disassemblyText : '');
       setDebugReady(true);
       const elfSize = Number.isFinite(result.elfSize) ? Number(result.elfSize) : 0;
       const lineEntries = Number.isFinite(result.lineMapEntries) ? Number(result.lineMapEntries) : 0;
@@ -640,7 +629,11 @@ function App() {
   const runElfDebug = useCallback(async () => {
     let ready = debugReady;
     if (!ready) {
-      ready = elfFile ? await initElfDebug() : await buildAsmAndInitDebug();
+      if (runtimeInputMode === 'upload') {
+        ready = await initElfDebug();
+      } else {
+        ready = elfFile ? await initElfDebug() : await buildAsmAndInitDebug();
+      }
     }
     if (!ready) {
       return;
@@ -664,7 +657,7 @@ function App() {
     } finally {
       setDebugBusy(false);
     }
-  }, [applyDebugState, buildAsmAndInitDebug, callDebugWorker, debugReady, elfFile, elfFile?.name, initElfDebug]);
+  }, [applyDebugState, buildAsmAndInitDebug, callDebugWorker, debugReady, elfFile, elfFile?.name, initElfDebug, runtimeInputMode]);
 
   const resetElfDebug = useCallback(async () => {
     setDebugBusy(true);
@@ -676,10 +669,29 @@ function App() {
       setDebugBusy(false);
       setDebugReady(false);
       setDebugState(null);
+      setExpandedAsmSourceInput('');
+      setUploadDisasmInput('');
       resetDebugDiff();
       setElfRunStatus('Debug session reset.');
     }
   }, [callDebugWorker, resetDebugDiff]);
+
+  const onToolbarReset = useCallback(async () => {
+    if (runtimeInputMode === 'upload') {
+      await resetElfDebug();
+      setElfFile(null);
+      setElfRunStatus('Upload cleared.');
+      return;
+    }
+    setAsmSourceInput(DEFAULT_DEBUG_ASM_SOURCE);
+    setLinkerScriptInput(DEFAULT_DEBUG_LINKER_SCRIPT);
+    setGasMarchInput('rv64imac');
+    setGasAbiInput('lp64');
+    setActiveEditorTab('program');
+    setElfFile(null);
+    setUploadDisasmInput('');
+    setElfRunStatus('Edit defaults restored.');
+  }, [resetElfDebug, runtimeInputMode]);
 
   const runPrintIsa = useCallback(async () => {
     refreshIsa((value) => value + 1);
@@ -833,7 +845,20 @@ function App() {
     return value;
   }, [debugState?.expandedSourceLine]);
 
-  const activeRuntimeEditorLine = activeEditorTab === 'expanded' ? activeExpandedSourceLine : activeSourceLine;
+  const activeUploadDisasmLine = useMemo(() => {
+    const value = Number(debugState?.uploadDisasmLine);
+    if (!Number.isInteger(value) || value <= 0) {
+      return null;
+    }
+    return value;
+  }, [debugState?.uploadDisasmLine]);
+
+  const activeRuntimeEditorLine = useMemo(() => {
+    if (runtimeInputMode === 'upload') {
+      return activeUploadDisasmLine;
+    }
+    return activeEditorTab === 'expanded' ? activeExpandedSourceLine : activeSourceLine;
+  }, [activeEditorTab, activeExpandedSourceLine, activeSourceLine, activeUploadDisasmLine, runtimeInputMode]);
 
   useEffect(() => {
     if (!monacoEditorRef.current || !monacoRef.current) {
@@ -845,7 +870,7 @@ function App() {
     if (!model) {
       return;
     }
-    if (!['program', 'expanded'].includes(activeEditorTab) || !activeRuntimeEditorLine || activeRuntimeEditorLine > model.getLineCount()) {
+    if (!['program', 'expanded', 'upload-disasm'].includes(activeEditorTab) || !activeRuntimeEditorLine || activeRuntimeEditorLine > model.getLineCount()) {
       monacoDecorationsRef.current = editor.deltaDecorations(monacoDecorationsRef.current, []);
       return;
     }
@@ -865,15 +890,21 @@ function App() {
         },
       },
     ]);
-  }, [activeEditorTab, activeRuntimeEditorLine, asmSourceInput, expandedAsmSourceInput, linkerScriptInput]);
+  }, [activeEditorTab, activeRuntimeEditorLine, asmSourceInput, expandedAsmSourceInput, linkerScriptInput, runtimeInputMode, uploadDisasmInput]);
 
-  const runtimeEditorValue = activeEditorTab === 'program'
-    ? asmSourceInput
-    : activeEditorTab === 'expanded'
-      ? expandedAsmSourceInput
-      : linkerScriptInput;
-  const runtimeEditorLanguage = activeEditorTab === 'linker' ? 'plaintext' : 'asm';
-  const runtimeEditorReadOnly = activeEditorTab === 'expanded';
+  const runtimeEditorValue = runtimeInputMode === 'upload'
+    ? (uploadDisasmInput || '; upload an ELF and click Init ELF to generate disassembly')
+    : activeEditorTab === 'program'
+      ? asmSourceInput
+      : activeEditorTab === 'expanded'
+        ? expandedAsmSourceInput
+        : linkerScriptInput;
+  const runtimeEditorLanguage = runtimeInputMode === 'upload'
+    ? 'asm'
+    : activeEditorTab === 'linker'
+      ? 'plaintext'
+      : 'asm';
+  const runtimeEditorReadOnly = runtimeInputMode === 'upload' || activeEditorTab === 'expanded';
 
   const handleRuntimeEditorMount = useCallback((editor, monaco) => {
     monacoEditorRef.current = editor;
@@ -882,6 +913,9 @@ function App() {
 
   const handleRuntimeEditorChange = useCallback((value) => {
     const next = value ?? '';
+    if (runtimeInputMode === 'upload') {
+      return;
+    }
     if (activeEditorTab === 'program') {
       setAsmSourceInput(next);
       return;
@@ -890,7 +924,7 @@ function App() {
       return;
     }
     setLinkerScriptInput(next);
-  }, [activeEditorTab]);
+  }, [activeEditorTab, runtimeInputMode]);
 
   const renderUdbValue = (value) => {
     if (!value) return null;
@@ -1212,23 +1246,23 @@ function App() {
     setGasMarchInput,
     gasAbiInput,
     setGasAbiInput,
-    setAsmSourceInput,
-    setLinkerScriptInput,
+    onUploadElf,
+    onToolbarReset,
     setStepBatchInput,
-    setElfFile,
+    runtimeInputMode,
+    setRuntimeInputMode,
     stepBatchInput,
     activeSourceLine: activeRuntimeEditorLine,
     activeExpandedSourceLine,
     debugBusy,
     buildAsmAndInitDebug,
-    initElfDebug,
     stepElfDebug,
     runElfDebug,
-    resetElfDebug,
     debugReady,
     elfFile,
     asmSourceInput,
     expandedAsmSourceInput,
+    uploadDisasmInput,
     activeEditorTab,
     setActiveEditorTab,
     runtimeEditorLanguage,
@@ -1240,28 +1274,28 @@ function App() {
     setRuntimeLogTab,
     setOutput,
     runtimeLogText,
+    runtimeLogStats,
     debugState,
     registerView,
     setRegisterView,
     debugRegisterRows,
     elfRunStatus,
-    DEFAULT_DEBUG_ASM_SOURCE,
-    DEFAULT_DEBUG_LINKER_SCRIPT,
   };
 
   return (
     <div
       className={`relative overflow-hidden ${
         isDark
-          ? 'bg-[radial-gradient(circle_at_top,_rgb(15_23_42),_rgb(2_6_23)_55%)] text-slate-100'
-          : 'bg-[radial-gradient(circle_at_top,_rgb(255_247_237),_rgb(248_250_252)_55%)] text-slate-900'
+          ? 'bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 text-slate-100'
+          : 'bg-gradient-to-b from-slate-100 via-slate-50 to-slate-100 text-slate-900'
       } ${activePage === 'runtime' ? 'h-screen flex flex-col' : 'min-h-screen'}`}
     >
-      <div className="pointer-events-none absolute -top-24 right-[-10%] h-72 w-72 rounded-full bg-[radial-gradient(circle,_rgba(14,116,144,0.18),_rgba(14,116,144,0))] blur-2xl animate-drift" />
-      <div className="pointer-events-none absolute -bottom-24 left-[-5%] h-80 w-80 rounded-full bg-[radial-gradient(circle,_rgba(249,115,22,0.18),_rgba(249,115,22,0))] blur-2xl animate-drift" />
-
-      <header className="mx-auto flex w-full max-w-[1400px] items-center gap-3 px-4 py-3 animate-rise">
-        <div className="flex h-8 items-center rounded-xl bg-slate-900 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white shadow-sm">
+      <header className={`mx-auto flex w-full max-w-[1400px] items-center gap-3 border-b px-4 py-3 animate-rise ${
+        isDark ? 'border-slate-800 bg-slate-950/85' : 'border-slate-200 bg-white/85'
+      }`}>
+        <div className={`flex h-8 items-center rounded-lg px-3 text-[10px] font-semibold uppercase tracking-[0.18em] shadow-sm ${
+          isDark ? 'bg-slate-800 text-slate-100' : 'bg-slate-900 text-white'
+        }`}>
           sail-riscv
         </div>
         <div className={`min-w-0 flex-1 truncate text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
