@@ -4,3 +4,6 @@
 [submodule "wasm/riscv-unified-db"]
 	path = wasm/riscv-unified-db
 	url = https://github.com/riscv/riscv-unified-db.git
+[submodule "wasm/binutils-wasm"]
+	path = wasm/binutils-wasm
+	url = https://github.com/mnixry/binutils-wasm.git

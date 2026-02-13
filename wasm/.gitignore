@@ -2,3 +2,4 @@ sail*
 web/public/config
 web/public/wasm
 web/public/udb
+.tmp

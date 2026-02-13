@@ -312,6 +312,37 @@ uint32_t read_u32(uint64_t addr) {
   return b0 | (b1 << 8) | (b2 << 16) | (b3 << 24);
 }
 
+struct DecodedInsn {
+  int width = 16;
+  uint64_t raw = 0;
+  std::string text;
+};
+
+DecodedInsn decode_instruction_at_pc(ModelImpl &model, uint16_t inst16, uint32_t inst32) {
+  DecodedInsn result;
+  hart::zinstruction insn;
+  if ((inst16 & 0x3u) != 0x3u) {
+    result.width = 16;
+    result.raw = static_cast<uint64_t>(inst16);
+    model.zext_decode_compressed(&insn, result.raw);
+  } else {
+    result.width = 32;
+    result.raw = static_cast<uint64_t>(inst32);
+    model.zext_decode(&insn, result.raw);
+  }
+
+  sail_string asm_str;
+  CREATE(sail_string)(&asm_str);
+  if (model.zassembly_forwards_matches(insn)) {
+    model.zassembly_forwards(&asm_str, insn);
+  } else {
+    model.zinstruction_to_str(&asm_str, insn);
+  }
+  result.text = asm_str;
+  KILL(sail_string)(&asm_str);
+  return result;
+}
+
 std::string build_state_json() {
   if (!g_ctx.initialized || g_ctx.model == nullptr) {
     return "{\"ok\":false,\"initialized\":false,\"error\":\"not initialized\"}";
@@ -348,6 +379,7 @@ std::string build_state_json() {
   uint64_t pc = model.zPC.bits;
   uint16_t inst16 = read_u16(pc);
   uint32_t inst32 = read_u32(pc);
+  const DecodedInsn decoded = decode_instruction_at_pc(model, inst16, inst32);
 
   std::ostringstream oss;
   oss << "{";
@@ -365,6 +397,9 @@ std::string build_state_json() {
   oss << ",\"pc\":\"0x" << std::hex << pc << std::dec << "\"";
   oss << ",\"inst16\":\"0x" << std::hex << inst16 << std::dec << "\"";
   oss << ",\"inst32\":\"0x" << std::hex << inst32 << std::dec << "\"";
+  oss << ",\"instWidth\":" << decoded.width;
+  oss << ",\"instHex\":\"" << format_hex_u64(decoded.raw, std::max(1, decoded.width / 4)) << "\"";
+  oss << ",\"disasm\":\"" << json_escape(decoded.text) << "\"";
   oss << ",\"xregAbi\":";
   {
     std::array<std::string, 32> abi_names = {};
