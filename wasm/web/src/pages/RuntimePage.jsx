@@ -89,7 +89,7 @@ export function RuntimePage({
         className="flex-1 w-full min-h-0 lg:grid"
         style={{ gridTemplateColumns: `${100 - splitRatio}fr 8px ${splitRatio}fr` }}
       >
-        <section className={`flex min-h-0 flex-col overflow-hidden lg:col-start-3 ${shellClass}`}>
+        <section className={`flex min-h-0 flex-col overflow-hidden lg:col-start-3 lg:row-start-1 ${shellClass}`}>
           <RuntimeToolbar
             isDark={isDark}
             configPath={configPath}
@@ -141,14 +141,14 @@ export function RuntimePage({
         </section>
 
         <div
-          className={`hidden lg:block cursor-col-resize ${isDark ? 'bg-slate-800 hover:bg-slate-700' : 'bg-slate-200 hover:bg-slate-300'}`}
+          className={`hidden cursor-col-resize lg:col-start-2 lg:row-start-1 lg:block ${isDark ? 'bg-slate-800 hover:bg-slate-700' : 'bg-slate-200 hover:bg-slate-300'}`}
           onMouseDown={() => setIsResizing(true)}
           role="separator"
           aria-orientation="vertical"
           aria-label="Resize panes"
         />
 
-        <div className="min-h-0 lg:col-start-1">
+        <div className="min-h-0 lg:col-start-1 lg:row-start-1">
           <RuntimeSidebar
             isDark={isDark}
             debugReady={debugReady}

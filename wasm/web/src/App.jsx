@@ -182,6 +182,9 @@ function App() {
   const monacoDecorationsRef = useRef([]);
   const isDark = theme === 'dark';
   const editorTheme = isDark ? 'vs-dark' : 'vs';
+  const pageTitle = activePage === 'explorer' ? 'Instruction Explorer' : 'ASM Runtime';
+  const brandTitle = 'Sail RISC-V Web';
+  const brandSubtitle = 'Built on sail-riscv with an online Sail model core.';
 
   const append = useCallback((line) => {
     setOutput((prev) => (prev ? `${prev}\n${line}` : line));
@@ -350,6 +353,11 @@ function App() {
     document.documentElement.classList.toggle('dark', isDark);
     window.localStorage.setItem('sail-theme', theme);
   }, [isDark, theme]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.title = `${pageTitle} · ${brandTitle}`;
+  }, [brandTitle, pageTitle]);
 
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
@@ -1304,7 +1312,7 @@ function App() {
           : 'bg-gradient-to-b from-slate-100 via-slate-50 to-slate-100 text-slate-900'
       } ${activePage === 'runtime' ? 'h-screen flex flex-col' : 'min-h-screen'}`}
     >
-      <header className={`mx-auto flex w-full max-w-[1400px] items-center gap-3 border-b px-4 py-3 animate-rise ${
+      <header className={`flex w-full items-center gap-3 border-b px-4 py-3 animate-rise ${
         isDark ? 'border-slate-800 bg-slate-950/85' : 'border-slate-200 bg-white/85'
       }`}>
         <div className={`flex h-8 items-center rounded-lg px-3 text-[10px] font-semibold uppercase tracking-[0.18em] shadow-sm ${
@@ -1313,7 +1321,7 @@ function App() {
           sail-riscv
         </div>
         <div className={`min-w-0 flex-1 truncate text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-          Inspect RISC-V encodings with a live Sail core.
+          {brandTitle} · {brandSubtitle}
         </div>
         <div className={`inline-flex rounded-xl border p-1 shadow-sm ${isDark ? 'border-slate-700 bg-slate-900/70' : 'border-slate-200 bg-white/80'}`}>
           <button
