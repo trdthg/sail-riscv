@@ -151,14 +151,17 @@ function App() {
     const traceLines = [];
     const runtimeLines = [];
 
-    const tracePattern = /^(\[\d+\]|mem\[|x\d+\s<-|f\d+\s<-|v\d+\s<-|clint |htif\[|htif-syscall-proxy|pma|ptw|exception|interrupt)/i;
-    const htifCmdPattern = /htif-syscall-proxy cmd:\s*0x([0-9a-fA-F]+)/i;
+    const tracePattern = /^(\[\d+\]|mem\[|x\d+\s<-|f\d+\s<-|v\d+\s<-|clint |htif\[|htif-(?:syscall-proxy|term|debug)|pma|ptw|exception|interrupt)/i;
+    const htifTermCmdPattern = /htif-term cmd:\s*0x([0-9a-fA-F]+)/i;
+    const htifTermCompatPattern = /htif-term compat byte:\s*0x([0-9a-fA-F]+)/i;
 
     for (const line of lines) {
-      const cmd = line.match(htifCmdPattern);
-      if (cmd) {
+      const termCmd = line.match(htifTermCmdPattern);
+      const termCompat = line.match(htifTermCompatPattern);
+      const payloadHex = termCmd?.[1] ?? termCompat?.[1] ?? null;
+      if (payloadHex) {
         try {
-          const value = BigInt(`0x${cmd[1]}`);
+          const value = BigInt(`0x${payloadHex}`);
           const ch = Number(value & 0xffn);
           if (ch === 10) {
             programText += '\n';

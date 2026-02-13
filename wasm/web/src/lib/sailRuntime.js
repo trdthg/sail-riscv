@@ -5,7 +5,7 @@ const pushOutputLine = (line) => {
     window.__sailOutputLines = [];
   }
   window.__sailOutputLines.push(line);
-  if (window.__sailOutputLines.length > 2000) {
+  if (window.__sailOutputLines.length > 20000) {
     window.__sailOutputLines.shift();
   }
   if (window.__sailOutputSink) {
