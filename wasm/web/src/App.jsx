@@ -607,6 +607,31 @@ function App() {
     }
   }, [applyDebugState, callDebugWorker, debugReady, setRuntimeField]);
 
+  const stepElfDebugLine = useCallback(async () => {
+    if (!debugReady) {
+      setRuntimeField('elfRunStatus', 'Debug session is not initialized.');
+      return;
+    }
+    setRuntimeField('debugBusy', true);
+    try {
+      const result = await callDebugWorker('stepLine', { maxSteps: 4096 });
+      applyDebugState(result.state);
+      const halted = Boolean(result?.state?.halted);
+      const exitCode = Number.isFinite(result?.state?.exitCode) ? Number(result.state.exitCode) : 0;
+      if (halted) {
+        setRuntimeField('elfRunStatus', `Halted (exit=${exitCode})`);
+      } else if (result?.reachedNext) {
+        setRuntimeField('elfRunStatus', `Stepped to next line (${result.committed || 0} instruction(s)).`);
+      } else {
+        setRuntimeField('elfRunStatus', `Step line limit reached (${result.committed || 0} instruction(s)).`);
+      }
+    } catch (error) {
+      setRuntimeField('elfRunStatus', `Step line failed: ${error?.message || String(error)}`);
+    } finally {
+      setRuntimeField('debugBusy', false);
+    }
+  }, [applyDebugState, callDebugWorker, debugReady, setRuntimeField]);
+
   const runElfDebug = useCallback(async () => {
     let ready = debugReady;
     if (!ready) {
@@ -1280,6 +1305,7 @@ function App() {
     debugBusy,
     buildAsmAndInitDebug,
     stepElfDebug,
+    stepElfDebugLine,
     runElfDebug,
     debugReady,
     elfFile: uploadElfFile,

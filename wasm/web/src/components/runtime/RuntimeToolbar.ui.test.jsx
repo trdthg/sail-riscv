@@ -63,6 +63,7 @@ function ToolbarHarness({ onUploadElf = () => {} }) {
         onUploadElf={onUploadElf}
         elfFile={state.uploadElfFile}
         stepElfDebug={() => {}}
+        stepElfDebugLine={() => {}}
         debugReady={Boolean(state.debugReady)}
         stepBatchInput={state.stepBatchInput}
         setStepBatchInput={(value) => setRuntimeField('stepBatchInput', value)}

@@ -26,6 +26,7 @@ export function RuntimePage({
   debugBusy,
   buildAsmAndInitDebug,
   stepElfDebug,
+  stepElfDebugLine,
   runElfDebug,
   debugReady,
   elfFile,
@@ -108,6 +109,7 @@ export function RuntimePage({
             onUploadElf={onUploadElf}
             elfFile={elfFile}
             stepElfDebug={stepElfDebug}
+            stepElfDebugLine={stepElfDebugLine}
             debugReady={debugReady}
             stepBatchInput={stepBatchInput}
             setStepBatchInput={setStepBatchInput}

@@ -18,6 +18,7 @@ export function RuntimeToolbar({
   onUploadElf,
   elfFile,
   stepElfDebug,
+  stepElfDebugLine,
   debugReady,
   stepBatchInput,
   setStepBatchInput,
@@ -176,6 +177,14 @@ export function RuntimeToolbar({
           className={`h-8 px-3 text-[11px] font-semibold ${controlButtonClass} disabled:cursor-not-allowed disabled:opacity-50`}
         >
           Step
+        </button>
+        <button
+          type="button"
+          onClick={stepElfDebugLine}
+          disabled={!debugReady || debugBusy}
+          className={`h-8 px-3 text-[11px] font-semibold ${controlButtonClass} disabled:cursor-not-allowed disabled:opacity-50`}
+        >
+          Next Line
         </button>
         <input
           type="number"

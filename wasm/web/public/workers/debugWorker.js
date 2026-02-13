@@ -708,6 +708,28 @@ const requireSession = (Module) => {
   }
 };
 
+const getStepAnchor = (state) => {
+  if (!state || typeof state !== 'object') {
+    return 'none';
+  }
+  const sourceLine = Number(state.sourceLine);
+  if (Number.isInteger(sourceLine) && sourceLine > 0) {
+    return `src:${sourceLine}`;
+  }
+  const uploadLine = Number(state.uploadDisasmLine);
+  if (Number.isInteger(uploadLine) && uploadLine > 0) {
+    return `upload:${uploadLine}`;
+  }
+  const expandedLine = Number(state.expandedSourceLine);
+  if (Number.isInteger(expandedLine) && expandedLine > 0) {
+    return `expanded:${expandedLine}`;
+  }
+  if (typeof state.pc === 'string' && state.pc) {
+    return `pc:${state.pc}`;
+  }
+  return 'none';
+};
+
 const startSession = async ({ requestId, baseUrl, cacheBust, configText, elfBytes, elfName }) => {
   const Module = await getDebugModule(baseUrl, cacheBust);
   const elfPath = toUploadElfPath(elfName, 'upload.elf');
@@ -895,6 +917,45 @@ const stepSession = async ({ requestId, steps = 1 }) => {
   };
 };
 
+const stepLineSession = async ({ requestId, maxSteps = 4096 }) => {
+  const Module = debugModuleInstance;
+  requireSession(Module);
+
+  const initialState = augmentStateWithSourceLine(readDebugState(Module));
+  const initialAnchor = getStepAnchor(initialState);
+  const maxCount = Math.max(1, Math.min(200000, maxSteps | 0));
+  let committedTotal = 0;
+  let latestState = initialState;
+
+  while (committedTotal < maxCount && Module._debug_is_halted() !== 1) {
+    const committed = Number(Module._debug_step(1));
+    if (committed < 0) {
+      throw new Error(readDebugError(Module) || `debug_step failed (${committed})`);
+    }
+    if (committed === 0 && Module._debug_is_halted() !== 1) {
+      throw new Error(readDebugError(Module) || 'debug runtime made no progress');
+    }
+    committedTotal += committed;
+    latestState = augmentStateWithSourceLine(readDebugState(Module));
+    const latestAnchor = getStepAnchor(latestState);
+    if (latestAnchor !== initialAnchor) {
+      flushOutput(requestId, false);
+      return {
+        state: latestState,
+        committed: committedTotal,
+        reachedNext: true,
+      };
+    }
+  }
+
+  flushOutput(requestId, false);
+  return {
+    state: latestState,
+    committed: committedTotal,
+    reachedNext: false,
+  };
+};
+
 const runSession = async ({ requestId, chunk = 5000, watchdogMs = 15000 }) => {
   const Module = debugModuleInstance;
   requireSession(Module);
@@ -998,6 +1059,12 @@ self.onmessage = async (event) => {
         result = await stepSession({
           requestId,
           steps: message.steps,
+        });
+        break;
+      case 'stepLine':
+        result = await stepLineSession({
+          requestId,
+          maxSteps: message.maxSteps,
         });
         break;
       case 'run':
