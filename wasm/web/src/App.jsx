@@ -111,6 +111,80 @@ const assemblyStatusStyles = {
   error: 'border-rose-200 bg-rose-50 text-rose-700',
 };
 
+const DEFAULT_DEBUG_ASM_SOURCE = `.section .bss.mmio.htif
+.balign 8
+.global tohost
+tohost:
+  .zero 8
+.balign 8
+.global fromhost
+fromhost:
+  .zero 8
+
+.macro htif_putc value
+  li a0, \\value
+  sw a0, 0(t0)
+  li a0, 0x01010000
+  sw a0, 4(t0)
+.endm
+
+.section .text
+.global _start
+_start:
+  la t0, tohost
+  htif_putc 'H'
+  htif_putc 'e'
+  htif_putc 'l'
+  htif_putc 'l'
+  htif_putc 'o'
+  htif_putc ','
+  htif_putc ' '
+  htif_putc 'S'
+  htif_putc 'a'
+  htif_putc 'i'
+  htif_putc 'l'
+  htif_putc '!'
+  htif_putc 10
+
+  li a0, 0
+  slli a0, a0, 1
+  ori a0, a0, 1
+1:
+  sw a0, 0(t0)
+  sw zero, 4(t0)
+  j 1b
+`;
+
+const DEFAULT_DEBUG_LINKER_SCRIPT = `OUTPUT_ARCH("riscv")
+ENTRY(_start)
+__STACK_SIZE = 0x2000;
+
+MEMORY {
+  if_clint (wa) : org = 0x2000000, len = 768k
+  if_htif (wa)  : org = 0x20c0000, len = 512k
+  if_ram (wxa)  : org = 0x80000000, len = 512m
+}
+
+SECTIONS {
+  . = ORIGIN(if_ram);
+  .stack ALIGN(16) (NOLOAD) : {
+    _stack_end = .;
+    . += __STACK_SIZE;
+    . = ALIGN(16);
+    _stack = .;
+  } >if_ram
+  __global_pointer$ = .;
+  .text : { *(.text) } >if_ram
+  .data : { *(.data) } >if_ram
+  .rodata : { *(.rodata) } >if_ram
+  .bss (NOLOAD) : { *(.bss) } >if_ram
+  .sbss : { *(.sbss .sbss.* .gnu.linkonce.sb.*) *(.scommon) } >if_ram
+  .tdata : { *(.tdata) } >if_ram
+  .tbss : { *(.tbss) } >if_ram
+  .bss.mmio.htif : { *(.bss.mmio.htif) } >if_htif
+}
+`;
+
 function App() {
   const [output, setOutput] = useState('');
   const [configsState] = useAtom(configsLoadableAtom);
@@ -139,6 +213,10 @@ function App() {
   const [changedFRegs, setChangedFRegs] = useState([]);
   const [registerView, setRegisterView] = useState('x');
   const [stepBatchInput, setStepBatchInput] = useState('10');
+  const [asmSourceInput, setAsmSourceInput] = useState(DEFAULT_DEBUG_ASM_SOURCE);
+  const [linkerScriptInput, setLinkerScriptInput] = useState(DEFAULT_DEBUG_LINKER_SCRIPT);
+  const [gasMarchInput, setGasMarchInput] = useState('rv64imac');
+  const [gasAbiInput, setGasAbiInput] = useState('lp64');
   const applyTimerRef = useRef(null);
   const decodeTimerRef = useRef(null);
   const assembleTimerRef = useRef(null);
@@ -266,7 +344,7 @@ function App() {
 
     const tracePattern = /^(\[\d+\]|mem\[|x\d+\s<-|f\d+\s<-|v\d+\s<-|clint |csr |htif\[|htif-(?:syscall-proxy|term|debug)|pma|ptw|exception|interrupt)/i;
     const traceInlinePattern = /(\[\d+\]|mem\[|x\d+\s<-|f\d+\s<-|v\d+\s<-|clint |csr |htif\[|htif-(?:syscall-proxy|term|debug)|pma|ptw|exception|interrupt)/i;
-    const runtimePattern = /^(running|run watchdog|run timed out|run finished|selected:|htif located|entry point|success|failure:|program exited|committed steps:|exitstatus|debug error:)/i;
+    const runtimePattern = /^(running|run watchdog|run timed out|run finished|selected:|htif located|entry point|success|failure:|program exited|committed steps:|exitstatus|debug error:|gas:|ld:|\[gas\]|\[ld\])/i;
     const htifTermCmdPattern = /htif-(?:term|syscall-proxy)\s+cmd:\s*0x([0-9a-fA-F]+)/i;
     const htifTermCompatPattern = /htif-term compat byte:\s*0x([0-9a-fA-F]+)/i;
     const hasCompatTrace = lines.some((line) => htifTermCompatPattern.test(line));
@@ -432,6 +510,58 @@ function App() {
     }
   }, [applyDebugState, callDebugWorker, elfFile, resetDebugDiff, resolveConfigText]);
 
+  const buildAsmAndInitDebug = useCallback(async () => {
+    const configText = await resolveConfigText();
+    if (!configText) {
+      setElfRunStatus('Config not available.');
+      return false;
+    }
+    if (!asmSourceInput.trim()) {
+      setElfRunStatus('Assembly source is empty.');
+      return false;
+    }
+    if (!linkerScriptInput.trim()) {
+      setElfRunStatus('Linker script is empty.');
+      return false;
+    }
+
+    setDebugBusy(true);
+    setDebugReady(false);
+    setOutput('');
+    resetDebugDiff();
+    setElfRunStatus('Assembling + linking in worker...');
+
+    try {
+      const result = await callDebugWorker('assembleStart', {
+        configText,
+        asmText: asmSourceInput,
+        linkScriptText: linkerScriptInput,
+        gasMarch: gasMarchInput.trim() || 'rv64imac',
+        gasAbi: gasAbiInput.trim() || 'lp64',
+      });
+      applyDebugState(result.state, { resetDiff: true });
+      setDebugReady(true);
+      const elfSize = Number.isFinite(result.elfSize) ? Number(result.elfSize) : 0;
+      setElfRunStatus(`Built + initialized from assembly (${elfSize} bytes).`);
+      return true;
+    } catch (error) {
+      setDebugReady(false);
+      setElfRunStatus(`Build failed: ${error?.message || String(error)}`);
+      return false;
+    } finally {
+      setDebugBusy(false);
+    }
+  }, [
+    applyDebugState,
+    asmSourceInput,
+    callDebugWorker,
+    gasAbiInput,
+    gasMarchInput,
+    linkerScriptInput,
+    resetDebugDiff,
+    resolveConfigText,
+  ]);
+
   const stepElfDebug = useCallback(async (steps = 1) => {
     if (!debugReady) {
       setElfRunStatus('Debug session is not initialized.');
@@ -458,7 +588,7 @@ function App() {
   const runElfDebug = useCallback(async () => {
     let ready = debugReady;
     if (!ready) {
-      ready = await initElfDebug();
+      ready = elfFile ? await initElfDebug() : await buildAsmAndInitDebug();
     }
     if (!ready) {
       return;
@@ -482,7 +612,7 @@ function App() {
     } finally {
       setDebugBusy(false);
     }
-  }, [applyDebugState, callDebugWorker, debugReady, elfFile?.name, initElfDebug]);
+  }, [applyDebugState, buildAsmAndInitDebug, callDebugWorker, debugReady, elfFile, elfFile?.name, initElfDebug]);
 
   const resetElfDebug = useCallback(async () => {
     setDebugBusy(true);
@@ -1098,9 +1228,73 @@ function App() {
               </label>
 
               <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="rounded-lg border border-slate-200 bg-white p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Assembly Build (gas + ld)</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAsmSourceInput(DEFAULT_DEBUG_ASM_SOURCE);
+                        setLinkerScriptInput(DEFAULT_DEBUG_LINKER_SCRIPT);
+                        setGasMarchInput('rv64imac');
+                        setGasAbiInput('lp64');
+                      }}
+                      className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600 hover:border-slate-300"
+                    >
+                      Reset template
+                    </button>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <label className="space-y-1 text-[11px] font-medium text-slate-600">
+                      Program (.S)
+                      <textarea
+                        value={asmSourceInput}
+                        onChange={(event) => setAsmSourceInput(event.target.value)}
+                        spellCheck={false}
+                        className="h-48 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-[11px] text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                      />
+                    </label>
+                    <label className="space-y-1 text-[11px] font-medium text-slate-600">
+                      Linker script (ld)
+                      <textarea
+                        value={linkerScriptInput}
+                        onChange={(event) => setLinkerScriptInput(event.target.value)}
+                        spellCheck={false}
+                        className="h-48 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-[11px] text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                      />
+                    </label>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <label className="text-[11px] text-slate-600">
+                      -march
+                      <input
+                        value={gasMarchInput}
+                        onChange={(event) => setGasMarchInput(event.target.value)}
+                        className="ml-2 h-8 w-32 rounded border border-slate-300 bg-white px-2 font-mono text-[11px] text-slate-800"
+                      />
+                    </label>
+                    <label className="text-[11px] text-slate-600">
+                      -mabi
+                      <input
+                        value={gasAbiInput}
+                        onChange={(event) => setGasAbiInput(event.target.value)}
+                        className="ml-2 h-8 w-20 rounded border border-slate-300 bg-white px-2 font-mono text-[11px] text-slate-800"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={buildAsmAndInitDebug}
+                      disabled={debugBusy}
+                      className="h-8 rounded-lg border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Build + Init
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-3">
                   <label className="flex-1 min-w-[220px] text-xs font-medium text-slate-700">
-                    ELF file
+                    ELF file (optional, upload prebuilt ELF)
                     <input
                       type="file"
                       accept=".elf,application/octet-stream"
@@ -1150,7 +1344,7 @@ function App() {
                     <button
                       type="button"
                       onClick={runElfDebug}
-                      disabled={debugBusy || (!debugReady && !elfFile)}
+                      disabled={debugBusy || (!debugReady && !elfFile && !asmSourceInput.trim())}
                       className="h-10 rounded-lg border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Run
@@ -1166,7 +1360,7 @@ function App() {
                   </div>
                 </div>
                 <p className="mt-2 text-xs text-slate-500">
-                  {elfFile ? `Selected: ${elfFile.name}` : 'No ELF selected.'}
+                  {elfFile ? `Selected ELF: ${elfFile.name}` : 'No ELF selected (you can Build + Init from assembly).'}
                 </p>
                 {elfRunStatus && (
                   <p className="mt-1 text-xs text-slate-600">{elfRunStatus}</p>

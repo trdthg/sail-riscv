@@ -1,5 +1,6 @@
 sail*
 web/public/config
 web/public/wasm
+web/public/binutils
 web/public/udb
 .tmp

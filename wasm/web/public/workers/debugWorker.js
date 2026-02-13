@@ -3,6 +3,8 @@
 let debugModuleInstance = null;
 let debugModulePromise = null;
 let debugSessionReady = false;
+let gasFactory = null;
+let ldFactory = null;
 
 let outputLines = [];
 let emittedLineCount = 0;
@@ -86,6 +88,54 @@ const readDebugState = (Module) => {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const withCacheBust = (url, cacheBust) => {
+  if (!cacheBust) {
+    return url;
+  }
+  return `${url}${url.includes('?') ? '&' : '?'}v=${cacheBust}`;
+};
+
+const loadToolFactory = ({ baseUrl, cacheBust, relativePath, label }) => {
+  const normalizedBase = normalizeBaseUrl(baseUrl);
+  const scriptUrl = withCacheBust(`${normalizedBase}${relativePath}`, cacheBust);
+  try {
+    importScripts(scriptUrl);
+  } catch (error) {
+    throw new Error(
+      `Failed to load ${label} tool script: ${scriptUrl}. ` +
+      `Make sure wasm/web/public/${relativePath} exists (run binutils wasm build first).`
+    );
+  }
+  if (typeof self.Module !== 'function') {
+    throw new Error(`${label} factory is not available after loading ${relativePath}`);
+  }
+  return self.Module;
+};
+
+const getGasFactory = ({ baseUrl, cacheBust }) => {
+  if (!gasFactory) {
+    gasFactory = loadToolFactory({
+      baseUrl,
+      cacheBust,
+      relativePath: 'binutils/riscv64-linux-gnu.js',
+      label: 'gas',
+    });
+  }
+  return gasFactory;
+};
+
+const getLdFactory = ({ baseUrl, cacheBust }) => {
+  if (!ldFactory) {
+    ldFactory = loadToolFactory({
+      baseUrl,
+      cacheBust,
+      relativePath: 'binutils/ld.js',
+      label: 'ld',
+    });
+  }
+  return ldFactory;
+};
+
 const getDebugModule = async (baseUrl, cacheBust) => {
   if (debugModuleInstance) {
     return debugModuleInstance;
@@ -123,18 +173,7 @@ const getDebugModule = async (baseUrl, cacheBust) => {
   return debugModuleInstance;
 };
 
-const requireSession = (Module) => {
-  if (!debugSessionReady) {
-    throw new Error('Debug session is not initialized. Click Init ELF first.');
-  }
-  if (!Module || typeof Module._debug_state_json !== 'function') {
-    throw new Error('Debug runtime is not available.');
-  }
-};
-
-const startSession = async ({ requestId, baseUrl, cacheBust, configText, elfBytes }) => {
-  const Module = await getDebugModule(baseUrl, cacheBust);
-  clearOutput();
+const initDebugSessionWithElf = ({ requestId, Module, configText, elfBytes }) => {
   ensureDir(Module, '/debug');
   Module._debug_reset();
   debugSessionReady = false;
@@ -153,6 +192,169 @@ const startSession = async ({ requestId, baseUrl, cacheBust, configText, elfByte
   return {
     state: readDebugState(Module),
     committed: 0,
+  };
+};
+
+const runBinutilsModule = async ({
+  requestId,
+  factory,
+  label,
+  args,
+  preRun,
+}) => {
+  const stdoutLines = [];
+  const stderrLines = [];
+  const module = await factory({
+    arguments: args,
+    preRun: [
+      (toolModule) => {
+        ensureDir(toolModule, '/tmp');
+        if (typeof preRun === 'function') {
+          preRun(toolModule);
+        }
+      },
+    ],
+    print: (text) => {
+      const line = String(text);
+      stdoutLines.push(line);
+      pushOutputLine(`[${label}] ${line}`);
+    },
+    printErr: (text) => {
+      const line = String(text);
+      stderrLines.push(line);
+      pushOutputLine(`[${label}] ${line}`);
+    },
+  });
+  flushOutput(requestId, false);
+  return { module, stdoutLines, stderrLines };
+};
+
+const requireSession = (Module) => {
+  if (!debugSessionReady) {
+    throw new Error('Debug session is not initialized. Click Build + Init or Init ELF first.');
+  }
+  if (!Module || typeof Module._debug_state_json !== 'function') {
+    throw new Error('Debug runtime is not available.');
+  }
+};
+
+const startSession = async ({ requestId, baseUrl, cacheBust, configText, elfBytes }) => {
+  const Module = await getDebugModule(baseUrl, cacheBust);
+  clearOutput();
+  return initDebugSessionWithElf({
+    requestId,
+    Module,
+    configText,
+    elfBytes,
+  });
+};
+
+const assembleAndStartSession = async ({
+  requestId,
+  baseUrl,
+  cacheBust,
+  configText,
+  asmText,
+  linkScriptText,
+  gasMarch,
+  gasAbi,
+}) => {
+  const Module = await getDebugModule(baseUrl, cacheBust);
+  const sourceText = String(asmText || '');
+  const linkerText = String(linkScriptText || '');
+  if (!sourceText.trim()) {
+    throw new Error('Assembly source is empty.');
+  }
+  if (!linkerText.trim()) {
+    throw new Error('Linker script is empty.');
+  }
+
+  clearOutput();
+  pushOutputLine('Running in worker: assembling /tmp/program.S');
+  flushOutput(requestId, false);
+
+  const asFactory = getGasFactory({ baseUrl, cacheBust });
+  const linkerFactory = getLdFactory({ baseUrl, cacheBust });
+
+  const gasArgs = [
+    `-march=${String(gasMarch || 'rv64imac')}`,
+    `-mabi=${String(gasAbi || 'lp64')}`,
+    '-o',
+    '/tmp/program.o',
+    '/tmp/program.S',
+  ];
+  const gasResult = await runBinutilsModule({
+    requestId,
+    factory: asFactory,
+    label: 'gas',
+    args: gasArgs,
+    preRun: (gasModule) => {
+      gasModule.FS.writeFile('/tmp/program.S', sourceText);
+    },
+  });
+
+  let objectFile = null;
+  try {
+    objectFile = gasResult.module.FS.readFile('/tmp/program.o');
+  } catch {
+    objectFile = null;
+  }
+  if (!objectFile || objectFile.length === 0) {
+    const details = [...gasResult.stderrLines, ...gasResult.stdoutLines]
+      .filter((line) => line && line.trim())
+      .slice(-6)
+      .join('\n');
+    throw new Error(details ? `gas failed:\n${details}` : 'gas failed: no object file produced');
+  }
+
+  pushOutputLine(`gas: produced /tmp/program.o (${objectFile.length} bytes)`);
+  flushOutput(requestId, false);
+
+  const ldArgs = [
+    '-m',
+    'elf64lriscv',
+    '-T',
+    '/tmp/link.ld',
+    '-o',
+    '/tmp/program.elf',
+    '/tmp/program.o',
+  ];
+  const ldResult = await runBinutilsModule({
+    requestId,
+    factory: linkerFactory,
+    label: 'ld',
+    args: ldArgs,
+    preRun: (ldModule) => {
+      ldModule.FS.writeFile('/tmp/program.o', objectFile);
+      ldModule.FS.writeFile('/tmp/link.ld', linkerText);
+    },
+  });
+
+  let elfBytes = null;
+  try {
+    elfBytes = ldResult.module.FS.readFile('/tmp/program.elf');
+  } catch {
+    elfBytes = null;
+  }
+  if (!elfBytes || elfBytes.length === 0) {
+    const details = [...ldResult.stderrLines, ...ldResult.stdoutLines]
+      .filter((line) => line && line.trim())
+      .slice(-8)
+      .join('\n');
+    throw new Error(details ? `ld failed:\n${details}` : 'ld failed: no ELF produced');
+  }
+
+  pushOutputLine(`ld: produced /tmp/program.elf (${elfBytes.length} bytes)`);
+  flushOutput(requestId, false);
+
+  return {
+    ...(initDebugSessionWithElf({
+      requestId,
+      Module,
+      configText,
+      elfBytes,
+    })),
+    elfSize: elfBytes.length,
   };
 };
 
@@ -250,6 +452,18 @@ self.onmessage = async (event) => {
           cacheBust: message.cacheBust,
           configText: message.configText,
           elfBytes: message.elfBytes,
+        });
+        break;
+      case 'assembleStart':
+        result = await assembleAndStartSession({
+          requestId,
+          baseUrl: message.baseUrl,
+          cacheBust: message.cacheBust,
+          configText: message.configText,
+          asmText: message.asmText,
+          linkScriptText: message.linkScriptText,
+          gasMarch: message.gasMarch,
+          gasAbi: message.gasAbi,
         });
         break;
       case 'step':

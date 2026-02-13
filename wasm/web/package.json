@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "predev": "node scripts/build-udb-index.mjs",
+    "predev": "node scripts/build-udb-index.mjs && node scripts/sync-binutils-assets.mjs",
     "dev": "vite",
-    "prebuild": "node scripts/build-udb-index.mjs",
+    "prebuild": "node scripts/build-udb-index.mjs && node scripts/sync-binutils-assets.mjs",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

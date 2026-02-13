@@ -69,6 +69,22 @@ echo "built: ${repo_root}/wasm/web/public/sail_riscv_sim.js"
 echo "built: ${repo_root}/wasm/web/public/sail_riscv_sim.wasm"
 echo "built: ${repo_root}/wasm/web/public/sail_riscv_debug.js"
 echo "built: ${repo_root}/wasm/web/public/sail_riscv_debug.wasm"
+
+binutils_public="${repo_root}/wasm/web/public/binutils"
+gas_src="${repo_root}/wasm/binutils-wasm/packages/gas/build/dist/cjs/riscv64-linux-gnu.js"
+ld_src="${repo_root}/wasm/binutils-wasm/packages/binutils/build/dist/cjs/ld.js"
+mkdir -p "${binutils_public}"
+if [[ -f "${gas_src}" && -f "${ld_src}" ]]; then
+  cp -f "${gas_src}" "${binutils_public}/riscv64-linux-gnu.js"
+  cp -f "${ld_src}" "${binutils_public}/ld.js"
+  echo "built: ${binutils_public}/riscv64-linux-gnu.js"
+  echo "built: ${binutils_public}/ld.js"
+else
+  echo "warn: binutils wasm assets not found; run:" >&2
+  echo "  pnpm -C wasm/binutils-wasm/packages/gas run build:wasm" >&2
+  echo "  pnpm -C wasm/binutils-wasm/packages/binutils run build:wasm" >&2
+fi
+
 cp -f "${repo_root}/wasm/web/public/"*.wasm "${repo_root}/wasm/web/public/"*.js "${repo_root}/wasm/web/public/wasm/"
 config_src="${repo_root}/build-emscripten/config"
 if compgen -G "${config_src}/*.json" > /dev/null; then
