@@ -19,6 +19,7 @@ export function RuntimePage({
   setStepBatchInput,
   runtimeInputMode,
   setRuntimeInputMode,
+  onSwitchToEdit,
   stepBatchInput,
   activeSourceLine,
   activeExpandedSourceLine,
@@ -31,6 +32,7 @@ export function RuntimePage({
   asmSourceInput,
   expandedAsmSourceInput,
   uploadDisasmInput,
+  linkerScriptInput,
   activeEditorTab,
   setActiveEditorTab,
   runtimeEditorLanguage,
@@ -42,19 +44,17 @@ export function RuntimePage({
   setRuntimeLogTab,
   setOutput,
   runtimeLogText,
-  runtimeLogStats,
   debugState,
   registerView,
   setRegisterView,
   debugRegisterRows,
-  elfRunStatus,
 }) {
   const mainRef = useRef(null);
   const [splitRatio, setSplitRatio] = useState(58);
   const [isResizing, setIsResizing] = useState(false);
   const shellClass = isDark
-    ? 'border-r border-slate-700 bg-slate-900 text-slate-100'
-    : 'border-r border-slate-300 bg-white text-slate-900';
+    ? 'border-l border-slate-700 bg-slate-900 text-slate-100'
+    : 'border-l border-slate-300 bg-white text-slate-900';
 
   useEffect(() => {
     if (!isResizing) return undefined;
@@ -64,9 +64,10 @@ export function RuntimePage({
       const bounds = container.getBoundingClientRect();
       if (bounds.width <= 0) return;
       const relativeX = event.clientX - bounds.left;
-      const nextRatio = (relativeX / bounds.width) * 100;
-      const clamped = Math.max(34, Math.min(78, nextRatio));
-      setSplitRatio(clamped);
+      const leftRatio = (relativeX / bounds.width) * 100;
+      const editorRatio = 100 - leftRatio;
+      const clampedEditor = Math.max(34, Math.min(78, editorRatio));
+      setSplitRatio(clampedEditor);
     };
     const onMouseUp = () => setIsResizing(false);
     window.addEventListener('mousemove', onMouseMove);
@@ -86,9 +87,9 @@ export function RuntimePage({
       <main
         ref={mainRef}
         className="flex-1 w-full min-h-0 lg:grid"
-        style={{ gridTemplateColumns: `${splitRatio}fr 8px ${100 - splitRatio}fr` }}
+        style={{ gridTemplateColumns: `${100 - splitRatio}fr 8px ${splitRatio}fr` }}
       >
-        <section className={`flex min-h-0 flex-col overflow-hidden ${shellClass}`}>
+        <section className={`flex min-h-0 flex-col overflow-hidden lg:col-start-3 ${shellClass}`}>
           <RuntimeToolbar
             isDark={isDark}
             configPath={configPath}
@@ -96,6 +97,7 @@ export function RuntimePage({
             configsState={configsState}
             runtimeInputMode={runtimeInputMode}
             setRuntimeInputMode={setRuntimeInputMode}
+            onSwitchToEdit={onSwitchToEdit}
             gasMarchInput={gasMarchInput}
             setGasMarchInput={setGasMarchInput}
             gasAbiInput={gasAbiInput}
@@ -126,11 +128,15 @@ export function RuntimePage({
             runtimeEditorReadOnly={runtimeEditorReadOnly}
             handleRuntimeEditorChange={handleRuntimeEditorChange}
             handleRuntimeEditorMount={handleRuntimeEditorMount}
+            runtimeInputMode={runtimeInputMode}
+            asmSourceInput={asmSourceInput}
+            expandedAsmSourceInput={expandedAsmSourceInput}
+            linkerScriptInput={linkerScriptInput}
+            uploadDisasmInput={uploadDisasmInput}
             runtimeLogTab={runtimeLogTab}
             setRuntimeLogTab={setRuntimeLogTab}
             setOutput={setOutput}
             runtimeLogText={runtimeLogText}
-            runtimeLogStats={runtimeLogStats}
           />
         </section>
 
@@ -142,24 +148,19 @@ export function RuntimePage({
           aria-label="Resize panes"
         />
 
-        <RuntimeSidebar
-          isDark={isDark}
-          debugReady={debugReady}
-          debugBusy={debugBusy}
-          debugState={debugState}
-          registerView={registerView}
-          setRegisterView={setRegisterView}
-          debugRegisterRows={debugRegisterRows}
-          configsState={configsState}
-        />
+        <div className="min-h-0 lg:col-start-1">
+          <RuntimeSidebar
+            isDark={isDark}
+            debugReady={debugReady}
+            debugBusy={debugBusy}
+            debugState={debugState}
+            registerView={registerView}
+            setRegisterView={setRegisterView}
+            debugRegisterRows={debugRegisterRows}
+            configsState={configsState}
+          />
+        </div>
       </main>
-      <div className={`box-border h-8 min-h-8 flex-shrink-0 overflow-hidden border-t px-3 text-[11px] font-medium flex items-center ${
-        isDark ? 'border-slate-700 bg-slate-900 text-slate-300' : 'border-slate-200 bg-slate-50 text-slate-600'
-      }`}>
-        <span className="block min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap">
-          {elfRunStatus || (debugBusy ? 'Running...' : 'Ready')}
-        </span>
-      </div>
     </div>
   );
 }

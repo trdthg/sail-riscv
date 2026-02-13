@@ -10,6 +10,11 @@ import { getRuntimeModule } from './lib/sailRuntime.js';
 import { udbIndexLoadableAtom } from './lib/udbIndex.js';
 import { configEditorAtom, configPathAtom, configsLoadableAtom } from './state/configAtoms.js';
 import { isaLoadableAtom, isaRefreshAtom } from './state/isaAtoms.js';
+import {
+  DEFAULT_DEBUG_ASM_SOURCE,
+  DEFAULT_DEBUG_LINKER_SCRIPT,
+  useRuntimeWorkspaceState,
+} from './state/runtimeWorkspaceState.js';
 
 const MAX_BITS = 32;
 const MAX_HEX = MAX_BITS / 4;
@@ -111,80 +116,6 @@ const assemblyStatusStyles = {
   error: 'border-rose-200 bg-rose-50 text-rose-700',
 };
 
-const DEFAULT_DEBUG_ASM_SOURCE = `.section .bss.mmio.htif
-.balign 8
-.global tohost
-tohost:
-  .zero 8
-.balign 8
-.global fromhost
-fromhost:
-  .zero 8
-
-.macro htif_putc value
-  li a0, \\value
-  sw a0, 0(t0)
-  li a0, 0x01010000
-  sw a0, 4(t0)
-.endm
-
-.section .text
-.global _start
-_start:
-  la t0, tohost
-  htif_putc 'H'
-  htif_putc 'e'
-  htif_putc 'l'
-  htif_putc 'l'
-  htif_putc 'o'
-  htif_putc ','
-  htif_putc ' '
-  htif_putc 'S'
-  htif_putc 'a'
-  htif_putc 'i'
-  htif_putc 'l'
-  htif_putc '!'
-  htif_putc 10
-
-  li a0, 0
-  slli a0, a0, 1
-  ori a0, a0, 1
-1:
-  sw a0, 0(t0)
-  sw zero, 4(t0)
-  j 1b
-`;
-
-const DEFAULT_DEBUG_LINKER_SCRIPT = `OUTPUT_ARCH("riscv")
-ENTRY(_start)
-__STACK_SIZE = 0x2000;
-
-MEMORY {
-  if_clint (wa) : org = 0x2000000, len = 768k
-  if_htif (wa)  : org = 0x20c0000, len = 512k
-  if_ram (wxa)  : org = 0x80000000, len = 512m
-}
-
-SECTIONS {
-  . = ORIGIN(if_ram);
-  .stack ALIGN(16) (NOLOAD) : {
-    _stack_end = .;
-    . += __STACK_SIZE;
-    . = ALIGN(16);
-    _stack = .;
-  } >if_ram
-  __global_pointer$ = .;
-  .text : { *(.text) } >if_ram
-  .data : { *(.data) } >if_ram
-  .rodata : { *(.rodata) } >if_ram
-  .bss (NOLOAD) : { *(.bss) } >if_ram
-  .sbss : { *(.sbss .sbss.* .gnu.linkonce.sb.*) *(.scommon) } >if_ram
-  .tdata : { *(.tdata) } >if_ram
-  .tbss : { *(.tbss) } >if_ram
-  .bss.mmio.htif : { *(.bss.mmio.htif) } >if_htif
-}
-`;
-
 function App() {
   const [output, setOutput] = useState('');
   const [configsState] = useAtom(configsLoadableAtom);
@@ -204,29 +135,37 @@ function App() {
   const [configEditor, setConfigEditor] = useAtom(configEditorAtom);
   const [configEditorStatus, setConfigEditorStatus] = useState('');
   const [decodeMode, setDecodeMode] = useState('auto');
-  const [elfFile, setElfFile] = useState(null);
-  const [elfRunStatus, setElfRunStatus] = useState('');
-  const [debugReady, setDebugReady] = useState(false);
-  const [debugBusy, setDebugBusy] = useState(false);
-  const [debugState, setDebugState] = useState(null);
-  const [changedXRegs, setChangedXRegs] = useState([]);
-  const [changedFRegs, setChangedFRegs] = useState([]);
-  const [registerView, setRegisterView] = useState('x');
-  const [stepBatchInput, setStepBatchInput] = useState('10');
   const [activePage, setActivePage] = useState('explorer');
-  const [runtimeLogTab, setRuntimeLogTab] = useState('program');
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') return 'light';
     return window.localStorage.getItem('sail-theme') === 'dark' ? 'dark' : 'light';
   });
-  const [runtimeInputMode, setRuntimeInputMode] = useState('edit');
-  const [activeEditorTab, setActiveEditorTab] = useState('program');
-  const [asmSourceInput, setAsmSourceInput] = useState(DEFAULT_DEBUG_ASM_SOURCE);
-  const [expandedAsmSourceInput, setExpandedAsmSourceInput] = useState('');
-  const [uploadDisasmInput, setUploadDisasmInput] = useState('');
-  const [linkerScriptInput, setLinkerScriptInput] = useState(DEFAULT_DEBUG_LINKER_SCRIPT);
-  const [gasMarchInput, setGasMarchInput] = useState('rv64imac');
-  const [gasAbiInput, setGasAbiInput] = useState('lp64');
+  const {
+    state: runtimeState,
+    setRuntimeField,
+    patchRuntimeState,
+    resetEditDefaults,
+  } = useRuntimeWorkspaceState();
+  const {
+    uploadElfFile,
+    elfRunStatus,
+    debugReady,
+    debugBusy,
+    debugState,
+    changedXRegs,
+    changedFRegs,
+    registerView,
+    stepBatchInput,
+    runtimeLogTab,
+    runtimeInputMode,
+    editEditorTab,
+    asmSourceInput,
+    expandedAsmSourceInput,
+    uploadDisasmInput,
+    linkerScriptInput,
+    gasMarchInput,
+    gasAbiInput,
+  } = runtimeState;
   const applyTimerRef = useRef(null);
   const decodeTimerRef = useRef(null);
   const assembleTimerRef = useRef(null);
@@ -258,15 +197,17 @@ function App() {
   }, []);
 
   const resetDebugDiff = useCallback(() => {
-    setChangedXRegs([]);
-    setChangedFRegs([]);
+    patchRuntimeState({
+      changedXRegs: [],
+      changedFRegs: [],
+    });
     previousDebugRegsRef.current = { xregs: null, fregs: null, pc: '' };
-  }, []);
+  }, [patchRuntimeState]);
 
   const applyDebugState = useCallback((state, options = {}) => {
     const resetDiff = Boolean(options.resetDiff);
     if (!state || typeof state !== 'object') {
-      setDebugState(null);
+      setRuntimeField('debugState', null);
       if (resetDiff) {
         resetDebugDiff();
       }
@@ -278,11 +219,15 @@ function App() {
     const prev = previousDebugRegsRef.current;
 
     if (resetDiff || !Array.isArray(prev.xregs)) {
-      setChangedXRegs(new Array(xregs.length).fill(false));
-      setChangedFRegs(new Array(fregs.length).fill(false));
+      patchRuntimeState({
+        changedXRegs: new Array(xregs.length).fill(false),
+        changedFRegs: new Array(fregs.length).fill(false),
+      });
     } else {
-      setChangedXRegs(xregs.map((value, index) => prev.xregs[index] !== value));
-      setChangedFRegs(fregs.map((value, index) => prev.fregs[index] !== value));
+      patchRuntimeState({
+        changedXRegs: xregs.map((value, index) => prev.xregs[index] !== value),
+        changedFRegs: fregs.map((value, index) => prev.fregs[index] !== value),
+      });
     }
 
     previousDebugRegsRef.current = {
@@ -290,8 +235,8 @@ function App() {
       fregs: fregs.slice(),
       pc: state.pc || '',
     };
-    setDebugState(state);
-  }, [resetDebugDiff]);
+    setRuntimeField('debugState', state);
+  }, [patchRuntimeState, resetDebugDiff, setRuntimeField]);
 
   const ensureDebugWorker = useCallback(() => {
     if (debugWorkerRef.current) {
@@ -364,6 +309,24 @@ function App() {
   }, [debugState, parsedRuntimeOutput.programText]);
 
   const runtimeLogText = useMemo(() => {
+    if (runtimeLogTab === 'status') {
+      const lines = [];
+      if (elfRunStatus) {
+        lines.push(elfRunStatus);
+      }
+      if (parsedRuntimeOutput.runtimeLines.length > 0) {
+        lines.push(...parsedRuntimeOutput.runtimeLines);
+      }
+      return lines.length ? lines.join('\n') : '(no status lines)';
+    }
+    if (runtimeLogTab === 'build') {
+      const sourceLines = output ? output.split('\n').filter((line) => line.length > 0) : [];
+      const buildLines = sourceLines.filter((line) => /(\[gas\]|\[ld\]|\[readelf\]|gas failed|ld failed|readelf failed|error:|undefined reference|collect2:)/i.test(line));
+      if (elfRunStatus && /(build failed|gas failed|ld failed|readelf failed|error)/i.test(elfRunStatus)) {
+        buildLines.unshift(elfRunStatus);
+      }
+      return buildLines.length ? buildLines.join('\n') : '(no build/link errors)';
+    }
     if (runtimeLogTab === 'summary') {
       return parsedRuntimeOutput.runtimeLines.join('\n') || '(no runtime summary)';
     }
@@ -371,23 +334,7 @@ function App() {
       return parsedRuntimeOutput.traceLines.join('\n') || '(no trace lines)';
     }
     return displayedProgramOutput || '(no decoded program output)';
-  }, [displayedProgramOutput, parsedRuntimeOutput.runtimeLines, parsedRuntimeOutput.traceLines, runtimeLogTab]);
-
-  const runtimeLogStats = useMemo(() => {
-    const safeLineCount = (text) => {
-      if (!text || text.startsWith('(no ')) {
-        return 0;
-      }
-      return text.split('\n').length;
-    };
-    return {
-      tab: runtimeLogTab,
-      currentLines: safeLineCount(runtimeLogText),
-      programLines: safeLineCount(displayedProgramOutput),
-      summaryLines: parsedRuntimeOutput.runtimeLines.length,
-      traceLines: parsedRuntimeOutput.traceLines.length,
-    };
-  }, [displayedProgramOutput, parsedRuntimeOutput.runtimeLines.length, parsedRuntimeOutput.traceLines.length, runtimeLogTab, runtimeLogText]);
+  }, [displayedProgramOutput, elfRunStatus, output, parsedRuntimeOutput.runtimeLines, parsedRuntimeOutput.traceLines, runtimeLogTab]);
 
   useEffect(() => {
     window.__sailOutputSink = append;
@@ -486,28 +433,28 @@ function App() {
   }, [append, resolveConfigText]);
 
   const initElfDebug = useCallback(async (overrideElfFile = null) => {
-    const targetElfFile = overrideElfFile || elfFile;
+    const targetElfFile = overrideElfFile || uploadElfFile;
     if (!targetElfFile) {
-      setElfRunStatus('Please choose an ELF file.');
+      setRuntimeField('elfRunStatus', 'Please choose an ELF file.');
       return false;
     }
     const configText = await resolveConfigText();
     if (!configText) {
-      setElfRunStatus('Config not available.');
+      setRuntimeField('elfRunStatus', 'Config not available.');
       return false;
     }
 
     const bytes = new Uint8Array(await targetElfFile.arrayBuffer());
-    setElfFile(targetElfFile);
-    setDebugBusy(true);
-    setDebugReady(false);
+    patchRuntimeState({
+      uploadElfFile: targetElfFile,
+      debugBusy: true,
+      debugReady: false,
+      runtimeInputMode: 'upload',
+      uploadDisasmInput: '',
+      elfRunStatus: `Initializing ${targetElfFile.name}...`,
+    });
     setOutput('');
-    setRuntimeInputMode('upload');
-    setActiveEditorTab('upload-disasm');
-    setExpandedAsmSourceInput('');
-    setUploadDisasmInput('');
     resetDebugDiff();
-    setElfRunStatus(`Initializing ${targetElfFile.name}...`);
 
     try {
       const result = await callDebugWorker(
@@ -515,58 +462,78 @@ function App() {
         {
           configText,
           elfBytes: bytes.buffer,
+          elfName: targetElfFile.name,
         },
         [bytes.buffer]
       );
       applyDebugState(result.state, { resetDiff: true });
-      setExpandedAsmSourceInput(typeof result.expandedSourceText === 'string' ? result.expandedSourceText : '');
-      setUploadDisasmInput(typeof result.disassemblyText === 'string' ? result.disassemblyText : '');
-      setDebugReady(true);
-      setElfRunStatus(`Initialized: ${targetElfFile.name}`);
+      patchRuntimeState({
+        uploadDisasmInput: typeof result.disassemblyText === 'string' ? result.disassemblyText : '',
+        debugReady: true,
+        elfRunStatus: `Initialized: ${targetElfFile.name}`,
+      });
       return true;
     } catch (error) {
-      setDebugReady(false);
-      setElfRunStatus(`Init failed: ${error?.message || String(error)}`);
+      patchRuntimeState({
+        debugReady: false,
+        elfRunStatus: `Init failed: ${error?.message || String(error)}`,
+      });
       return false;
     } finally {
-      setDebugBusy(false);
+      setRuntimeField('debugBusy', false);
     }
-  }, [applyDebugState, callDebugWorker, elfFile, resetDebugDiff, resolveConfigText]);
+  }, [applyDebugState, callDebugWorker, patchRuntimeState, resetDebugDiff, resolveConfigText, setRuntimeField, uploadElfFile]);
 
   const onUploadElf = useCallback((file) => {
     if (!file) {
       return;
     }
-    setRuntimeInputMode('upload');
-    setActiveEditorTab('upload-disasm');
-    setElfFile(file);
+    patchRuntimeState({
+      runtimeInputMode: 'upload',
+      uploadElfFile: file,
+    });
     void initElfDebug(file);
-  }, [initElfDebug]);
+  }, [initElfDebug, patchRuntimeState]);
+
+  const switchToEditMode = useCallback(() => {
+    patchRuntimeState({
+      runtimeInputMode: 'edit',
+      editEditorTab: 'program',
+      debugState: null,
+      debugReady: false,
+      changedXRegs: [],
+      changedFRegs: [],
+      elfRunStatus: 'Edit mode',
+    });
+    previousDebugRegsRef.current = { xregs: null, fregs: null, pc: '' };
+  }, [patchRuntimeState]);
 
   const buildAsmAndInitDebug = useCallback(async () => {
     const configText = await resolveConfigText();
     if (!configText) {
-      setElfRunStatus('Config not available.');
+      setRuntimeField('elfRunStatus', 'Config not available.');
       return false;
     }
     if (!asmSourceInput.trim()) {
-      setElfRunStatus('Assembly source is empty.');
+      setRuntimeField('elfRunStatus', 'Assembly source is empty.');
       return false;
     }
     if (!linkerScriptInput.trim()) {
-      setElfRunStatus('Linker script is empty.');
+      setRuntimeField('elfRunStatus', 'Linker script is empty.');
       return false;
     }
 
-    setDebugBusy(true);
-    setDebugReady(false);
+    patchRuntimeState({
+      debugBusy: true,
+      debugReady: false,
+      runtimeInputMode: 'edit',
+      editEditorTab: 'program',
+      expandedAsmSourceInput: '',
+      uploadDisasmInput: '',
+      elfRunStatus: 'Assembling + linking in worker...',
+    });
     setOutput('');
-    setRuntimeInputMode('edit');
-    setActiveEditorTab('program');
-    setExpandedAsmSourceInput('');
-    setUploadDisasmInput('');
     resetDebugDiff();
-    setElfRunStatus('Assembling + linking in worker...');
 
     try {
       const result = await callDebugWorker('assembleStart', {
@@ -577,20 +544,24 @@ function App() {
         gasAbi: gasAbiInput.trim() || 'lp64',
       });
       applyDebugState(result.state, { resetDiff: true });
-      setExpandedAsmSourceInput(typeof result.expandedSourceText === 'string' ? result.expandedSourceText : '');
-      setUploadDisasmInput(typeof result.disassemblyText === 'string' ? result.disassemblyText : '');
-      setDebugReady(true);
       const elfSize = Number.isFinite(result.elfSize) ? Number(result.elfSize) : 0;
       const lineEntries = Number.isFinite(result.lineMapEntries) ? Number(result.lineMapEntries) : 0;
       const expandedEntries = Number.isFinite(result.expandedMapEntries) ? Number(result.expandedMapEntries) : 0;
-      setElfRunStatus(`Built + initialized from assembly (${elfSize} bytes, ${lineEntries} line entries, ${expandedEntries} expanded entries).`);
+      patchRuntimeState({
+        expandedAsmSourceInput: typeof result.expandedSourceText === 'string' ? result.expandedSourceText : '',
+        uploadDisasmInput: typeof result.disassemblyText === 'string' ? result.disassemblyText : '',
+        debugReady: true,
+        elfRunStatus: `Built + initialized from assembly (${elfSize} bytes, ${lineEntries} line entries, ${expandedEntries} expanded entries).`,
+      });
       return true;
     } catch (error) {
-      setDebugReady(false);
-      setElfRunStatus(`Build failed: ${error?.message || String(error)}`);
+      patchRuntimeState({
+        debugReady: false,
+        elfRunStatus: `Build failed: ${error?.message || String(error)}`,
+      });
       return false;
     } finally {
-      setDebugBusy(false);
+      setRuntimeField('debugBusy', false);
     }
   }, [
     applyDebugState,
@@ -599,32 +570,34 @@ function App() {
     gasAbiInput,
     gasMarchInput,
     linkerScriptInput,
+    patchRuntimeState,
     resetDebugDiff,
     resolveConfigText,
+    setRuntimeField,
   ]);
 
   const stepElfDebug = useCallback(async (steps = 1) => {
     if (!debugReady) {
-      setElfRunStatus('Debug session is not initialized.');
+      setRuntimeField('elfRunStatus', 'Debug session is not initialized.');
       return;
     }
-    setDebugBusy(true);
+    setRuntimeField('debugBusy', true);
     try {
       const result = await callDebugWorker('step', { steps: Math.max(1, steps | 0) });
       applyDebugState(result.state);
       const halted = Boolean(result?.state?.halted);
       const exitCode = Number.isFinite(result?.state?.exitCode) ? Number(result.state.exitCode) : 0;
       if (halted) {
-        setElfRunStatus(`Halted (exit=${exitCode})`);
+        setRuntimeField('elfRunStatus', `Halted (exit=${exitCode})`);
       } else {
-        setElfRunStatus(`Stepped ${result.committed || 0} instruction(s).`);
+        setRuntimeField('elfRunStatus', `Stepped ${result.committed || 0} instruction(s).`);
       }
     } catch (error) {
-      setElfRunStatus(`Step failed: ${error?.message || String(error)}`);
+      setRuntimeField('elfRunStatus', `Step failed: ${error?.message || String(error)}`);
     } finally {
-      setDebugBusy(false);
+      setRuntimeField('debugBusy', false);
     }
-  }, [applyDebugState, callDebugWorker, debugReady]);
+  }, [applyDebugState, callDebugWorker, debugReady, setRuntimeField]);
 
   const runElfDebug = useCallback(async () => {
     let ready = debugReady;
@@ -632,14 +605,16 @@ function App() {
       if (runtimeInputMode === 'upload') {
         ready = await initElfDebug();
       } else {
-        ready = elfFile ? await initElfDebug() : await buildAsmAndInitDebug();
+        ready = await buildAsmAndInitDebug();
       }
     }
     if (!ready) {
       return;
     }
-    setDebugBusy(true);
-    setElfRunStatus('Running to completion...');
+    patchRuntimeState({
+      debugBusy: true,
+      elfRunStatus: 'Running to completion...',
+    });
     try {
       const result = await callDebugWorker('run', {
         chunk: 5000,
@@ -648,50 +623,52 @@ function App() {
       applyDebugState(result.state);
       const exitCode = Number.isFinite(result?.state?.exitCode) ? Number(result.state.exitCode) : 0;
       if (exitCode === 0) {
-        setElfRunStatus(`Run finished: ${elfFile?.name || 'ELF'}`);
+        const runName = runtimeInputMode === 'upload' ? (uploadElfFile?.name || 'ELF') : 'assembly';
+        setRuntimeField('elfRunStatus', `Run finished: ${runName}`);
       } else {
-        setElfRunStatus(`Run failed with exit code ${exitCode}`);
+        setRuntimeField('elfRunStatus', `Run failed with exit code ${exitCode}`);
       }
     } catch (error) {
-      setElfRunStatus(`Run failed: ${error?.message || String(error)}`);
+      setRuntimeField('elfRunStatus', `Run failed: ${error?.message || String(error)}`);
     } finally {
-      setDebugBusy(false);
+      setRuntimeField('debugBusy', false);
     }
-  }, [applyDebugState, buildAsmAndInitDebug, callDebugWorker, debugReady, elfFile, elfFile?.name, initElfDebug, runtimeInputMode]);
+  }, [applyDebugState, buildAsmAndInitDebug, callDebugWorker, debugReady, initElfDebug, patchRuntimeState, runtimeInputMode, setRuntimeField, uploadElfFile?.name]);
 
-  const resetElfDebug = useCallback(async () => {
-    setDebugBusy(true);
+  const resetElfDebug = useCallback(async ({ preserveEditBuffers = false } = {}) => {
+    setRuntimeField('debugBusy', true);
     try {
       await callDebugWorker('reset');
     } catch {
       // reset best-effort
     } finally {
-      setDebugBusy(false);
-      setDebugReady(false);
-      setDebugState(null);
-      setExpandedAsmSourceInput('');
-      setUploadDisasmInput('');
+      const nextState = {
+        debugBusy: false,
+        debugReady: false,
+        debugState: null,
+        uploadDisasmInput: '',
+        elfRunStatus: 'Debug session reset.',
+      };
+      if (!preserveEditBuffers) {
+        nextState.expandedAsmSourceInput = '';
+      }
+      patchRuntimeState(nextState);
       resetDebugDiff();
-      setElfRunStatus('Debug session reset.');
     }
-  }, [callDebugWorker, resetDebugDiff]);
+  }, [callDebugWorker, patchRuntimeState, resetDebugDiff, setRuntimeField]);
 
   const onToolbarReset = useCallback(async () => {
     if (runtimeInputMode === 'upload') {
-      await resetElfDebug();
-      setElfFile(null);
-      setElfRunStatus('Upload cleared.');
+      await resetElfDebug({ preserveEditBuffers: true });
+      patchRuntimeState({
+        uploadElfFile: null,
+        elfRunStatus: 'Upload cleared.',
+      });
       return;
     }
-    setAsmSourceInput(DEFAULT_DEBUG_ASM_SOURCE);
-    setLinkerScriptInput(DEFAULT_DEBUG_LINKER_SCRIPT);
-    setGasMarchInput('rv64imac');
-    setGasAbiInput('lp64');
-    setActiveEditorTab('program');
-    setElfFile(null);
-    setUploadDisasmInput('');
-    setElfRunStatus('Edit defaults restored.');
-  }, [resetElfDebug, runtimeInputMode]);
+    resetEditDefaults();
+    setRuntimeField('elfRunStatus', 'Edit defaults restored.');
+  }, [patchRuntimeState, resetEditDefaults, resetElfDebug, runtimeInputMode, setRuntimeField]);
 
   const runPrintIsa = useCallback(async () => {
     refreshIsa((value) => value + 1);
@@ -853,12 +830,16 @@ function App() {
     return value;
   }, [debugState?.uploadDisasmLine]);
 
+  const runtimeActiveEditorTab = useMemo(() => {
+    return runtimeInputMode === 'upload' ? 'upload-disasm' : editEditorTab;
+  }, [editEditorTab, runtimeInputMode]);
+
   const activeRuntimeEditorLine = useMemo(() => {
     if (runtimeInputMode === 'upload') {
       return activeUploadDisasmLine;
     }
-    return activeEditorTab === 'expanded' ? activeExpandedSourceLine : activeSourceLine;
-  }, [activeEditorTab, activeExpandedSourceLine, activeSourceLine, activeUploadDisasmLine, runtimeInputMode]);
+    return runtimeActiveEditorTab === 'expanded' ? activeExpandedSourceLine : activeSourceLine;
+  }, [activeExpandedSourceLine, activeSourceLine, activeUploadDisasmLine, runtimeActiveEditorTab, runtimeInputMode]);
 
   useEffect(() => {
     if (!monacoEditorRef.current || !monacoRef.current) {
@@ -870,7 +851,7 @@ function App() {
     if (!model) {
       return;
     }
-    if (!['program', 'expanded', 'upload-disasm'].includes(activeEditorTab) || !activeRuntimeEditorLine || activeRuntimeEditorLine > model.getLineCount()) {
+    if (!['program', 'expanded', 'upload-disasm'].includes(runtimeActiveEditorTab) || !activeRuntimeEditorLine || activeRuntimeEditorLine > model.getLineCount()) {
       monacoDecorationsRef.current = editor.deltaDecorations(monacoDecorationsRef.current, []);
       return;
     }
@@ -890,41 +871,50 @@ function App() {
         },
       },
     ]);
-  }, [activeEditorTab, activeRuntimeEditorLine, asmSourceInput, expandedAsmSourceInput, linkerScriptInput, runtimeInputMode, uploadDisasmInput]);
+  }, [activeRuntimeEditorLine, asmSourceInput, expandedAsmSourceInput, linkerScriptInput, runtimeActiveEditorTab, runtimeInputMode, uploadDisasmInput]);
 
   const runtimeEditorValue = runtimeInputMode === 'upload'
-    ? (uploadDisasmInput || '; upload an ELF and click Init ELF to generate disassembly')
-    : activeEditorTab === 'program'
+    ? (uploadDisasmInput || '; upload an ELF to generate disassembly')
+    : runtimeActiveEditorTab === 'program'
       ? asmSourceInput
-      : activeEditorTab === 'expanded'
+      : runtimeActiveEditorTab === 'expanded'
         ? expandedAsmSourceInput
         : linkerScriptInput;
   const runtimeEditorLanguage = runtimeInputMode === 'upload'
     ? 'asm'
-    : activeEditorTab === 'linker'
+    : runtimeActiveEditorTab === 'linker'
       ? 'plaintext'
       : 'asm';
-  const runtimeEditorReadOnly = runtimeInputMode === 'upload' || activeEditorTab === 'expanded';
+  const runtimeEditorReadOnly = runtimeInputMode === 'upload' || runtimeActiveEditorTab === 'expanded';
 
   const handleRuntimeEditorMount = useCallback((editor, monaco) => {
     monacoEditorRef.current = editor;
     monacoRef.current = monaco;
   }, []);
 
-  const handleRuntimeEditorChange = useCallback((value) => {
+  const handleRuntimeEditorChange = useCallback((value, event) => {
+    if (event?.isFlush) {
+      return;
+    }
     const next = value ?? '';
     if (runtimeInputMode === 'upload') {
       return;
     }
-    if (activeEditorTab === 'program') {
-      setAsmSourceInput(next);
+    if (runtimeActiveEditorTab === 'program') {
+      setRuntimeField('asmSourceInput', next);
       return;
     }
-    if (activeEditorTab === 'expanded') {
+    if (runtimeActiveEditorTab === 'expanded') {
       return;
     }
-    setLinkerScriptInput(next);
-  }, [activeEditorTab, runtimeInputMode]);
+    setRuntimeField('linkerScriptInput', next);
+  }, [runtimeActiveEditorTab, runtimeInputMode, setRuntimeField]);
+
+  const setRuntimeEditorTab = useCallback((tab) => {
+    if (['program', 'expanded', 'linker'].includes(tab)) {
+      setRuntimeField('editEditorTab', tab);
+    }
+  }, [setRuntimeField]);
 
   const renderUdbValue = (value) => {
     if (!value) return null;
@@ -1191,6 +1181,30 @@ function App() {
     }
   };
 
+  const setRuntimeInputMode = useCallback((value) => {
+    setRuntimeField('runtimeInputMode', value);
+  }, [setRuntimeField]);
+
+  const setGasMarchInput = useCallback((value) => {
+    setRuntimeField('gasMarchInput', value);
+  }, [setRuntimeField]);
+
+  const setGasAbiInput = useCallback((value) => {
+    setRuntimeField('gasAbiInput', value);
+  }, [setRuntimeField]);
+
+  const setStepBatchInput = useCallback((value) => {
+    setRuntimeField('stepBatchInput', value);
+  }, [setRuntimeField]);
+
+  const setRuntimeLogTab = useCallback((value) => {
+    setRuntimeField('runtimeLogTab', value);
+  }, [setRuntimeField]);
+
+  const setRegisterView = useCallback((value) => {
+    setRuntimeField('registerView', value);
+  }, [setRuntimeField]);
+
   const explorerPageProps = {
     isDark,
     configPath,
@@ -1251,6 +1265,7 @@ function App() {
     setStepBatchInput,
     runtimeInputMode,
     setRuntimeInputMode,
+    onSwitchToEdit: switchToEditMode,
     stepBatchInput,
     activeSourceLine: activeRuntimeEditorLine,
     activeExpandedSourceLine,
@@ -1259,12 +1274,13 @@ function App() {
     stepElfDebug,
     runElfDebug,
     debugReady,
-    elfFile,
+    elfFile: uploadElfFile,
     asmSourceInput,
     expandedAsmSourceInput,
     uploadDisasmInput,
-    activeEditorTab,
-    setActiveEditorTab,
+    linkerScriptInput,
+    activeEditorTab: runtimeActiveEditorTab,
+    setActiveEditorTab: setRuntimeEditorTab,
     runtimeEditorLanguage,
     runtimeEditorValue,
     runtimeEditorReadOnly,
@@ -1274,12 +1290,10 @@ function App() {
     setRuntimeLogTab,
     setOutput,
     runtimeLogText,
-    runtimeLogStats,
     debugState,
     registerView,
     setRegisterView,
     debugRegisterRows,
-    elfRunStatus,
   };
 
   return (

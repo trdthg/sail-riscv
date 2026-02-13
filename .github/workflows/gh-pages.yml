@@ -51,6 +51,12 @@ jobs:
       - name: Install web dependencies
         run: pnpm -C wasm/web install
 
+      - name: Run web unit tests
+        run: pnpm -C wasm/web test
+
+      - name: Run web UI regression tests
+        run: pnpm -C wasm/web test:ui
+
       - name: Build web
         env:
           BASE_PATH: /${{ github.event.repository.name }}/

@@ -20,6 +20,9 @@ let outputLines = [];
 let emittedLineCount = 0;
 
 const MAX_OUTPUT_LINES = 40000;
+const TMP_ROOT_DIR = '/tmp';
+const EDIT_TMP_DIR = '/tmp/edit';
+const UPLOAD_TMP_DIR = '/tmp/upload';
 
 const normalizeBaseUrl = (baseUrl) => {
   if (!baseUrl || typeof baseUrl !== 'string') {
@@ -97,6 +100,19 @@ const readDebugState = (Module) => {
 };
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const sanitizeFileName = (name, fallback = 'program.elf') => {
+  const raw = String(name || '').trim();
+  const base = raw ? raw.split(/[\\/]/).pop() : fallback;
+  const cleaned = String(base || fallback).replace(/[^\w.\-+]/g, '_');
+  if (!cleaned) {
+    return fallback;
+  }
+  return cleaned.toLowerCase().endsWith('.elf') ? cleaned : `${cleaned}.elf`;
+};
+
+const toUploadElfPath = (name, fallback = 'upload.elf') =>
+  `${UPLOAD_TMP_DIR}/${sanitizeFileName(name, fallback)}`;
 
 const withCacheBust = (url, cacheBust) => {
   if (!cacheBust) {
@@ -243,7 +259,9 @@ const runBinutilsModule = async ({
     arguments: args,
     preRun: [
       (toolModule) => {
-        ensureDir(toolModule, '/tmp');
+        ensureDir(toolModule, TMP_ROOT_DIR);
+        ensureDir(toolModule, EDIT_TMP_DIR);
+        ensureDir(toolModule, UPLOAD_TMP_DIR);
         if (typeof preRun === 'function') {
           preRun(toolModule);
         }
@@ -582,7 +600,13 @@ const augmentStateWithSourceLine = (state) => {
   return state;
 };
 
-const refreshLineMapFromElf = async ({ requestId, baseUrl, cacheBust, elfBytes }) => {
+const refreshLineMapFromElf = async ({
+  requestId,
+  baseUrl,
+  cacheBust,
+  elfBytes,
+  elfPath = `${UPLOAD_TMP_DIR}/upload.elf`,
+}) => {
   debugLineEntries = null;
   debugLineFile = '';
   debugSectionAddresses = {};
@@ -591,9 +615,9 @@ const refreshLineMapFromElf = async ({ requestId, baseUrl, cacheBust, elfBytes }
     requestId,
     factory,
     label: 'readelf',
-    args: ['--debug-dump=decodedline', '/tmp/program.elf'],
+    args: ['--debug-dump=decodedline', elfPath],
     preRun: (module) => {
-      module.FS.writeFile('/tmp/program.elf', new Uint8Array(elfBytes));
+      module.FS.writeFile(elfPath, new Uint8Array(elfBytes));
     },
     silent: true,
   });
@@ -606,9 +630,9 @@ const refreshLineMapFromElf = async ({ requestId, baseUrl, cacheBust, elfBytes }
     requestId,
     factory,
     label: 'readelf',
-    args: ['-S', '/tmp/program.elf'],
+    args: ['-S', elfPath],
     preRun: (module) => {
-      module.FS.writeFile('/tmp/program.elf', new Uint8Array(elfBytes));
+      module.FS.writeFile(elfPath, new Uint8Array(elfBytes));
     },
     silent: true,
   });
@@ -633,7 +657,7 @@ const refreshExpandedSourceMapFromListing = (listingText) => {
   if (parsed.entries.length > 0) {
     expandedSourceEntries = parsed.entries;
     expandedSourceText = parsed.sourceText;
-    expandedSourceFile = '/tmp/program.S (expanded listing)';
+    expandedSourceFile = `${EDIT_TMP_DIR}/program.S (expanded listing)`;
   }
   return parsed.entries.length;
 };
@@ -645,7 +669,13 @@ const expandedSourcePayload = () => ({
   disassemblyText: debugDisassemblyText,
 });
 
-const refreshDisassemblyFromElf = async ({ requestId, baseUrl, cacheBust, elfBytes }) => {
+const refreshDisassemblyFromElf = async ({
+  requestId,
+  baseUrl,
+  cacheBust,
+  elfBytes,
+  elfPath = `${UPLOAD_TMP_DIR}/upload.elf`,
+}) => {
   clearDisassemblyText();
   let factory = null;
   try {
@@ -657,9 +687,9 @@ const refreshDisassemblyFromElf = async ({ requestId, baseUrl, cacheBust, elfByt
     requestId,
     factory,
     label: 'objdump',
-    args: ['-d', '-M', 'no-aliases', '/tmp/program.elf'],
+    args: ['-d', '-M', 'no-aliases', elfPath],
     preRun: (module) => {
-      module.FS.writeFile('/tmp/program.elf', new Uint8Array(elfBytes));
+      module.FS.writeFile(elfPath, new Uint8Array(elfBytes));
     },
     silent: true,
   });
@@ -678,13 +708,14 @@ const requireSession = (Module) => {
   }
 };
 
-const startSession = async ({ requestId, baseUrl, cacheBust, configText, elfBytes }) => {
+const startSession = async ({ requestId, baseUrl, cacheBust, configText, elfBytes, elfName }) => {
   const Module = await getDebugModule(baseUrl, cacheBust);
+  const elfPath = toUploadElfPath(elfName, 'upload.elf');
   clearOutput();
   clearExpandedSourceMap();
   clearDisassemblyText();
-  await refreshLineMapFromElf({ requestId, baseUrl, cacheBust, elfBytes });
-  await refreshDisassemblyFromElf({ requestId, baseUrl, cacheBust, elfBytes });
+  await refreshLineMapFromElf({ requestId, baseUrl, cacheBust, elfBytes, elfPath });
+  await refreshDisassemblyFromElf({ requestId, baseUrl, cacheBust, elfBytes, elfPath });
   return {
     ...(initDebugSessionWithElf({
       requestId,
@@ -718,7 +749,13 @@ const assembleAndStartSession = async ({
 
   clearOutput();
   clearDisassemblyText();
-  pushOutputLine('Running in worker: assembling /tmp/program.S');
+  const sourcePath = `${EDIT_TMP_DIR}/program.S`;
+  const listingPath = `${EDIT_TMP_DIR}/program.lst`;
+  const objectPath = `${EDIT_TMP_DIR}/program.o`;
+  const linkerPath = `${EDIT_TMP_DIR}/link.ld`;
+  const generatedElfPath = `${EDIT_TMP_DIR}/generated_program.elf`;
+
+  pushOutputLine(`Running in worker: assembling ${sourcePath}`);
   flushOutput(requestId, false);
 
   const asFactory = getGasFactory({ baseUrl, cacheBust });
@@ -726,12 +763,12 @@ const assembleAndStartSession = async ({
 
   const gasArgs = [
     '-g',
-    '-almhnd=/tmp/program.lst',
+    `-almhnd=${listingPath}`,
     `-march=${String(gasMarch || 'rv64imac')}`,
     `-mabi=${String(gasAbi || 'lp64')}`,
     '-o',
-    '/tmp/program.o',
-    '/tmp/program.S',
+    objectPath,
+    sourcePath,
   ];
   const gasResult = await runBinutilsModule({
     requestId,
@@ -739,13 +776,13 @@ const assembleAndStartSession = async ({
     label: 'gas',
     args: gasArgs,
     preRun: (gasModule) => {
-      gasModule.FS.writeFile('/tmp/program.S', sourceText);
+      gasModule.FS.writeFile(sourcePath, sourceText);
     },
   });
 
   let objectFile = null;
   try {
-    objectFile = gasResult.module.FS.readFile('/tmp/program.o');
+    objectFile = gasResult.module.FS.readFile(objectPath);
   } catch {
     objectFile = null;
   }
@@ -757,12 +794,12 @@ const assembleAndStartSession = async ({
     throw new Error(details ? `gas failed:\n${details}` : 'gas failed: no object file produced');
   }
 
-  pushOutputLine(`gas: produced /tmp/program.o (${objectFile.length} bytes)`);
+  pushOutputLine(`gas: produced ${objectPath} (${objectFile.length} bytes)`);
   flushOutput(requestId, false);
 
   let listingText = '';
   try {
-    listingText = gasResult.module.FS.readFile('/tmp/program.lst', { encoding: 'utf8' });
+    listingText = gasResult.module.FS.readFile(listingPath, { encoding: 'utf8' });
   } catch {
     listingText = '';
   }
@@ -771,10 +808,10 @@ const assembleAndStartSession = async ({
     '-m',
     'elf64lriscv',
     '-T',
-    '/tmp/link.ld',
+    linkerPath,
     '-o',
-    '/tmp/program.elf',
-    '/tmp/program.o',
+    generatedElfPath,
+    objectPath,
   ];
   const ldResult = await runBinutilsModule({
     requestId,
@@ -782,14 +819,14 @@ const assembleAndStartSession = async ({
     label: 'ld',
     args: ldArgs,
     preRun: (ldModule) => {
-      ldModule.FS.writeFile('/tmp/program.o', objectFile);
-      ldModule.FS.writeFile('/tmp/link.ld', linkerText);
+      ldModule.FS.writeFile(objectPath, objectFile);
+      ldModule.FS.writeFile(linkerPath, linkerText);
     },
   });
 
   let elfBytes = null;
   try {
-    elfBytes = ldResult.module.FS.readFile('/tmp/program.elf');
+    elfBytes = ldResult.module.FS.readFile(generatedElfPath);
   } catch {
     elfBytes = null;
   }
@@ -801,7 +838,7 @@ const assembleAndStartSession = async ({
     throw new Error(details ? `ld failed:\n${details}` : 'ld failed: no ELF produced');
   }
 
-  pushOutputLine(`ld: produced /tmp/program.elf (${elfBytes.length} bytes)`);
+  pushOutputLine(`ld: produced ${generatedElfPath} (${elfBytes.length} bytes)`);
   flushOutput(requestId, false);
 
   const lineCount = await refreshLineMapFromElf({
@@ -809,12 +846,14 @@ const assembleAndStartSession = async ({
     baseUrl,
     cacheBust,
     elfBytes,
+    elfPath: generatedElfPath,
   });
   await refreshDisassemblyFromElf({
     requestId,
     baseUrl,
     cacheBust,
     elfBytes,
+    elfPath: generatedElfPath,
   });
   const expandedCount = refreshExpandedSourceMapFromListing(listingText);
   if (lineCount > 0) {
@@ -940,6 +979,7 @@ self.onmessage = async (event) => {
           cacheBust: message.cacheBust,
           configText: message.configText,
           elfBytes: message.elfBytes,
+          elfName: message.elfName,
         });
         break;
       case 'assembleStart':

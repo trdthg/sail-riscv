@@ -7,6 +7,7 @@ export function RuntimeToolbar({
   configsState,
   runtimeInputMode,
   setRuntimeInputMode,
+  onSwitchToEdit,
   gasMarchInput,
   setGasMarchInput,
   gasAbiInput,
@@ -46,11 +47,9 @@ export function RuntimeToolbar({
   const uploadDisasmLines = uploadDisasmInput ? uploadDisasmInput.split('\n').length : 0;
   const canInitFromCurrentMode = runtimeInputMode === 'upload'
     ? Boolean(elfFile)
-    : Boolean(elfFile || asmSourceInput.trim());
+    : Boolean(asmSourceInput.trim());
 
   const openUploadPicker = () => {
-    setRuntimeInputMode('upload');
-    setActiveEditorTab('upload-disasm');
     uploadInputRef.current?.click();
   };
 
@@ -76,17 +75,17 @@ export function RuntimeToolbar({
         <div className={`inline-flex rounded-md border p-0.5 ${isDark ? 'border-slate-600 bg-slate-900' : 'border-slate-300 bg-white'}`}>
           <button
             type="button"
-            onClick={() => {
-              setRuntimeInputMode('edit');
-              setActiveEditorTab('program');
-            }}
+            onClick={onSwitchToEdit}
             className={`rounded px-2.5 py-1 text-[11px] font-semibold ${runtimeInputMode === 'edit' ? tabActiveClass : tabInactiveClass}`}
           >
             Edit
           </button>
           <button
             type="button"
-            onClick={openUploadPicker}
+            onClick={() => {
+              setRuntimeInputMode('upload');
+              setActiveEditorTab('upload-disasm');
+            }}
             className={`rounded px-2.5 py-1 text-[11px] font-semibold ${runtimeInputMode === 'upload' ? tabActiveClass : tabInactiveClass}`}
           >
             Upload
@@ -159,6 +158,16 @@ export function RuntimeToolbar({
               Build + Init
             </button>
           </>
+        )}
+        {runtimeInputMode === 'upload' && (
+          <button
+            type="button"
+            onClick={openUploadPicker}
+            disabled={debugBusy}
+            className={`h-8 px-3 text-[11px] font-semibold ${controlButtonClass} disabled:cursor-not-allowed disabled:opacity-50`}
+          >
+            {elfFile ? 'Replace ELF' : 'Choose ELF'}
+          </button>
         )}
         <button
           type="button"
@@ -242,9 +251,7 @@ export function RuntimeToolbar({
               : 'Upload an ELF to inspect')
             : activeEditorTab === 'expanded' && activeExpandedSourceLine
               ? `expanded line ${activeExpandedSourceLine}`
-              : elfFile
-                ? `ELF: ${elfFile.name}`
-                : 'No ELF selected'}
+              : ''}
         </span>
       </div>
     </>
