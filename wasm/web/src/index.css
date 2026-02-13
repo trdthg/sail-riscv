@@ -57,7 +57,11 @@ h3 {
     animation-delay: 360ms;
   }
 
-  .animate-drift {
-    animation: drift 8s ease-in-out infinite;
-  }
+.animate-drift {
+  animation: drift 8s ease-in-out infinite;
+}
+
+.debug-active-line {
+  background-color: rgba(245, 158, 11, 0.18);
+}
 }

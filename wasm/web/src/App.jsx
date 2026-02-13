@@ -1,11 +1,10 @@
 import { useAtom } from 'jotai';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-
-import { BinaryInput } from './components/BinaryInput.jsx';
 import { buildFieldMap, buildSegments, matchEncoding } from './lib/bits.js';
 import { encodeWithUdb } from './lib/encoder.js';
 import { maybeWithBase } from './lib/paths.js';
+import { ExplorerPage } from './pages/ExplorerPage.jsx';
+import { RuntimePage } from './pages/RuntimePage.jsx';
 import { getRuntimeModule } from './lib/sailRuntime.js';
 import { udbIndexLoadableAtom } from './lib/udbIndex.js';
 import { configEditorAtom, configPathAtom, configsLoadableAtom } from './state/configAtoms.js';
@@ -18,7 +17,7 @@ const normalizeHex = (value) => value.trim().toLowerCase().replace(/^0x/, '').re
 const isHex = (value) => /^[0-9a-f]+$/i.test(value);
 const normalizeBin = (value) => value.replace(/[\s_]+/g, '');
 const isBin = (value) => /^[01]+$/.test(value);
-  const formatBin = (value) => value.replace(/(.{4})/g, '$1 ').trim();
+const formatBin = (value) => value.replace(/(.{4})/g, '$1 ').trim();
 const formatBinWithCursor = (raw, cursorPos) => {
   const clean = normalizeBin(raw).replace(/[^01]/g, '').slice(0, MAX_BITS);
   const display = formatBin(clean);
@@ -213,6 +212,9 @@ function App() {
   const [changedFRegs, setChangedFRegs] = useState([]);
   const [registerView, setRegisterView] = useState('x');
   const [stepBatchInput, setStepBatchInput] = useState('10');
+  const [activePage, setActivePage] = useState('explorer');
+  const [runtimeLogTab, setRuntimeLogTab] = useState('program');
+  const [activeEditorTab, setActiveEditorTab] = useState('program');
   const [asmSourceInput, setAsmSourceInput] = useState(DEFAULT_DEBUG_ASM_SOURCE);
   const [linkerScriptInput, setLinkerScriptInput] = useState(DEFAULT_DEBUG_LINKER_SCRIPT);
   const [gasMarchInput, setGasMarchInput] = useState('rv64imac');
@@ -223,12 +225,14 @@ function App() {
   const lastEditedRef = useRef('');
   const asmInputRef = useRef(null);
   const binInputRef = useRef(null);
-  const asmSourceRef = useRef(null);
   const asmSuppressOpenRef = useRef(false);
   const debugWorkerRef = useRef(null);
   const debugWorkerCacheBustRef = useRef('');
   const debugRequestCounterRef = useRef(0);
   const previousDebugRegsRef = useRef({ xregs: null, fregs: null, pc: '' });
+  const monacoEditorRef = useRef(null);
+  const monacoRef = useRef(null);
+  const monacoDecorationsRef = useRef([]);
 
   const append = useCallback((line) => {
     setOutput((prev) => (prev ? `${prev}\n${line}` : line));
@@ -397,6 +401,16 @@ function App() {
     }
     return parsedRuntimeOutput.programText;
   }, [debugState, parsedRuntimeOutput.programText]);
+
+  const runtimeLogText = useMemo(() => {
+    if (runtimeLogTab === 'summary') {
+      return parsedRuntimeOutput.runtimeLines.join('\n') || '(no runtime summary)';
+    }
+    if (runtimeLogTab === 'trace') {
+      return parsedRuntimeOutput.traceLines.join('\n') || '(no trace lines)';
+    }
+    return displayedProgramOutput || '(no decoded program output)';
+  }, [displayedProgramOutput, parsedRuntimeOutput.runtimeLines, parsedRuntimeOutput.traceLines, runtimeLogTab]);
 
   useEffect(() => {
     window.__sailOutputSink = append;
@@ -775,39 +789,54 @@ function App() {
     return value;
   }, [debugState?.sourceLine]);
 
-  const sourcePreviewRows = useMemo(() => {
-    const rows = asmSourceInput.split('\n');
-    const width = Math.max(2, String(rows.length).length);
-    return rows.map((text, index) => ({
-      key: index,
-      lineNo: index + 1,
-      gutter: String(index + 1).padStart(width, ' '),
-      text,
-    }));
-  }, [asmSourceInput]);
-
   useEffect(() => {
-    if (!activeSourceLine || !asmSourceRef.current) {
+    if (!monacoEditorRef.current || !monacoRef.current) {
       return;
     }
-    const lineIdx = activeSourceLine - 1;
-    const rows = asmSourceInput.split('\n');
-    if (lineIdx < 0 || lineIdx >= rows.length) {
+    const editor = monacoEditorRef.current;
+    const monaco = monacoRef.current;
+    const model = editor.getModel();
+    if (!model) {
       return;
     }
-    let selectionStart = 0;
-    for (let i = 0; i < lineIdx; i += 1) {
-      selectionStart += rows[i].length + 1;
+    if (activeEditorTab !== 'program' || !activeSourceLine || activeSourceLine > model.getLineCount()) {
+      monacoDecorationsRef.current = editor.deltaDecorations(monacoDecorationsRef.current, []);
+      return;
     }
-    const selectionEnd = selectionStart + rows[lineIdx].length;
-    const textarea = asmSourceRef.current;
-    textarea.setSelectionRange(selectionStart, selectionEnd);
-    const lineHeight = Number.parseFloat(window.getComputedStyle(textarea).lineHeight || '16') || 16;
-    const targetTop = Math.max(0, (lineIdx - 2) * lineHeight);
-    if (Math.abs(textarea.scrollTop - targetTop) > lineHeight) {
-      textarea.scrollTop = targetTop;
+    editor.revealLineInCenter(activeSourceLine);
+    editor.setSelection({
+      startLineNumber: activeSourceLine,
+      startColumn: 1,
+      endLineNumber: activeSourceLine,
+      endColumn: model.getLineMaxColumn(activeSourceLine),
+    });
+    monacoDecorationsRef.current = editor.deltaDecorations(monacoDecorationsRef.current, [
+      {
+        range: new monaco.Range(activeSourceLine, 1, activeSourceLine, 1),
+        options: {
+          isWholeLine: true,
+          className: 'debug-active-line',
+        },
+      },
+    ]);
+  }, [activeEditorTab, activeSourceLine, asmSourceInput]);
+
+  const runtimeEditorValue = activeEditorTab === 'program' ? asmSourceInput : linkerScriptInput;
+  const runtimeEditorLanguage = activeEditorTab === 'program' ? 'asm' : 'plaintext';
+
+  const handleRuntimeEditorMount = useCallback((editor, monaco) => {
+    monacoEditorRef.current = editor;
+    monacoRef.current = monaco;
+  }, []);
+
+  const handleRuntimeEditorChange = useCallback((value) => {
+    const next = value ?? '';
+    if (activeEditorTab === 'program') {
+      setAsmSourceInput(next);
+      return;
     }
-  }, [activeSourceLine, asmSourceInput]);
+    setLinkerScriptInput(next);
+  }, [activeEditorTab]);
 
   const renderUdbValue = (value) => {
     if (!value) return null;
@@ -1074,12 +1103,98 @@ function App() {
     }
   };
 
+  const explorerPageProps = {
+    configPath,
+    setConfigPath,
+    configsState,
+    decodeMode,
+    setDecodeMode,
+    hexInput,
+    setHexInput,
+    binInput,
+    setBinInput,
+    assemblyInput,
+    setAssemblyInput,
+    assemblyStatus,
+    assemblyStatusStyles,
+    assemblyMessage,
+    setAssemblyMessage,
+    asmInputRef,
+    asmSuggestions,
+    asmOpen,
+    setAsmOpen,
+    asmHighlight,
+    setAsmHighlight,
+    asmDropdownPos,
+    setAsmFocused,
+    applyAsmSuggestion,
+    runPrintIsa,
+    isaState,
+    currentInstruction,
+    renderUdbValue,
+    configEditor,
+    setConfigEditor,
+    configEditorStatus,
+    applyTimerRef,
+    applyConfigToRuntime,
+    MAX_HEX,
+    lastEditedRef,
+    clampHex,
+    hexToBin,
+    formatBinWithCursor,
+    binToHex,
+    bitLayout,
+    binInputRef,
+  };
+
+  const runtimePageProps = {
+    configPath,
+    setConfigPath,
+    configsState,
+    gasMarchInput,
+    setGasMarchInput,
+    gasAbiInput,
+    setGasAbiInput,
+    setAsmSourceInput,
+    setLinkerScriptInput,
+    setStepBatchInput,
+    setElfFile,
+    stepBatchInput,
+    activeSourceLine,
+    debugBusy,
+    buildAsmAndInitDebug,
+    initElfDebug,
+    stepElfDebug,
+    runElfDebug,
+    resetElfDebug,
+    debugReady,
+    elfFile,
+    asmSourceInput,
+    activeEditorTab,
+    setActiveEditorTab,
+    runtimeEditorLanguage,
+    runtimeEditorValue,
+    handleRuntimeEditorChange,
+    handleRuntimeEditorMount,
+    runtimeLogTab,
+    setRuntimeLogTab,
+    setOutput,
+    runtimeLogText,
+    debugState,
+    registerView,
+    setRegisterView,
+    debugRegisterRows,
+    elfRunStatus,
+    DEFAULT_DEBUG_ASM_SOURCE,
+    DEFAULT_DEBUG_LINKER_SCRIPT,
+  };
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,_rgb(255_247_237),_rgb(248_250_252)_55%)] text-slate-900">
       <div className="pointer-events-none absolute -top-24 right-[-10%] h-72 w-72 rounded-full bg-[radial-gradient(circle,_rgba(14,116,144,0.18),_rgba(14,116,144,0))] blur-2xl animate-drift" />
       <div className="pointer-events-none absolute -bottom-24 left-[-5%] h-80 w-80 rounded-full bg-[radial-gradient(circle,_rgba(249,115,22,0.18),_rgba(249,115,22,0))] blur-2xl animate-drift" />
 
-      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6 animate-rise">
+      <header className="mx-auto flex w-full max-w-[1400px] items-center justify-between px-6 py-6 animate-rise">
         <div className="flex items-center gap-3">
           <div className="flex h-10 items-center rounded-2xl bg-slate-900 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white shadow-lg shadow-slate-900/15">
             sail-riscv
@@ -1097,598 +1212,38 @@ function App() {
           </span>
         </div>
       </header>
+      <div className="mx-auto w-full max-w-[1400px] px-6 pb-2">
+        <div className="inline-flex rounded-2xl border border-slate-200 bg-white/80 p-1 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setActivePage('explorer')}
+            className={`rounded-xl px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition ${
+              activePage === 'explorer'
+                ? 'bg-slate-900 text-white'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            Page 1 · Instruction
+          </button>
+          <button
+            type="button"
+            onClick={() => setActivePage('runtime')}
+            className={`rounded-xl px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition ${
+              activePage === 'runtime'
+                ? 'bg-slate-900 text-white'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            Page 2 · Asm Runtime
+          </button>
+        </div>
+      </div>
 
-      <main className="mx-auto grid w-full max-w-6xl gap-8 px-6 pb-12 lg:grid-cols-[1.15fr_0.85fr]">
-        <section className="space-y-6">
-          <div className="min-h-[560px] rounded-3xl border border-slate-200 bg-white/80 p-8 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.55)] backdrop-blur animate-rise animate-rise-delay-1">
-            <div className="mb-6 space-y-3">
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl font-serif">
-                Instruction explorer
-              </h1>
-              <p className="max-w-xl text-sm text-slate-600">
-                Load a config, decode an instruction, or print the active ISA string. Results stream live from the WASM runtime.
-              </p>
-            </div>
-
-            <div className="grid gap-5 md:grid-cols-2">
-              <label className="space-y-2 text-sm font-medium text-slate-700">
-                Config
-                <select
-                  value={configPath}
-                  onChange={(e) => setConfigPath(e.target.value)}
-                  disabled={configsState.state !== 'hasData'}
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                >
-                  <option value="/config.json">runtime config (edited)</option>
-                  {configsState.state === 'hasData' && configsState.data.map((cfg) => (
-                    <option key={cfg.path} value={cfg.path}>{cfg.label}</option>
-                  ))}
-                  {configsState.state === 'loading' && (
-                    <option value="">Loading configs...</option>
-                  )}
-                  {configsState.state === 'hasError' && (
-                    <option value="">Failed to load configs</option>
-                  )}
-                </select>
-              </label>
-
-              <label className="space-y-2 text-sm font-medium text-slate-700">
-                Decode mode
-                <select
-                  value={decodeMode}
-                  onChange={(e) => setDecodeMode(e.target.value)}
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                >
-                  <option value="auto">Auto (by length)</option>
-                  <option value="16">16-bit (compressed)</option>
-                  <option value="32">32-bit</option>
-                </select>
-              </label>
-
-              <label className="relative space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
-                Hex instruction
-                <input
-                  type="text"
-                  inputMode="text"
-                  autoComplete="off"
-                  placeholder="e.g. 0x00008067"
-                  value={hexInput}
-                  onChange={(e) => {
-                    lastEditedRef.current = 'hex';
-                    const clamped = clampHex(e.target.value);
-                    const display = clamped ? `0x${clamped}` : '';
-                    setHexInput(display);
-                    const nextBin = hexToBin(display);
-                    if (nextBin !== null) {
-                      setBinInput(nextBin);
-                    }
-                  }}
-                  maxLength={MAX_HEX + 2}
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                />
-              </label>
-
-              <BinaryInput
-                binInput={binInput}
-                bitLayout={bitLayout}
-                inputRef={binInputRef}
-                onChange={(e) => {
-                  lastEditedRef.current = 'bin';
-                  const { value, selectionStart = 0 } = e.target;
-                  const { display, cursor } = formatBinWithCursor(value, selectionStart);
-                  setBinInput(display);
-                  const nextHex = binToHex(display);
-                  if (nextHex !== null) {
-                    setHexInput(nextHex ? `0x${nextHex}` : '');
-                  }
-                  requestAnimationFrame(() => {
-                    if (binInputRef.current) {
-                      binInputRef.current.setSelectionRange(cursor, cursor);
-                    }
-                  });
-                }}
-              />
-
-              <label className="relative z-30 space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
-                <div className="flex items-center justify-between">
-                  <span>Assembly</span>
-                  <span
-                    className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] ${assemblyStatusStyles[assemblyStatus] || assemblyStatusStyles.waiting}`}
-                  >
-                    {assemblyStatus}
-                  </span>
-                </div>
-                <input
-                  ref={asmInputRef}
-                  value={assemblyInput}
-                  placeholder="e.g. addi x1, x2, 4"
-                  onChange={(e) => {
-                    lastEditedRef.current = 'asm';
-                    setAssemblyMessage('');
-                    setAssemblyInput(e.target.value);
-                  }}
-                  onFocus={() => {
-                    setAsmFocused(true);
-                    if (asmSuggestions.length) setAsmOpen(true);
-                  }}
-                  onBlur={() => {
-                    setTimeout(() => {
-                      setAsmFocused(false);
-                      setAsmOpen(false);
-                    }, 100);
-                  }}
-                  onKeyDown={(e) => {
-                    if (!asmOpen || asmSuggestions.length === 0) return;
-                    if (e.key === 'ArrowDown') {
-                      e.preventDefault();
-                      setAsmHighlight((idx) => (idx + 1) % asmSuggestions.length);
-                    } else if (e.key === 'ArrowUp') {
-                      e.preventDefault();
-                      setAsmHighlight((idx) => (idx - 1 + asmSuggestions.length) % asmSuggestions.length);
-                    } else if (e.key === 'Enter') {
-                      e.preventDefault();
-                      applyAsmSuggestion(asmSuggestions[asmHighlight]);
-                    } else if (e.key === 'Escape') {
-                      setAsmOpen(false);
-                    }
-                  }}
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-xs text-slate-900 shadow-sm focus:outline-none"
-                />
-                {asmOpen && asmSuggestions.length > 0 && asmDropdownPos &&
-                  createPortal(
-                    <div
-                      className="max-h-56 overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg"
-                      style={{
-                        position: 'fixed',
-                        left: asmDropdownPos.left,
-                        top: asmDropdownPos.top,
-                        width: asmDropdownPos.width,
-                        zIndex: 1000,
-                      }}
-                    >
-                      {asmSuggestions.map((suggestion, idx) => (
-                        <button
-                          key={`${suggestion.type}-${suggestion.label}`}
-                          type="button"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            applyAsmSuggestion(suggestion);
-                          }}
-                          className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs ${
-                            idx === asmHighlight
-                              ? 'bg-slate-100 text-slate-900'
-                              : 'text-slate-600 hover:bg-slate-50'
-                          }`}
-                        >
-                          <span className="font-mono">{suggestion.label}</span>
-                        </button>
-                      ))}
-                    </div>,
-                    document.body
-                  )}
-                {assemblyMessage && (
-                  <p className="text-xs text-rose-600">{assemblyMessage}</p>
-                )}
-              </label>
-
-              <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <div className="rounded-lg border border-slate-200 bg-white p-3">
-                  <div className="mb-2 flex items-center justify-between">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Assembly Build (gas + ld)</p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAsmSourceInput(DEFAULT_DEBUG_ASM_SOURCE);
-                        setLinkerScriptInput(DEFAULT_DEBUG_LINKER_SCRIPT);
-                        setGasMarchInput('rv64imac');
-                        setGasAbiInput('lp64');
-                      }}
-                      className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600 hover:border-slate-300"
-                    >
-                      Reset template
-                    </button>
-                  </div>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <label className="space-y-1 text-[11px] font-medium text-slate-600">
-                      Program (.S)
-                      <textarea
-                        ref={asmSourceRef}
-                        value={asmSourceInput}
-                        onChange={(event) => setAsmSourceInput(event.target.value)}
-                        spellCheck={false}
-                        className="h-48 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-[11px] text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                      />
-                    </label>
-                    <label className="space-y-1 text-[11px] font-medium text-slate-600">
-                      Linker script (ld)
-                      <textarea
-                        value={linkerScriptInput}
-                        onChange={(event) => setLinkerScriptInput(event.target.value)}
-                        spellCheck={false}
-                        className="h-48 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-[11px] text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                      />
-                    </label>
-                  </div>
-                  <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
-                    <div className="mb-1 flex items-center justify-between text-[11px] text-slate-500">
-                      <span>Assembly line map (from DWARF)</span>
-                      <span className="font-mono">
-                        {activeSourceLine ? `active line ${activeSourceLine}` : 'no active line'}
-                      </span>
-                    </div>
-                    <div className="max-h-40 overflow-auto rounded border border-slate-200 bg-white font-mono text-[11px] leading-5 text-slate-700">
-                      {sourcePreviewRows.map((row) => (
-                        <div
-                          key={row.key}
-                          className={`flex px-2 ${activeSourceLine === row.lineNo ? 'bg-amber-100 text-amber-900' : ''}`}
-                        >
-                          <span className="mr-2 shrink-0 text-slate-400">{row.gutter}</span>
-                          <span className="whitespace-pre-wrap break-all">{row.text || ' '}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <label className="text-[11px] text-slate-600">
-                      -march
-                      <input
-                        value={gasMarchInput}
-                        onChange={(event) => setGasMarchInput(event.target.value)}
-                        className="ml-2 h-8 w-32 rounded border border-slate-300 bg-white px-2 font-mono text-[11px] text-slate-800"
-                      />
-                    </label>
-                    <label className="text-[11px] text-slate-600">
-                      -mabi
-                      <input
-                        value={gasAbiInput}
-                        onChange={(event) => setGasAbiInput(event.target.value)}
-                        className="ml-2 h-8 w-20 rounded border border-slate-300 bg-white px-2 font-mono text-[11px] text-slate-800"
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={buildAsmAndInitDebug}
-                      disabled={debugBusy}
-                      className="h-8 rounded-lg border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Build + Init
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-3 flex flex-wrap items-center gap-3">
-                  <label className="flex-1 min-w-[220px] text-xs font-medium text-slate-700">
-                    ELF file (optional, upload prebuilt ELF)
-                    <input
-                      type="file"
-                      accept=".elf,application/octet-stream"
-                      onChange={(e) => setElfFile(e.target.files?.[0] || null)}
-                      className="mt-2 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700"
-                    />
-                  </label>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={initElfDebug}
-                      disabled={!elfFile || debugBusy}
-                      className="h-10 rounded-lg border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Init ELF
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => stepElfDebug(1)}
-                      disabled={!debugReady || debugBusy}
-                      className="h-10 rounded-lg border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Step
-                    </button>
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={stepBatchInput}
-                      onChange={(event) => {
-                        const next = event.target.value.replace(/[^\d]/g, '');
-                        setStepBatchInput(next);
-                      }}
-                      className="h-10 w-20 rounded-lg border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const parsed = Number.parseInt(stepBatchInput, 10);
-                        stepElfDebug(Number.isFinite(parsed) && parsed > 0 ? parsed : 1);
-                      }}
-                      disabled={!debugReady || debugBusy}
-                      className="h-10 rounded-lg border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Step ×N
-                    </button>
-                    <button
-                      type="button"
-                      onClick={runElfDebug}
-                      disabled={debugBusy || (!debugReady && !elfFile && !asmSourceInput.trim())}
-                      className="h-10 rounded-lg border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Run
-                    </button>
-                    <button
-                      type="button"
-                      onClick={resetElfDebug}
-                      disabled={debugBusy}
-                      className="h-10 rounded-lg border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Reset
-                    </button>
-                  </div>
-                </div>
-                <p className="mt-2 text-xs text-slate-500">
-                  {elfFile ? `Selected ELF: ${elfFile.name}` : 'No ELF selected (you can Build + Init from assembly).'}
-                </p>
-                {elfRunStatus && (
-                  <p className="mt-1 text-xs text-slate-600">{elfRunStatus}</p>
-                )}
-
-                <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Debug State</p>
-                    <div className="flex items-center gap-2 text-[11px] text-slate-600">
-                      <span className={`rounded-full border px-2 py-0.5 ${debugReady ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>
-                        {debugReady ? 'ready' : 'not initialized'}
-                      </span>
-                      {debugBusy && (
-                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700">
-                          busy
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {debugState ? (
-                    <>
-                      <div className="mt-2 grid gap-2 text-[11px] text-slate-700 md:grid-cols-5">
-                        <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono">pc: {debugState.pc || '-'}</div>
-                        <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono">step: {debugState.step ?? '-'}</div>
-                        <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono">halted: {String(Boolean(debugState.halted))}</div>
-                        <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono">exit: {debugState.exitCode ?? '-'}</div>
-                        <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono">line: {debugState.sourceLine ?? '-'}</div>
-                      </div>
-                      {debugState.sourceFile && (
-                        <div className="mt-2 rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-[11px] text-slate-700">
-                          source: {debugState.sourceFile}
-                        </div>
-                      )}
-                      <div className="mt-2 rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-[11px] text-slate-700">
-                        {`inst: [${debugState.instWidth ?? '-'}] ${debugState.instHex || '-'}  ${debugState.disasm || '-'}`}
-                      </div>
-                    </>
-                  ) : (
-                    <p className="mt-2 text-[11px] text-slate-500">No debug state yet.</p>
-                  )}
-                </div>
-
-                <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
-                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Registers</p>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setRegisterView('x')}
-                        className={`rounded border px-2 py-1 text-[11px] ${registerView === 'x' ? 'border-slate-400 bg-slate-100 text-slate-900' : 'border-slate-200 bg-white text-slate-600'}`}
-                      >
-                        X
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setRegisterView('f')}
-                        className={`rounded border px-2 py-1 text-[11px] ${registerView === 'f' ? 'border-slate-400 bg-slate-100 text-slate-900' : 'border-slate-200 bg-white text-slate-600'}`}
-                      >
-                        F
-                      </button>
-                    </div>
-                  </div>
-                  <div className="grid max-h-72 gap-1 overflow-auto md:grid-cols-2">
-                    {debugRegisterRows.length > 0 ? debugRegisterRows.map((row) => (
-                      <div
-                        key={row.key}
-                        className={`flex items-center justify-between rounded border px-2 py-1 font-mono text-[11px] ${
-                          row.changed
-                            ? 'border-amber-300 bg-amber-50 text-amber-900'
-                            : 'border-slate-200 bg-slate-50 text-slate-700'
-                        }`}
-                      >
-                        <span>
-                          {row.name}
-                          {row.alias ? ` (${row.alias})` : ''}
-                        </span>
-                        <span>{row.value}</span>
-                      </div>
-                    )) : (
-                      <p className="text-[11px] text-slate-500">No registers available.</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="md:col-span-2 rounded-xl border border-slate-200 bg-white p-3">
-                <div className="mb-2 flex items-center justify-between">
-                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">Runtime Console</p>
-                  <button
-                    type="button"
-                    onClick={() => setOutput('')}
-                    className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-600 hover:border-slate-300"
-                  >
-                    Clear
-                  </button>
-                </div>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div>
-                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Program Output (HTIF)</p>
-                    <pre className="h-28 overflow-auto rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-[11px] leading-relaxed text-slate-800 whitespace-pre-wrap">
-                      {displayedProgramOutput || '(no decoded program output)'}
-                    </pre>
-                  </div>
-                  <div>
-                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Runtime Summary</p>
-                    <pre className="h-28 overflow-auto rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-[11px] leading-relaxed text-slate-800 whitespace-pre-wrap">
-                      {parsedRuntimeOutput.runtimeLines.join('\n') || '(no runtime summary)'}
-                    </pre>
-                  </div>
-                </div>
-                <p className="mt-3 mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Sail Trace</p>
-                <pre className="h-48 overflow-auto rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-[11px] leading-relaxed text-slate-800 whitespace-pre-wrap">
-                  {parsedRuntimeOutput.traceLines.join('\n') || '(no trace lines)'}
-                </pre>
-              </div>
-            </div>
-
-
-            {configsState.state === 'hasError' && (
-              <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700">
-                Failed to load config list. Make sure <span className="font-semibold">/config/configs.json</span> exists.
-              </p>
-            )}
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-white/70 p-5 text-sm text-slate-600 shadow-sm animate-rise animate-rise-delay-2">
-              <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-slate-400">
-                <span>ISA string</span>
-                <button
-                  onClick={runPrintIsa}
-                  className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300"
-                >
-                  Refresh
-                </button>
-              </div>
-              <div className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 whitespace-pre-wrap break-all">
-                {isaState.state === 'loading' && 'Loading...'}
-                {isaState.state === 'hasError' && 'Failed to load'}
-                {isaState.state === 'hasData' && (isaState.data || 'Not loaded')}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white/70 p-5 text-sm text-slate-600 shadow-sm animate-rise animate-rise-delay-3">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Runtime</p>
-              <p className="mt-2 text-lg font-semibold text-slate-900">WASM + Sail</p>
-              <p className="mt-2 text-sm">Modules are loaded on demand to keep the UI responsive.</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white/70 p-5 text-sm text-slate-600 shadow-sm animate-rise animate-rise-delay-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Configs</p>
-              <p className="mt-2 text-lg font-semibold text-slate-900">Auto-indexed</p>
-              <p className="mt-2 text-sm">Generated from build outputs at <code className="text-slate-800">/config</code>.</p>
-            </div>
-          </div>
-        </section>
-
-        <aside className="space-y-6">
-          <div className="rounded-3xl border border-slate-200 bg-white/80 p-6 text-sm text-slate-600 shadow-sm animate-rise animate-rise-delay-2">
-            <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-slate-400">
-              <span>Instruction</span>
-              {currentInstruction?.inst?.definedBy?.extension?.name && (
-                <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500">
-                  {currentInstruction.inst.definedBy.extension.name}
-                </span>
-              )}
-            </div>
-            {currentInstruction?.inst ? (
-              <div className="mt-4 space-y-3 text-xs text-slate-700">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">{currentInstruction.inst.name}</p>
-                  {currentInstruction.inst.longName && (
-                    <p className="text-xs text-slate-500">{currentInstruction.inst.longName}</p>
-                  )}
-                </div>
-                {currentInstruction.inst.assembly && (
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Assembly</p>
-                    <p className="mt-1 font-mono text-xs text-slate-800">{currentInstruction.inst.name} {currentInstruction.inst.assembly}</p>
-                  </div>
-                )}
-                {renderUdbValue(currentInstruction.inst.description) && (
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Description</p>
-                    <p className="mt-1 whitespace-pre-wrap text-xs text-slate-700">{renderUdbValue(currentInstruction.inst.description)}</p>
-                  </div>
-                )}
-                {renderUdbValue(currentInstruction.inst.access) && (
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Access</p>
-                    <pre className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-700 whitespace-pre-wrap">
-                      {renderUdbValue(currentInstruction.inst.access)}
-                    </pre>
-                  </div>
-                )}
-                {renderUdbValue(currentInstruction.inst.operation) && (
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Operation</p>
-                    <pre className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-[11px] text-slate-700 whitespace-pre-wrap">
-                      {renderUdbValue(currentInstruction.inst.operation)}
-                    </pre>
-                  </div>
-                )}
-                {renderUdbValue(currentInstruction.inst.pseudoinstructions) && (
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Pseudoinstructions</p>
-                    <pre className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-700 whitespace-pre-wrap">
-                      {renderUdbValue(currentInstruction.inst.pseudoinstructions)}
-                    </pre>
-                  </div>
-                )}
-                {currentInstruction.encoding && (
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Encoding</p>
-                    <pre className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-[11px] text-slate-700 whitespace-pre-wrap">
-                      {renderUdbValue(currentInstruction.encoding)}
-                    </pre>
-                  </div>
-                )}
-                {currentInstruction.inst.encodingRaw && (
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Encoding Raw</p>
-                    <pre className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-700 whitespace-pre-wrap">
-                      {renderUdbValue(currentInstruction.inst.encodingRaw)}
-                    </pre>
-                  </div>
-                )}
-                {currentInstruction.inst.full && (
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">YAML (Full)</p>
-                    <pre className="mt-1 max-h-64 overflow-auto rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-700 whitespace-pre-wrap">
-                      {renderUdbValue(currentInstruction.inst.full)}
-                    </pre>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="mt-4 text-xs text-slate-500">No instruction matched yet. Enter assembly or binary.</p>
-            )}
-          </div>
-          <div className="min-h-[560px] rounded-3xl border border-slate-200 bg-white/80 p-6 text-sm text-slate-600 shadow-sm animate-rise animate-rise-delay-3 flex flex-col">
-            <h3 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl font-serif">Config editor</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              Load an existing config and save it as a new file.
-            </p>
-            <textarea
-              className="mt-4 w-full flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 font-mono text-xs leading-relaxed text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-              placeholder="Load and edit config JSON here."
-              value={configEditor}
-              onChange={(e) => {
-                const next = e.target.value;
-                setConfigEditor(next);
-                if (applyTimerRef.current) {
-                  clearTimeout(applyTimerRef.current);
-                }
-                applyTimerRef.current = setTimeout(() => {
-                  applyConfigToRuntime();
-                }, 500);
-              }}
-            />
-            {configEditorStatus && (
-              <p className="mt-3 text-xs text-slate-500">{configEditorStatus}</p>
-            )}
-          </div>
-        </aside>
-      </main>
+      {activePage === 'explorer' ? (
+        <ExplorerPage {...explorerPageProps} />
+      ) : (
+        <RuntimePage {...runtimePageProps} />
+      )}
     </div>
   )
 }
