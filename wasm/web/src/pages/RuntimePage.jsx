@@ -1,6 +1,9 @@
+import { useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 
 export function RuntimePage({
+  isDark,
+  editorTheme,
   configPath,
   setConfigPath,
   configsState,
@@ -41,17 +44,68 @@ export function RuntimePage({
   DEFAULT_DEBUG_ASM_SOURCE,
   DEFAULT_DEBUG_LINKER_SCRIPT,
 }) {
+  const mainRef = useRef(null);
+  const [splitRatio, setSplitRatio] = useState(50);
+  const [isResizing, setIsResizing] = useState(false);
+  const shellClass = isDark
+    ? 'border-r border-slate-700 bg-slate-900 text-slate-100'
+    : 'border-r border-slate-300 bg-white text-slate-900';
+  const topBarClass = isDark ? 'border-b border-slate-700 bg-slate-800' : 'border-b border-slate-200 bg-slate-50';
+  const topBarAltClass = isDark ? 'border-b border-slate-700 bg-slate-800/80' : 'border-b border-slate-200 bg-slate-50/90';
+  const controlLabelClass = isDark ? 'text-[11px] font-medium text-slate-300' : 'text-[11px] font-medium text-slate-700';
+  const controlInputClass = isDark
+    ? 'rounded border border-slate-600 bg-slate-900 text-slate-100 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-500'
+    : 'rounded border border-slate-300 bg-white text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400';
+  const controlButtonClass = isDark
+    ? 'rounded border border-slate-600 bg-slate-900 text-slate-200 transition hover:border-slate-400'
+    : 'rounded border border-slate-300 bg-white text-slate-700 transition hover:border-slate-400';
+  const tabActiveClass = isDark ? 'bg-slate-100 text-slate-900' : 'bg-slate-900 text-white';
+  const tabInactiveClass = isDark ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-600 hover:bg-slate-200';
+  const logPaneClass = isDark ? 'border-t border-slate-700 bg-slate-950' : 'border-t border-slate-300 bg-slate-100';
+  const logTextClass = isDark ? 'text-slate-100' : 'text-slate-800';
+  const rightCardClass = isDark ? 'rounded-xl border border-slate-700 bg-slate-800 p-3' : 'rounded-xl border border-slate-200 bg-white p-3';
+
+  useEffect(() => {
+    if (!isResizing) return undefined;
+    const onMouseMove = (event) => {
+      const container = mainRef.current;
+      if (!container) return;
+      const bounds = container.getBoundingClientRect();
+      if (bounds.width <= 0) return;
+      const relativeX = event.clientX - bounds.left;
+      const nextRatio = (relativeX / bounds.width) * 100;
+      const clamped = Math.max(28, Math.min(72, nextRatio));
+      setSplitRatio(clamped);
+    };
+    const onMouseUp = () => setIsResizing(false);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing]);
+
   return (
-    <main className="w-full min-h-[560px] border-t border-slate-300 bg-slate-100 lg:grid lg:h-[calc(100vh-10rem)] lg:grid-cols-[1fr_420px]">
-      <section className="flex min-h-0 flex-col overflow-hidden border-r border-slate-700 bg-slate-900 text-slate-100">
-        <div className="flex flex-wrap items-center gap-2 border-b border-slate-700 bg-slate-800 px-3 py-2">
-          <label className="text-[11px] font-medium text-slate-300">
+    <div className={`box-border h-full w-full min-h-0 overflow-hidden border-t flex flex-col ${isDark ? 'border-slate-700 bg-slate-950' : 'border-slate-300 bg-slate-100'}`}>
+      <main
+        ref={mainRef}
+        className="flex-1 w-full min-h-0 lg:grid"
+        style={{ gridTemplateColumns: `${splitRatio}fr 8px ${100 - splitRatio}fr` }}
+      >
+      <section className={`flex min-h-0 flex-col overflow-hidden ${shellClass}`}>
+        <div className={`flex flex-wrap items-center gap-2 px-3 py-2 ${topBarClass}`}>
+          <label className={controlLabelClass}>
             Config
             <select
               value={configPath}
               onChange={(e) => setConfigPath(e.target.value)}
               disabled={configsState.state !== 'hasData'}
-              className="ml-2 h-8 rounded border border-slate-600 bg-slate-900 px-2 text-[11px] text-slate-100 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className={`ml-2 h-8 px-2 text-[11px] ${controlInputClass}`}
             >
               <option value="/config.json">runtime config (edited)</option>
               {configsState.state === 'hasData' && configsState.data.map((cfg) => (
@@ -61,20 +115,20 @@ export function RuntimePage({
               {configsState.state === 'hasError' && <option value="">Failed to load configs</option>}
             </select>
           </label>
-          <label className="text-[11px] font-medium text-slate-300">
+          <label className={controlLabelClass}>
             -march
             <input
               value={gasMarchInput}
               onChange={(event) => setGasMarchInput(event.target.value)}
-              className="ml-2 h-8 w-28 rounded border border-slate-600 bg-slate-900 px-2 font-mono text-[11px] text-slate-100"
+              className={`ml-2 h-8 w-28 px-2 font-mono text-[11px] ${controlInputClass}`}
             />
           </label>
-          <label className="text-[11px] font-medium text-slate-300">
+          <label className={controlLabelClass}>
             -mabi
             <input
               value={gasAbiInput}
               onChange={(event) => setGasAbiInput(event.target.value)}
-              className="ml-2 h-8 w-16 rounded border border-slate-600 bg-slate-900 px-2 font-mono text-[11px] text-slate-100"
+              className={`ml-2 h-8 w-16 px-2 font-mono text-[11px] ${controlInputClass}`}
             />
           </label>
           <button
@@ -85,7 +139,7 @@ export function RuntimePage({
               setGasMarchInput('rv64imac');
               setGasAbiInput('lp64');
             }}
-            className="h-8 rounded border border-slate-600 bg-slate-900 px-3 text-[11px] font-semibold text-slate-200 transition hover:border-slate-400"
+            className={`h-8 px-3 text-[11px] font-semibold ${controlButtonClass}`}
           >
             Reset
           </button>
@@ -93,30 +147,30 @@ export function RuntimePage({
             type="button"
             onClick={buildAsmAndInitDebug}
             disabled={debugBusy}
-            className="h-8 rounded border border-slate-600 bg-slate-900 px-3 text-[11px] font-semibold text-slate-200 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+            className={`h-8 px-3 text-[11px] font-semibold ${controlButtonClass} disabled:cursor-not-allowed disabled:opacity-50`}
           >
             Build + Init
           </button>
-          <span className="ml-auto rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] font-mono text-slate-300">
+          <span className={`ml-auto rounded px-2 py-1 text-[11px] font-mono ${isDark ? 'border border-slate-600 bg-slate-900 text-slate-300' : 'border border-slate-300 bg-white text-slate-700'}`}>
             {activeSourceLine ? `line ${activeSourceLine}` : 'line -'}
           </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 border-b border-slate-700 bg-slate-800/80 px-3 py-2">
-          <label className="min-w-[200px] flex-1 text-[11px] font-medium text-slate-300">
+        <div className={`flex flex-wrap items-center gap-2 px-3 py-2 ${topBarAltClass}`}>
+          <label className={`min-w-[200px] flex-1 ${controlLabelClass}`}>
             ELF file
             <input
               type="file"
               accept=".elf,application/octet-stream"
               onChange={(e) => setElfFile(e.target.files?.[0] || null)}
-              className="ml-2 inline-block w-[250px] rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 file:mr-2 file:rounded file:border-0 file:bg-slate-700 file:px-2 file:py-1 file:text-[11px] file:text-slate-100 hover:file:bg-slate-600"
+              className={`ml-2 inline-block w-[250px] px-2 py-1 text-[11px] ${controlInputClass} ${isDark ? 'file:bg-slate-700 file:text-slate-100 hover:file:bg-slate-600' : 'file:bg-slate-200 file:text-slate-700 hover:file:bg-slate-300'} file:mr-2 file:rounded file:border-0 file:px-2 file:py-1 file:text-[11px]`}
             />
           </label>
           <button
             type="button"
             onClick={initElfDebug}
             disabled={!elfFile || debugBusy}
-            className="h-8 rounded border border-slate-600 bg-slate-900 px-3 text-[11px] font-semibold text-slate-200 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+            className={`h-8 px-3 text-[11px] font-semibold ${controlButtonClass} disabled:cursor-not-allowed disabled:opacity-50`}
           >
             Init ELF
           </button>
@@ -124,7 +178,7 @@ export function RuntimePage({
             type="button"
             onClick={() => stepElfDebug(1)}
             disabled={!debugReady || debugBusy}
-            className="h-8 rounded border border-slate-600 bg-slate-900 px-3 text-[11px] font-semibold text-slate-200 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+            className={`h-8 px-3 text-[11px] font-semibold ${controlButtonClass} disabled:cursor-not-allowed disabled:opacity-50`}
           >
             Step
           </button>
@@ -137,7 +191,7 @@ export function RuntimePage({
               const next = event.target.value.replace(/[^\d]/g, '');
               setStepBatchInput(next);
             }}
-            className="h-8 w-16 rounded border border-slate-600 bg-slate-900 px-2 text-center text-[11px] font-semibold text-slate-100 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className={`h-8 w-16 px-2 text-center text-[11px] font-semibold ${controlInputClass}`}
           />
           <button
             type="button"
@@ -146,7 +200,7 @@ export function RuntimePage({
               stepElfDebug(Number.isFinite(parsed) && parsed > 0 ? parsed : 1);
             }}
             disabled={!debugReady || debugBusy}
-            className="h-8 rounded border border-slate-600 bg-slate-900 px-3 text-[11px] font-semibold text-slate-200 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+            className={`h-8 px-3 text-[11px] font-semibold ${controlButtonClass} disabled:cursor-not-allowed disabled:opacity-50`}
           >
             Step ×N
           </button>
@@ -154,7 +208,7 @@ export function RuntimePage({
             type="button"
             onClick={runElfDebug}
             disabled={debugBusy || (!debugReady && !elfFile && !asmSourceInput.trim())}
-            className="h-8 rounded border border-slate-600 bg-slate-900 px-3 text-[11px] font-semibold text-slate-200 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+            className={`h-8 px-3 text-[11px] font-semibold ${controlButtonClass} disabled:cursor-not-allowed disabled:opacity-50`}
           >
             Run
           </button>
@@ -162,28 +216,28 @@ export function RuntimePage({
             type="button"
             onClick={resetElfDebug}
             disabled={debugBusy}
-            className="h-8 rounded border border-slate-600 bg-slate-900 px-3 text-[11px] font-semibold text-slate-200 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+            className={`h-8 px-3 text-[11px] font-semibold ${controlButtonClass} disabled:cursor-not-allowed disabled:opacity-50`}
           >
             Reset
           </button>
         </div>
 
-        <div className="flex items-center border-b border-slate-700 bg-slate-800 px-2 py-1.5">
+        <div className={`flex items-center px-2 py-1.5 ${topBarClass}`}>
           <button
             type="button"
             onClick={() => setActiveEditorTab('program')}
-            className={`rounded px-3 py-1 text-xs font-medium ${activeEditorTab === 'program' ? 'bg-slate-100 text-slate-900' : 'text-slate-300 hover:bg-slate-700'}`}
+            className={`rounded px-3 py-1 text-xs font-medium ${activeEditorTab === 'program' ? tabActiveClass : tabInactiveClass}`}
           >
             program.S
           </button>
           <button
             type="button"
             onClick={() => setActiveEditorTab('linker')}
-            className={`ml-1 rounded px-3 py-1 text-xs font-medium ${activeEditorTab === 'linker' ? 'bg-slate-100 text-slate-900' : 'text-slate-300 hover:bg-slate-700'}`}
+            className={`ml-1 rounded px-3 py-1 text-xs font-medium ${activeEditorTab === 'linker' ? tabActiveClass : tabInactiveClass}`}
           >
             link.ld
           </button>
-          <span className="ml-auto text-[11px] text-slate-400">
+          <span className={`ml-auto text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
             {elfFile ? `ELF: ${elfFile.name}` : 'No ELF selected'}
           </span>
         </div>
@@ -205,31 +259,31 @@ export function RuntimePage({
               automaticLayout: true,
               lineNumbersMinChars: 3,
             }}
-            theme="vs-dark"
+            theme={editorTheme}
           />
         </div>
 
-        <div className="flex h-72 min-h-[220px] flex-col border-t border-slate-700 bg-slate-950">
-          <div className="flex items-center justify-between border-b border-slate-700 px-2 py-1.5">
+        <div className={`flex h-72 min-h-[220px] flex-col ${logPaneClass}`}>
+          <div className={`flex items-center justify-between px-2 py-1.5 ${isDark ? 'border-b border-slate-700' : 'border-b border-slate-300 bg-slate-50'}`}>
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => setRuntimeLogTab('program')}
-                className={`rounded px-3 py-1 text-[11px] font-medium ${runtimeLogTab === 'program' ? 'bg-slate-200 text-slate-900' : 'text-slate-300 hover:bg-slate-700'}`}
+                className={`rounded px-3 py-1 text-[11px] font-medium ${runtimeLogTab === 'program' ? tabActiveClass : tabInactiveClass}`}
               >
                 Program Output
               </button>
               <button
                 type="button"
                 onClick={() => setRuntimeLogTab('summary')}
-                className={`rounded px-3 py-1 text-[11px] font-medium ${runtimeLogTab === 'summary' ? 'bg-slate-200 text-slate-900' : 'text-slate-300 hover:bg-slate-700'}`}
+                className={`rounded px-3 py-1 text-[11px] font-medium ${runtimeLogTab === 'summary' ? tabActiveClass : tabInactiveClass}`}
               >
                 Runtime Summary
               </button>
               <button
                 type="button"
                 onClick={() => setRuntimeLogTab('trace')}
-                className={`rounded px-3 py-1 text-[11px] font-medium ${runtimeLogTab === 'trace' ? 'bg-slate-200 text-slate-900' : 'text-slate-300 hover:bg-slate-700'}`}
+                className={`rounded px-3 py-1 text-[11px] font-medium ${runtimeLogTab === 'trace' ? tabActiveClass : tabInactiveClass}`}
               >
                 Sail Trace
               </button>
@@ -237,20 +291,28 @@ export function RuntimePage({
             <button
               type="button"
               onClick={() => setOutput('')}
-              className="rounded border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-300 hover:border-slate-400"
+              className={`rounded px-2 py-1 text-[11px] ${controlButtonClass}`}
             >
               Clear
             </button>
           </div>
-          <pre className="flex-1 overflow-auto px-3 py-2 font-mono text-[11px] leading-relaxed text-slate-100 whitespace-pre-wrap">
+          <pre className={`flex-1 overflow-auto px-3 py-2 font-mono text-[11px] leading-relaxed whitespace-pre-wrap ${logTextClass}`}>
             {runtimeLogText}
           </pre>
         </div>
       </section>
 
-      <aside className="min-h-0 overflow-y-auto bg-slate-50 p-4">
+      <div
+        className={`hidden lg:block cursor-col-resize ${isDark ? 'bg-slate-800 hover:bg-slate-700' : 'bg-slate-200 hover:bg-slate-300'}`}
+        onMouseDown={() => setIsResizing(true)}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize panes"
+      />
+
+      <aside className={`min-h-0 overflow-y-auto p-4 ${isDark ? 'bg-slate-900' : 'bg-slate-50'}`}>
         <div className="space-y-4">
-          <div className="rounded-xl border border-slate-200 bg-white p-3">
+          <div className={rightCardClass}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Debug State</p>
               <div className="flex items-center gap-2 text-[11px] text-slate-600">
@@ -287,7 +349,7 @@ export function RuntimePage({
             )}
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-3">
+          <div className={rightCardClass}>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Registers</p>
               <div className="flex items-center gap-2">
@@ -328,24 +390,21 @@ export function RuntimePage({
               )}
             </div>
           </div>
-          {elfRunStatus && (
-            <p className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
-              {elfRunStatus}
-            </p>
-          )}
           {configsState.state === 'hasError' && (
             <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
               Failed to load config list. Make sure <span className="font-semibold">/config/configs.json</span> exists.
             </p>
           )}
-          <div className="rounded-xl border border-slate-200 bg-white p-3">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Run Context</p>
-            <p className="text-xs text-slate-600">
-              Left pane is non-scrolling at page level; editor and log panes scroll independently.
-            </p>
-          </div>
         </div>
       </aside>
-    </main>
+      </main>
+      <div className={`box-border h-8 min-h-8 flex-shrink-0 overflow-hidden border-t px-3 text-[11px] font-medium flex items-center ${
+        isDark ? 'border-slate-700 bg-slate-900 text-slate-300' : 'border-slate-200 bg-slate-50 text-slate-600'
+      }`}>
+        <span className="block min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap">
+          {elfRunStatus || (debugBusy ? 'Running...' : 'Ready')}
+        </span>
+      </div>
+    </div>
   );
 }

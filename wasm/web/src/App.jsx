@@ -214,6 +214,10 @@ function App() {
   const [stepBatchInput, setStepBatchInput] = useState('10');
   const [activePage, setActivePage] = useState('explorer');
   const [runtimeLogTab, setRuntimeLogTab] = useState('program');
+  const [theme, setTheme] = useState(() => {
+    if (typeof window === 'undefined') return 'light';
+    return window.localStorage.getItem('sail-theme') === 'dark' ? 'dark' : 'light';
+  });
   const [activeEditorTab, setActiveEditorTab] = useState('program');
   const [asmSourceInput, setAsmSourceInput] = useState(DEFAULT_DEBUG_ASM_SOURCE);
   const [linkerScriptInput, setLinkerScriptInput] = useState(DEFAULT_DEBUG_LINKER_SCRIPT);
@@ -233,6 +237,8 @@ function App() {
   const monacoEditorRef = useRef(null);
   const monacoRef = useRef(null);
   const monacoDecorationsRef = useRef([]);
+  const isDark = theme === 'dark';
+  const editorTheme = isDark ? 'vs-dark' : 'vs';
 
   const append = useCallback((line) => {
     setOutput((prev) => (prev ? `${prev}\n${line}` : line));
@@ -420,6 +426,29 @@ function App() {
       }
     };
   }, [append]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.classList.toggle('dark', isDark);
+    window.localStorage.setItem('sail-theme', theme);
+  }, [isDark, theme]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    if (activePage !== 'runtime') {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      return undefined;
+    }
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevBodyOverflow;
+      document.documentElement.style.overflow = prevHtmlOverflow;
+    };
+  }, [activePage]);
 
   useEffect(() => {
     return () => {
@@ -1104,6 +1133,7 @@ function App() {
   };
 
   const explorerPageProps = {
+    isDark,
     configPath,
     setConfigPath,
     configsState,
@@ -1148,6 +1178,8 @@ function App() {
   };
 
   const runtimePageProps = {
+    isDark,
+    editorTheme,
     configPath,
     setConfigPath,
     configsState,
@@ -1190,59 +1222,70 @@ function App() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,_rgb(255_247_237),_rgb(248_250_252)_55%)] text-slate-900">
+    <div
+      className={`relative overflow-hidden ${
+        isDark
+          ? 'bg-[radial-gradient(circle_at_top,_rgb(15_23_42),_rgb(2_6_23)_55%)] text-slate-100'
+          : 'bg-[radial-gradient(circle_at_top,_rgb(255_247_237),_rgb(248_250_252)_55%)] text-slate-900'
+      } ${activePage === 'runtime' ? 'h-screen flex flex-col' : 'min-h-screen'}`}
+    >
       <div className="pointer-events-none absolute -top-24 right-[-10%] h-72 w-72 rounded-full bg-[radial-gradient(circle,_rgba(14,116,144,0.18),_rgba(14,116,144,0))] blur-2xl animate-drift" />
       <div className="pointer-events-none absolute -bottom-24 left-[-5%] h-80 w-80 rounded-full bg-[radial-gradient(circle,_rgba(249,115,22,0.18),_rgba(249,115,22,0))] blur-2xl animate-drift" />
 
-      <header className="mx-auto flex w-full max-w-[1400px] items-center justify-between px-6 py-6 animate-rise">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 items-center rounded-2xl bg-slate-900 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white shadow-lg shadow-slate-900/15">
-            sail-riscv
-          </div>
-          <div className="text-2xl font-semibold font-serif leading-tight md:text-3xl">
-            Inspect RISC-V encodings with a live Sail core.
-          </div>
+      <header className="mx-auto flex w-full max-w-[1400px] items-center gap-3 px-4 py-3 animate-rise">
+        <div className="flex h-8 items-center rounded-xl bg-slate-900 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white shadow-sm">
+          sail-riscv
         </div>
-        <div className="flex items-center gap-3 text-xs">
-          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700">
-            {configsState.state === 'hasData' ? 'Configs ready' : 'Loading configs'}
-          </span>
-          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-600">
-            Emscripten build
-          </span>
+        <div className={`min-w-0 flex-1 truncate text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+          Inspect RISC-V encodings with a live Sail core.
         </div>
-      </header>
-      <div className="mx-auto w-full max-w-[1400px] px-6 pb-2">
-        <div className="inline-flex rounded-2xl border border-slate-200 bg-white/80 p-1 shadow-sm">
+        <div className={`inline-flex rounded-xl border p-1 shadow-sm ${isDark ? 'border-slate-700 bg-slate-900/70' : 'border-slate-200 bg-white/80'}`}>
           <button
             type="button"
             onClick={() => setActivePage('explorer')}
-            className={`rounded-xl px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition ${
+            className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] transition ${
               activePage === 'explorer'
                 ? 'bg-slate-900 text-white'
-                : 'text-slate-600 hover:bg-slate-100'
+                : isDark
+                  ? 'text-slate-300 hover:bg-slate-800'
+                  : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
-            Page 1 · Instruction
+            Instruction
           </button>
           <button
             type="button"
             onClick={() => setActivePage('runtime')}
-            className={`rounded-xl px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition ${
+            className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] transition ${
               activePage === 'runtime'
                 ? 'bg-slate-900 text-white'
-                : 'text-slate-600 hover:bg-slate-100'
+                : isDark
+                  ? 'text-slate-300 hover:bg-slate-800'
+                  : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
-            Page 2 · Asm Runtime
+            Asm Runtime
           </button>
         </div>
-      </div>
+        <button
+          type="button"
+          onClick={() => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))}
+          className={`rounded-xl border px-3 py-1.5 text-[11px] font-semibold transition ${
+            isDark
+              ? 'border-slate-700 bg-slate-900/70 text-slate-200 hover:border-slate-500'
+              : 'border-slate-200 bg-white/80 text-slate-700 hover:border-slate-300'
+          }`}
+        >
+          {isDark ? 'Dark' : 'Light'}
+        </button>
+      </header>
 
       {activePage === 'explorer' ? (
         <ExplorerPage {...explorerPageProps} />
       ) : (
-        <RuntimePage {...runtimePageProps} />
+        <div className="flex-1 min-h-0">
+          <RuntimePage {...runtimePageProps} />
+        </div>
       )}
     </div>
   )

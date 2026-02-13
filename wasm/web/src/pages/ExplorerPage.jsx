@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { BinaryInput } from '../components/BinaryInput.jsx';
 
 export function ExplorerPage({
+  isDark,
   configPath,
   setConfigPath,
   configsState,
@@ -46,9 +47,9 @@ export function ExplorerPage({
   binInputRef,
 }) {
   return (
-    <main className="mx-auto grid w-full max-w-[1400px] gap-8 px-6 pb-12 lg:min-h-[calc(100vh-13rem)] lg:grid-cols-[1.08fr_0.92fr]">
+    <main className={`mx-auto grid w-full max-w-[1400px] gap-8 px-6 pb-12 lg:min-h-[calc(100vh-8rem)] lg:grid-cols-[1.08fr_0.92fr] ${isDark ? 'text-slate-100' : ''}`}>
       <section className="space-y-6">
-        <div className="rounded-3xl border border-slate-200 bg-white/80 p-8 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.55)] backdrop-blur animate-rise animate-rise-delay-1">
+        <div className={`rounded-3xl border p-8 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.55)] backdrop-blur animate-rise animate-rise-delay-1 ${isDark ? 'border-slate-700 bg-slate-900/80' : 'border-slate-200 bg-white/80'}`}>
           <div className="mb-6 space-y-3">
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl font-serif">
               Instruction Encode / Decode
@@ -215,7 +216,7 @@ export function ExplorerPage({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white/80 p-5 text-sm text-slate-600 shadow-sm">
+        <div className={`rounded-2xl border p-5 text-sm shadow-sm ${isDark ? 'border-slate-700 bg-slate-900/80 text-slate-300' : 'border-slate-200 bg-white/80 text-slate-600'}`}>
           <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-slate-400">
             <span>ISA string</span>
             <button
@@ -240,7 +241,7 @@ export function ExplorerPage({
       </section>
 
       <aside className="space-y-6">
-        <div className="rounded-3xl border border-slate-200 bg-white/80 p-6 text-sm text-slate-600 shadow-sm">
+        <div className={`rounded-3xl border p-6 text-sm shadow-sm ${isDark ? 'border-slate-700 bg-slate-900/80 text-slate-300' : 'border-slate-200 bg-white/80 text-slate-600'}`}>
           <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-slate-400">
             <span>Instruction</span>
             {currentInstruction?.inst?.definedBy?.extension?.name && (
@@ -323,7 +324,7 @@ export function ExplorerPage({
           )}
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white/80 p-6 text-sm text-slate-600 shadow-sm flex flex-col min-h-[520px]">
+        <div className={`rounded-3xl border p-6 text-sm shadow-sm flex flex-col min-h-[520px] ${isDark ? 'border-slate-700 bg-slate-900/80 text-slate-300' : 'border-slate-200 bg-white/80 text-slate-600'}`}>
           <h3 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl font-serif">Config editor</h3>
           <p className="mt-2 text-sm text-slate-600">
             Edit runtime config. Changes are auto-applied to <code className="text-slate-800">/config.json</code>.
