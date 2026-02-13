@@ -8,6 +8,10 @@ let ldFactory = null;
 let readelfFactory = null;
 let debugLineEntries = null;
 let debugLineFile = '';
+let debugSectionAddresses = {};
+let expandedSourceEntries = null;
+let expandedSourceText = '';
+let expandedSourceFile = '';
 
 let outputLines = [];
 let emittedLineCount = 0;
@@ -282,6 +286,144 @@ const parseReadelfDecodedLine = (lines) => {
   };
 };
 
+const parseReadelfSectionAddresses = (lines) => {
+  const sections = {};
+  for (const rawLine of lines) {
+    const line = String(rawLine || '');
+    const match = line.match(/^\s*\[\s*\d+\]\s+(\S+)\s+\S+\s+([0-9a-fA-F]{8,16})\s+[0-9a-fA-F]+\b/);
+    if (!match) {
+      continue;
+    }
+    const name = match[1];
+    const address = Number.parseInt(match[2], 16);
+    if (!Number.isFinite(address)) {
+      continue;
+    }
+    sections[name] = address;
+  }
+  return sections;
+};
+
+const resolveSectionAddress = (sectionAddresses, sectionName) => {
+  if (!sectionName) {
+    return null;
+  }
+  if (Object.prototype.hasOwnProperty.call(sectionAddresses, sectionName)) {
+    return sectionAddresses[sectionName];
+  }
+  if (sectionName.startsWith('.text') && Object.prototype.hasOwnProperty.call(sectionAddresses, '.text')) {
+    return sectionAddresses['.text'];
+  }
+  if (sectionName.startsWith('.rodata') && Object.prototype.hasOwnProperty.call(sectionAddresses, '.rodata')) {
+    return sectionAddresses['.rodata'];
+  }
+  if (sectionName.startsWith('.data') && Object.prototype.hasOwnProperty.call(sectionAddresses, '.data')) {
+    return sectionAddresses['.data'];
+  }
+  return null;
+};
+
+const detectSectionFromListingText = (rawText, currentSection) => {
+  const text = String(rawText || '').replace(/^>\s*/, '').trim();
+  if (!text) {
+    return currentSection;
+  }
+  const sectionMatch = text.match(/^\.section\s+([^\s,]+)/);
+  if (sectionMatch) {
+    return sectionMatch[1];
+  }
+  if (/^\.text\b/.test(text)) {
+    return '.text';
+  }
+  if (/^\.rodata\b/.test(text)) {
+    return '.rodata';
+  }
+  if (/^\.data\b/.test(text)) {
+    return '.data';
+  }
+  if (/^\.bss\b/.test(text)) {
+    return '.bss';
+  }
+  return currentSection;
+};
+
+const parseListingAddressMap = (listingText, sectionAddresses) => {
+  const lines = String(listingText || '').split(/\r?\n/);
+  const entries = [];
+  const perSectionCursor = {};
+  let currentSection = '.text';
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const rawLine = lines[index];
+    const lineNumber = index + 1;
+    const splitAt = rawLine.indexOf('\t');
+    const left = splitAt >= 0 ? rawLine.slice(0, splitAt) : rawLine;
+    const right = splitAt >= 0 ? rawLine.slice(splitAt + 1) : '';
+    const sourceText = right.trimEnd();
+    currentSection = detectSectionFromListingText(sourceText, currentSection);
+
+    const columns = left.trim();
+    if (!columns) {
+      continue;
+    }
+    const tokens = columns.split(/\s+/);
+    if (tokens.length < 2 || !/^\d+$/.test(tokens[0])) {
+      continue;
+    }
+
+    const sourceLine = Number.parseInt(tokens[0], 10);
+    const second = tokens[1] || '';
+    const third = tokens[2] || '';
+    const hasAddressToken = /^[0-9a-fA-F?]{4,16}$/.test(second) && /^[0-9a-fA-F]+$/.test(third);
+    const hasBytesOnly = !hasAddressToken && /^[0-9a-fA-F]+$/.test(second);
+    if (!hasAddressToken && !hasBytesOnly) {
+      continue;
+    }
+
+    const bytesToken = hasAddressToken ? third : second;
+    if (!bytesToken || !/^[0-9a-fA-F]+$/.test(bytesToken)) {
+      continue;
+    }
+
+    const sizeBytes = Math.max(1, Math.ceil(bytesToken.length / 2));
+    const sectionKey = currentSection || '.text';
+    const cursor = perSectionCursor[sectionKey] || { lastOffset: null, lastSize: 0 };
+
+    let offset = null;
+    if (hasAddressToken && /^[0-9a-fA-F]+$/.test(second)) {
+      offset = Number.parseInt(second, 16);
+    } else if (cursor.lastOffset !== null) {
+      offset = cursor.lastOffset + cursor.lastSize;
+    }
+    if (!Number.isFinite(offset)) {
+      continue;
+    }
+
+    cursor.lastOffset = offset;
+    cursor.lastSize = sizeBytes;
+    perSectionCursor[sectionKey] = cursor;
+
+    const sectionAddress = resolveSectionAddress(sectionAddresses, sectionKey);
+    if (!Number.isFinite(sectionAddress)) {
+      continue;
+    }
+
+    entries.push({
+      address: sectionAddress + offset,
+      line: lineNumber,
+      sourceLine: Number.isFinite(sourceLine) ? sourceLine : null,
+      section: sectionKey,
+      text: sourceText.replace(/^>\s*/, ''),
+    });
+  }
+
+  entries.sort((left, right) => left.address - right.address);
+  return {
+    sourceText: lines.join('\n'),
+    entries,
+  };
+};
+
 const lookupSourceLineByPc = (pcValue) => {
   if (!Array.isArray(debugLineEntries) || debugLineEntries.length === 0) {
     return null;
@@ -313,6 +455,37 @@ const lookupSourceLineByPc = (pcValue) => {
   return null;
 };
 
+const lookupExpandedSourceByPc = (pcValue) => {
+  if (!Array.isArray(expandedSourceEntries) || expandedSourceEntries.length === 0) {
+    return null;
+  }
+  const pc = Number(pcValue);
+  if (!Number.isFinite(pc)) {
+    return null;
+  }
+  let left = 0;
+  let right = expandedSourceEntries.length - 1;
+  let best = -1;
+  while (left <= right) {
+    const mid = (left + right) >> 1;
+    const address = expandedSourceEntries[mid].address;
+    if (address <= pc) {
+      best = mid;
+      left = mid + 1;
+    } else {
+      right = mid - 1;
+    }
+  }
+  if (best < 0) {
+    return null;
+  }
+  const entry = expandedSourceEntries[best];
+  if (!entry || !Number.isInteger(entry.line) || entry.line <= 0) {
+    return null;
+  }
+  return entry;
+};
+
 const augmentStateWithSourceLine = (state) => {
   if (!state || typeof state !== 'object') {
     return state;
@@ -325,14 +498,24 @@ const augmentStateWithSourceLine = (state) => {
   if (debugLineFile) {
     state.sourceFile = debugLineFile;
   }
+  const expandedSource = lookupExpandedSourceByPc(pc);
+  if (expandedSource) {
+    state.expandedSourceLine = expandedSource.line;
+    state.expandedSourceText = expandedSource.text;
+    state.expandedSourceSection = expandedSource.section;
+  }
+  if (expandedSourceFile) {
+    state.expandedSourceFile = expandedSourceFile;
+  }
   return state;
 };
 
 const refreshLineMapFromElf = async ({ requestId, baseUrl, cacheBust, elfBytes }) => {
   debugLineEntries = null;
   debugLineFile = '';
+  debugSectionAddresses = {};
   const factory = getReadelfFactory({ baseUrl, cacheBust });
-  const readelf = await runBinutilsModule({
+  const decodedLine = await runBinutilsModule({
     requestId,
     factory,
     label: 'readelf',
@@ -342,13 +525,47 @@ const refreshLineMapFromElf = async ({ requestId, baseUrl, cacheBust, elfBytes }
     },
     silent: true,
   });
-  const parsed = parseReadelfDecodedLine(readelf.stdoutLines);
+  const parsed = parseReadelfDecodedLine(decodedLine.stdoutLines);
   if (parsed.entries.length > 0) {
     debugLineEntries = parsed.entries;
     debugLineFile = parsed.sourceFile;
   }
+  const sectionHeaders = await runBinutilsModule({
+    requestId,
+    factory,
+    label: 'readelf',
+    args: ['-S', '/tmp/program.elf'],
+    preRun: (module) => {
+      module.FS.writeFile('/tmp/program.elf', new Uint8Array(elfBytes));
+    },
+    silent: true,
+  });
+  debugSectionAddresses = parseReadelfSectionAddresses(sectionHeaders.stdoutLines);
   return parsed.entries.length;
 };
+
+const clearExpandedSourceMap = () => {
+  expandedSourceEntries = null;
+  expandedSourceText = '';
+  expandedSourceFile = '';
+};
+
+const refreshExpandedSourceMapFromListing = (listingText) => {
+  clearExpandedSourceMap();
+  const parsed = parseListingAddressMap(listingText, debugSectionAddresses);
+  if (parsed.entries.length > 0) {
+    expandedSourceEntries = parsed.entries;
+    expandedSourceText = parsed.sourceText;
+    expandedSourceFile = '/tmp/program.S (expanded listing)';
+  }
+  return parsed.entries.length;
+};
+
+const expandedSourcePayload = () => ({
+  expandedSourceText,
+  expandedSourceFile,
+  expandedSourceEntries: Array.isArray(expandedSourceEntries) ? expandedSourceEntries.length : 0,
+});
 
 const requireSession = (Module) => {
   if (!debugSessionReady) {
@@ -362,13 +579,17 @@ const requireSession = (Module) => {
 const startSession = async ({ requestId, baseUrl, cacheBust, configText, elfBytes }) => {
   const Module = await getDebugModule(baseUrl, cacheBust);
   clearOutput();
+  clearExpandedSourceMap();
   await refreshLineMapFromElf({ requestId, baseUrl, cacheBust, elfBytes });
-  return initDebugSessionWithElf({
-    requestId,
-    Module,
-    configText,
-    elfBytes,
-  });
+  return {
+    ...(initDebugSessionWithElf({
+      requestId,
+      Module,
+      configText,
+      elfBytes,
+    })),
+    ...expandedSourcePayload(),
+  };
 };
 
 const assembleAndStartSession = async ({
@@ -400,6 +621,7 @@ const assembleAndStartSession = async ({
 
   const gasArgs = [
     '-g',
+    '-almhnd=/tmp/program.lst',
     `-march=${String(gasMarch || 'rv64imac')}`,
     `-mabi=${String(gasAbi || 'lp64')}`,
     '-o',
@@ -432,6 +654,13 @@ const assembleAndStartSession = async ({
 
   pushOutputLine(`gas: produced /tmp/program.o (${objectFile.length} bytes)`);
   flushOutput(requestId, false);
+
+  let listingText = '';
+  try {
+    listingText = gasResult.module.FS.readFile('/tmp/program.lst', { encoding: 'utf8' });
+  } catch {
+    listingText = '';
+  }
 
   const ldArgs = [
     '-m',
@@ -476,8 +705,13 @@ const assembleAndStartSession = async ({
     cacheBust,
     elfBytes,
   });
+  const expandedCount = refreshExpandedSourceMapFromListing(listingText);
   if (lineCount > 0) {
     pushOutputLine(`readelf: loaded ${lineCount} debug line entries`);
+    flushOutput(requestId, false);
+  }
+  if (expandedCount > 0) {
+    pushOutputLine(`gas: loaded ${expandedCount} expanded listing entries`);
     flushOutput(requestId, false);
   }
 
@@ -488,8 +722,10 @@ const assembleAndStartSession = async ({
       configText,
       elfBytes,
     })),
+    ...expandedSourcePayload(),
     elfSize: elfBytes.length,
     lineMapEntries: lineCount,
+    expandedMapEntries: expandedCount,
   };
 };
 
@@ -548,8 +784,10 @@ const resetSession = async () => {
   debugSessionReady = false;
   debugLineEntries = null;
   debugLineFile = '';
+  debugSectionAddresses = {};
+  clearExpandedSourceMap();
   clearOutput();
-  return { state: null, committed: 0 };
+  return { state: null, committed: 0, ...expandedSourcePayload() };
 };
 
 const sendResult = (requestId, payload) => {
@@ -569,6 +807,7 @@ const sendError = (requestId, error) => {
     requestId,
     error: messageText,
     state: debugModuleInstance ? augmentStateWithSourceLine(readDebugState(debugModuleInstance)) : null,
+    ...expandedSourcePayload(),
   });
 };
 
@@ -623,6 +862,7 @@ self.onmessage = async (event) => {
         result = {
           state: debugModuleInstance ? augmentStateWithSourceLine(readDebugState(debugModuleInstance)) : null,
           committed: 0,
+          ...expandedSourcePayload(),
         };
         break;
       default:

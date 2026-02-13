@@ -220,6 +220,7 @@ function App() {
   });
   const [activeEditorTab, setActiveEditorTab] = useState('program');
   const [asmSourceInput, setAsmSourceInput] = useState(DEFAULT_DEBUG_ASM_SOURCE);
+  const [expandedAsmSourceInput, setExpandedAsmSourceInput] = useState('');
   const [linkerScriptInput, setLinkerScriptInput] = useState(DEFAULT_DEBUG_LINKER_SCRIPT);
   const [gasMarchInput, setGasMarchInput] = useState('rv64imac');
   const [gasAbiInput, setGasAbiInput] = useState('lp64');
@@ -529,6 +530,8 @@ function App() {
     setDebugBusy(true);
     setDebugReady(false);
     setOutput('');
+    setActiveEditorTab('program');
+    setExpandedAsmSourceInput('');
     resetDebugDiff();
     setElfRunStatus(`Initializing ${elfFile.name}...`);
 
@@ -542,6 +545,7 @@ function App() {
         [bytes.buffer]
       );
       applyDebugState(result.state, { resetDiff: true });
+      setExpandedAsmSourceInput(typeof result.expandedSourceText === 'string' ? result.expandedSourceText : '');
       setDebugReady(true);
       setElfRunStatus(`Initialized: ${elfFile.name}`);
       return true;
@@ -572,6 +576,7 @@ function App() {
     setDebugBusy(true);
     setDebugReady(false);
     setOutput('');
+    setExpandedAsmSourceInput('');
     resetDebugDiff();
     setElfRunStatus('Assembling + linking in worker...');
 
@@ -584,10 +589,12 @@ function App() {
         gasAbi: gasAbiInput.trim() || 'lp64',
       });
       applyDebugState(result.state, { resetDiff: true });
+      setExpandedAsmSourceInput(typeof result.expandedSourceText === 'string' ? result.expandedSourceText : '');
       setDebugReady(true);
       const elfSize = Number.isFinite(result.elfSize) ? Number(result.elfSize) : 0;
       const lineEntries = Number.isFinite(result.lineMapEntries) ? Number(result.lineMapEntries) : 0;
-      setElfRunStatus(`Built + initialized from assembly (${elfSize} bytes, ${lineEntries} line entries).`);
+      const expandedEntries = Number.isFinite(result.expandedMapEntries) ? Number(result.expandedMapEntries) : 0;
+      setElfRunStatus(`Built + initialized from assembly (${elfSize} bytes, ${lineEntries} line entries, ${expandedEntries} expanded entries).`);
       return true;
     } catch (error) {
       setDebugReady(false);
@@ -818,6 +825,16 @@ function App() {
     return value;
   }, [debugState?.sourceLine]);
 
+  const activeExpandedSourceLine = useMemo(() => {
+    const value = Number(debugState?.expandedSourceLine);
+    if (!Number.isInteger(value) || value <= 0) {
+      return null;
+    }
+    return value;
+  }, [debugState?.expandedSourceLine]);
+
+  const activeRuntimeEditorLine = activeEditorTab === 'expanded' ? activeExpandedSourceLine : activeSourceLine;
+
   useEffect(() => {
     if (!monacoEditorRef.current || !monacoRef.current) {
       return;
@@ -828,30 +845,35 @@ function App() {
     if (!model) {
       return;
     }
-    if (activeEditorTab !== 'program' || !activeSourceLine || activeSourceLine > model.getLineCount()) {
+    if (!['program', 'expanded'].includes(activeEditorTab) || !activeRuntimeEditorLine || activeRuntimeEditorLine > model.getLineCount()) {
       monacoDecorationsRef.current = editor.deltaDecorations(monacoDecorationsRef.current, []);
       return;
     }
-    editor.revealLineInCenter(activeSourceLine);
+    editor.revealLineInCenter(activeRuntimeEditorLine);
     editor.setSelection({
-      startLineNumber: activeSourceLine,
+      startLineNumber: activeRuntimeEditorLine,
       startColumn: 1,
-      endLineNumber: activeSourceLine,
-      endColumn: model.getLineMaxColumn(activeSourceLine),
+      endLineNumber: activeRuntimeEditorLine,
+      endColumn: model.getLineMaxColumn(activeRuntimeEditorLine),
     });
     monacoDecorationsRef.current = editor.deltaDecorations(monacoDecorationsRef.current, [
       {
-        range: new monaco.Range(activeSourceLine, 1, activeSourceLine, 1),
+        range: new monaco.Range(activeRuntimeEditorLine, 1, activeRuntimeEditorLine, 1),
         options: {
           isWholeLine: true,
           className: 'debug-active-line',
         },
       },
     ]);
-  }, [activeEditorTab, activeSourceLine, asmSourceInput]);
+  }, [activeEditorTab, activeRuntimeEditorLine, asmSourceInput, expandedAsmSourceInput, linkerScriptInput]);
 
-  const runtimeEditorValue = activeEditorTab === 'program' ? asmSourceInput : linkerScriptInput;
-  const runtimeEditorLanguage = activeEditorTab === 'program' ? 'asm' : 'plaintext';
+  const runtimeEditorValue = activeEditorTab === 'program'
+    ? asmSourceInput
+    : activeEditorTab === 'expanded'
+      ? expandedAsmSourceInput
+      : linkerScriptInput;
+  const runtimeEditorLanguage = activeEditorTab === 'linker' ? 'plaintext' : 'asm';
+  const runtimeEditorReadOnly = activeEditorTab === 'expanded';
 
   const handleRuntimeEditorMount = useCallback((editor, monaco) => {
     monacoEditorRef.current = editor;
@@ -862,6 +884,9 @@ function App() {
     const next = value ?? '';
     if (activeEditorTab === 'program') {
       setAsmSourceInput(next);
+      return;
+    }
+    if (activeEditorTab === 'expanded') {
       return;
     }
     setLinkerScriptInput(next);
@@ -1192,7 +1217,8 @@ function App() {
     setStepBatchInput,
     setElfFile,
     stepBatchInput,
-    activeSourceLine,
+    activeSourceLine: activeRuntimeEditorLine,
+    activeExpandedSourceLine,
     debugBusy,
     buildAsmAndInitDebug,
     initElfDebug,
@@ -1202,10 +1228,12 @@ function App() {
     debugReady,
     elfFile,
     asmSourceInput,
+    expandedAsmSourceInput,
     activeEditorTab,
     setActiveEditorTab,
     runtimeEditorLanguage,
     runtimeEditorValue,
+    runtimeEditorReadOnly,
     handleRuntimeEditorChange,
     handleRuntimeEditorMount,
     runtimeLogTab,

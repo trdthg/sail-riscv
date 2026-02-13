@@ -17,6 +17,7 @@ export function RuntimePage({
   setElfFile,
   stepBatchInput,
   activeSourceLine,
+  activeExpandedSourceLine,
   debugBusy,
   buildAsmAndInitDebug,
   initElfDebug,
@@ -26,10 +27,12 @@ export function RuntimePage({
   debugReady,
   elfFile,
   asmSourceInput,
+  expandedAsmSourceInput,
   activeEditorTab,
   setActiveEditorTab,
   runtimeEditorLanguage,
   runtimeEditorValue,
+  runtimeEditorReadOnly,
   handleRuntimeEditorChange,
   handleRuntimeEditorMount,
   runtimeLogTab,
@@ -64,6 +67,7 @@ export function RuntimePage({
   const logPaneClass = isDark ? 'border-t border-slate-700 bg-slate-950' : 'border-t border-slate-300 bg-slate-100';
   const logTextClass = isDark ? 'text-slate-100' : 'text-slate-800';
   const rightCardClass = isDark ? 'rounded-xl border border-slate-700 bg-slate-800 p-3' : 'rounded-xl border border-slate-200 bg-white p-3';
+  const hasExpandedSource = Boolean(expandedAsmSourceInput && expandedAsmSourceInput.trim());
 
   useEffect(() => {
     if (!isResizing) return undefined;
@@ -232,13 +236,25 @@ export function RuntimePage({
           </button>
           <button
             type="button"
+            onClick={() => setActiveEditorTab('expanded')}
+            disabled={!hasExpandedSource}
+            className={`ml-1 rounded px-3 py-1 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-40 ${activeEditorTab === 'expanded' ? tabActiveClass : tabInactiveClass}`}
+          >
+            expanded.S
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveEditorTab('linker')}
             className={`ml-1 rounded px-3 py-1 text-xs font-medium ${activeEditorTab === 'linker' ? tabActiveClass : tabInactiveClass}`}
           >
             link.ld
           </button>
           <span className={`ml-auto text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            {elfFile ? `ELF: ${elfFile.name}` : 'No ELF selected'}
+            {activeEditorTab === 'expanded' && activeExpandedSourceLine
+              ? `expanded line ${activeExpandedSourceLine}`
+              : elfFile
+                ? `ELF: ${elfFile.name}`
+                : 'No ELF selected'}
           </span>
         </div>
 
@@ -258,6 +274,8 @@ export function RuntimePage({
               scrollBeyondLastLine: false,
               automaticLayout: true,
               lineNumbersMinChars: 3,
+              readOnly: runtimeEditorReadOnly,
+              domReadOnly: runtimeEditorReadOnly,
             }}
             theme={editorTheme}
           />
@@ -334,10 +352,21 @@ export function RuntimePage({
                   <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono">halted: {String(Boolean(debugState.halted))}</div>
                   <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono">exit: {debugState.exitCode ?? '-'}</div>
                   <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono">line: {debugState.sourceLine ?? '-'}</div>
+                  <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono">expanded: {debugState.expandedSourceLine ?? '-'}</div>
                 </div>
                 {debugState.sourceFile && (
                   <div className="mt-2 rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-[11px] text-slate-700">
                     source: {debugState.sourceFile}
+                  </div>
+                )}
+                {debugState.expandedSourceFile && (
+                  <div className="mt-2 rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-[11px] text-slate-700">
+                    expanded source: {debugState.expandedSourceFile}
+                  </div>
+                )}
+                {debugState.expandedSourceText && (
+                  <div className="mt-2 rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-[11px] text-slate-700">
+                    expanded text: {debugState.expandedSourceText}
                   </div>
                 )}
                 <div className="mt-2 rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-[11px] text-slate-700">
