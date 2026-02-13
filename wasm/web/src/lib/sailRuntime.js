@@ -36,6 +36,7 @@ const runtimeModulePromises = new Map();
 const runtimeFiles = {
   web: { js: '/wasm/sail_riscv_web.js', wasm: '/wasm/sail_riscv_web.wasm' },
   sim: { js: '/wasm/sail_riscv_sim.js', wasm: '/wasm/sail_riscv_sim.wasm' },
+  debug: { js: '/wasm/sail_riscv_debug.js', wasm: '/wasm/sail_riscv_debug.wasm' },
 };
 
 export const getRuntimeModule = async (target = 'web') => {

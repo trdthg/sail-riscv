@@ -11,6 +11,8 @@
 extern FILE *trace_log;
 extern int term_fd;
 void plat_term_write_impl(char c);
+using term_write_hook_t = void (*)(char);
+void set_term_write_hook(term_write_hook_t hook);
 
 // Model wrapped with an implementation of its platform callbacks.
 class ModelImpl final : public hart::Model {

@@ -165,3 +165,34 @@ target_compile_options(sail_riscv_web PRIVATE
 install(TARGETS sail_riscv_web
     RUNTIME DESTINATION "bin"
 )
+
+## Stateful debug entry for web worker (init/step/run/state APIs).
+
+add_executable(sail_riscv_debug
+    riscv_debug.cpp
+)
+
+add_dependencies(sail_riscv_debug generated_sail_riscv_model generated_config_schema)
+
+target_link_libraries(sail_riscv_debug
+    PRIVATE riscv_model
+)
+
+target_compile_options(sail_riscv_debug PRIVATE -fexceptions)
+target_link_options(sail_riscv_debug PRIVATE -fexceptions)
+
+if (EMSCRIPTEN)
+  target_link_options(sail_riscv_debug PRIVATE
+    "-sEXPORTED_FUNCTIONS=['_main','_debug_init','_debug_init_default','_debug_step','_debug_run','_debug_state_json','_debug_is_halted','_debug_exit_code','_debug_last_error','_debug_reset']"
+  )
+endif()
+
+target_compile_options(sail_riscv_debug PRIVATE
+  -Wall
+  -Wextra
+  -Wno-unused-parameter
+)
+
+install(TARGETS sail_riscv_debug
+    RUNTIME DESTINATION "bin"
+)

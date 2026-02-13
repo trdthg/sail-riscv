@@ -132,6 +132,13 @@ function App() {
   const [decodeMode, setDecodeMode] = useState('auto');
   const [elfFile, setElfFile] = useState(null);
   const [elfRunStatus, setElfRunStatus] = useState('');
+  const [debugReady, setDebugReady] = useState(false);
+  const [debugBusy, setDebugBusy] = useState(false);
+  const [debugState, setDebugState] = useState(null);
+  const [changedXRegs, setChangedXRegs] = useState([]);
+  const [changedFRegs, setChangedFRegs] = useState([]);
+  const [registerView, setRegisterView] = useState('x');
+  const [stepBatchInput, setStepBatchInput] = useState('10');
   const applyTimerRef = useRef(null);
   const decodeTimerRef = useRef(null);
   const assembleTimerRef = useRef(null);
@@ -139,11 +146,117 @@ function App() {
   const asmInputRef = useRef(null);
   const binInputRef = useRef(null);
   const asmSuppressOpenRef = useRef(false);
+  const debugWorkerRef = useRef(null);
+  const debugWorkerCacheBustRef = useRef('');
+  const debugRequestCounterRef = useRef(0);
+  const previousDebugRegsRef = useRef({ xregs: null, fregs: null, pc: '' });
 
   const append = useCallback((line) => {
     setOutput((prev) => (prev ? `${prev}\n${line}` : line));
   }, []);
   const setStatus = (text) => setConfigEditorStatus(text);
+
+  const appendOutputLines = useCallback((lines) => {
+    if (!Array.isArray(lines) || lines.length === 0) {
+      return;
+    }
+    const chunk = lines.map((line) => String(line)).join('\n');
+    setOutput((prev) => (prev ? `${prev}\n${chunk}` : chunk));
+  }, []);
+
+  const resetDebugDiff = useCallback(() => {
+    setChangedXRegs([]);
+    setChangedFRegs([]);
+    previousDebugRegsRef.current = { xregs: null, fregs: null, pc: '' };
+  }, []);
+
+  const applyDebugState = useCallback((state, options = {}) => {
+    const resetDiff = Boolean(options.resetDiff);
+    if (!state || typeof state !== 'object') {
+      setDebugState(null);
+      if (resetDiff) {
+        resetDebugDiff();
+      }
+      return;
+    }
+
+    const xregs = Array.isArray(state.xregs) ? state.xregs : [];
+    const fregs = Array.isArray(state.fregs) ? state.fregs : [];
+    const prev = previousDebugRegsRef.current;
+
+    if (resetDiff || !Array.isArray(prev.xregs)) {
+      setChangedXRegs(new Array(xregs.length).fill(false));
+      setChangedFRegs(new Array(fregs.length).fill(false));
+    } else {
+      setChangedXRegs(xregs.map((value, index) => prev.xregs[index] !== value));
+      setChangedFRegs(fregs.map((value, index) => prev.fregs[index] !== value));
+    }
+
+    previousDebugRegsRef.current = {
+      xregs: xregs.slice(),
+      fregs: fregs.slice(),
+      pc: state.pc || '',
+    };
+    setDebugState(state);
+  }, [resetDebugDiff]);
+
+  const ensureDebugWorker = useCallback(() => {
+    if (debugWorkerRef.current) {
+      return debugWorkerRef.current;
+    }
+    const cacheBust = `${Date.now()}`;
+    debugWorkerCacheBustRef.current = cacheBust;
+    const worker = new Worker(`${maybeWithBase('/workers/debugWorker.js')}?v=${cacheBust}`);
+    debugWorkerRef.current = worker;
+    return worker;
+  }, []);
+
+  const callDebugWorker = useCallback((method, payload = {}, transfer = []) => {
+    const worker = ensureDebugWorker();
+    const requestId = `${Date.now()}-${++debugRequestCounterRef.current}`;
+
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        worker.removeEventListener('message', onMessage);
+        reject(new Error(`Worker timeout: ${method}`));
+      }, 60000);
+
+      const onMessage = (event) => {
+        const message = event.data || {};
+        if (message.requestId !== requestId) {
+          return;
+        }
+
+        if (message.type === 'lines') {
+          appendOutputLines(message.lines || []);
+          return;
+        }
+
+        if (message.type === 'result') {
+          clearTimeout(timeout);
+          worker.removeEventListener('message', onMessage);
+          if (message.ok) {
+            resolve(message);
+          } else {
+            reject(new Error(message.error || `Worker ${method} failed`));
+          }
+        }
+      };
+
+      worker.addEventListener('message', onMessage);
+      worker.postMessage(
+        {
+          type: 'rpc',
+          method,
+          requestId,
+          baseUrl: import.meta.env.BASE_URL || '/',
+          cacheBust: debugWorkerCacheBustRef.current,
+          ...payload,
+        },
+        transfer
+      );
+    });
+  }, [appendOutputLines, ensureDebugWorker]);
 
   const parsedRuntimeOutput = useMemo(() => {
     const lines = output ? output.split('\n').filter((line) => line.length > 0) : [];
@@ -151,14 +264,18 @@ function App() {
     const traceLines = [];
     const runtimeLines = [];
 
-    const tracePattern = /^(\[\d+\]|mem\[|x\d+\s<-|f\d+\s<-|v\d+\s<-|clint |htif\[|htif-(?:syscall-proxy|term|debug)|pma|ptw|exception|interrupt)/i;
-    const htifTermCmdPattern = /htif-term cmd:\s*0x([0-9a-fA-F]+)/i;
+    const tracePattern = /^(\[\d+\]|mem\[|x\d+\s<-|f\d+\s<-|v\d+\s<-|clint |csr |htif\[|htif-(?:syscall-proxy|term|debug)|pma|ptw|exception|interrupt)/i;
+    const traceInlinePattern = /(\[\d+\]|mem\[|x\d+\s<-|f\d+\s<-|v\d+\s<-|clint |csr |htif\[|htif-(?:syscall-proxy|term|debug)|pma|ptw|exception|interrupt)/i;
+    const runtimePattern = /^(running|run watchdog|run timed out|run finished|selected:|htif located|entry point|success|failure:|program exited|committed steps:|exitstatus|debug error:)/i;
+    const htifTermCmdPattern = /htif-(?:term|syscall-proxy)\s+cmd:\s*0x([0-9a-fA-F]+)/i;
     const htifTermCompatPattern = /htif-term compat byte:\s*0x([0-9a-fA-F]+)/i;
+    const hasCompatTrace = lines.some((line) => htifTermCompatPattern.test(line));
 
     for (const line of lines) {
-      const termCmd = line.match(htifTermCmdPattern);
       const termCompat = line.match(htifTermCompatPattern);
-      const payloadHex = termCmd?.[1] ?? termCompat?.[1] ?? null;
+      const termCmd = line.match(htifTermCmdPattern);
+      const payloadHex = hasCompatTrace ? termCompat?.[1] ?? null : termCompat?.[1] ?? termCmd?.[1] ?? null;
+      let decodedFromLine = false;
       if (payloadHex) {
         try {
           const value = BigInt(`0x${payloadHex}`);
@@ -168,19 +285,39 @@ function App() {
           } else if (ch >= 32 && ch <= 126) {
             programText += String.fromCharCode(ch);
           }
+          decodedFromLine = true;
         } catch {
           // ignore malformed htif cmd lines
         }
       }
-      if (tracePattern.test(line.trim())) {
+      const trimmed = line.trim();
+      if (tracePattern.test(trimmed)) {
         traceLines.push(line);
-      } else {
+      } else if (runtimePattern.test(trimmed)) {
         runtimeLines.push(line);
+      } else {
+        const inline = line.match(traceInlinePattern);
+        if (inline && typeof inline.index === 'number' && inline.index > 0) {
+          const prefix = line.slice(0, inline.index);
+          if (prefix && !decodedFromLine) {
+            programText = programText ? `${programText}\n${prefix}` : prefix;
+          }
+          traceLines.push(line.slice(inline.index));
+        } else {
+          programText = programText ? `${programText}\n${line}` : line;
+        }
       }
     }
 
     return { programText, traceLines, runtimeLines, allLines: lines };
   }, [output]);
+
+  const displayedProgramOutput = useMemo(() => {
+    if (debugState && typeof debugState === 'object' && typeof debugState.programOutput === 'string') {
+      return debugState.programOutput;
+    }
+    return parsedRuntimeOutput.programText;
+  }, [debugState, parsedRuntimeOutput.programText]);
 
   useEffect(() => {
     window.__sailOutputSink = append;
@@ -196,6 +333,10 @@ function App() {
       if (applyTimerRef.current) clearTimeout(applyTimerRef.current);
       if (decodeTimerRef.current) clearTimeout(decodeTimerRef.current);
       if (assembleTimerRef.current) clearTimeout(assembleTimerRef.current);
+      if (debugWorkerRef.current) {
+        debugWorkerRef.current.terminate();
+        debugWorkerRef.current = null;
+      }
     };
   }, []);
 
@@ -251,51 +392,112 @@ function App() {
     return [...getOutputLines()];
   }, [append, resolveConfigText]);
 
-  const runElf = useCallback(async () => {
+  const initElfDebug = useCallback(async () => {
     if (!elfFile) {
       setElfRunStatus('Please choose an ELF file.');
-      return;
+      return false;
     }
-    setOutput('');
-    setElfRunStatus(`Running ${elfFile.name}...`);
-    const Module = await getRuntimeModule('sim');
     const configText = await resolveConfigText();
     if (!configText) {
       setElfRunStatus('Config not available.');
-      return;
-    }
-    if (!Module.FS || !Module.FS.writeFile) {
-      setElfRunStatus('Emscripten FS is not available.');
-      return;
+      return false;
     }
 
-    const fsConfigPath = '/config.json';
-    const fsElfPath = `/tmp/${elfFile.name.replace(/[^A-Za-z0-9._-]/g, '_') || 'program.elf'}`;
     const bytes = new Uint8Array(await elfFile.arrayBuffer());
-    Module.FS.writeFile(fsConfigPath, configText);
-    Module.FS.writeFile(fsElfPath, bytes);
+    setDebugBusy(true);
+    setDebugReady(false);
+    setOutput('');
+    resetDebugDiff();
+    setElfRunStatus(`Initializing ${elfFile.name}...`);
 
-    const lines = getOutputLines();
-    lines.length = 0;
-    append(`Running: --trace-all --config ${fsConfigPath} ${fsElfPath}`);
     try {
-      Module.callMain(['--trace-all', '--config', fsConfigPath, fsElfPath]);
-      setElfRunStatus(`Run finished: ${elfFile.name}`);
-    } catch (e) {
-      if (typeof e === 'number') {
-        append(`ExitStatus (number): ${e}`);
-        setElfRunStatus(`Run failed with exit code ${e}`);
-      } else if (e && typeof e.status === 'number') {
-        append(`ExitStatus: ${e.status}`);
-        setElfRunStatus(`Run failed with exit code ${e.status}`);
-      } else {
-        append(`Program exited: ${String(e)}`);
-        setElfRunStatus(`Run failed: ${String(e)}`);
-      }
+      const result = await callDebugWorker(
+        'start',
+        {
+          configText,
+          elfBytes: bytes.buffer,
+        },
+        [bytes.buffer]
+      );
+      applyDebugState(result.state, { resetDiff: true });
+      setDebugReady(true);
+      setElfRunStatus(`Initialized: ${elfFile.name}`);
+      return true;
+    } catch (error) {
+      setDebugReady(false);
+      setElfRunStatus(`Init failed: ${error?.message || String(error)}`);
+      return false;
     } finally {
-      setOutput([...getOutputLines()].join('\n'));
+      setDebugBusy(false);
     }
-  }, [append, elfFile, resolveConfigText]);
+  }, [applyDebugState, callDebugWorker, elfFile, resetDebugDiff, resolveConfigText]);
+
+  const stepElfDebug = useCallback(async (steps = 1) => {
+    if (!debugReady) {
+      setElfRunStatus('Debug session is not initialized.');
+      return;
+    }
+    setDebugBusy(true);
+    try {
+      const result = await callDebugWorker('step', { steps: Math.max(1, steps | 0) });
+      applyDebugState(result.state);
+      const halted = Boolean(result?.state?.halted);
+      const exitCode = Number.isFinite(result?.state?.exitCode) ? Number(result.state.exitCode) : 0;
+      if (halted) {
+        setElfRunStatus(`Halted (exit=${exitCode})`);
+      } else {
+        setElfRunStatus(`Stepped ${result.committed || 0} instruction(s).`);
+      }
+    } catch (error) {
+      setElfRunStatus(`Step failed: ${error?.message || String(error)}`);
+    } finally {
+      setDebugBusy(false);
+    }
+  }, [applyDebugState, callDebugWorker, debugReady]);
+
+  const runElfDebug = useCallback(async () => {
+    let ready = debugReady;
+    if (!ready) {
+      ready = await initElfDebug();
+    }
+    if (!ready) {
+      return;
+    }
+    setDebugBusy(true);
+    setElfRunStatus('Running to completion...');
+    try {
+      const result = await callDebugWorker('run', {
+        chunk: 5000,
+        watchdogMs: 15000,
+      });
+      applyDebugState(result.state);
+      const exitCode = Number.isFinite(result?.state?.exitCode) ? Number(result.state.exitCode) : 0;
+      if (exitCode === 0) {
+        setElfRunStatus(`Run finished: ${elfFile?.name || 'ELF'}`);
+      } else {
+        setElfRunStatus(`Run failed with exit code ${exitCode}`);
+      }
+    } catch (error) {
+      setElfRunStatus(`Run failed: ${error?.message || String(error)}`);
+    } finally {
+      setDebugBusy(false);
+    }
+  }, [applyDebugState, callDebugWorker, debugReady, elfFile?.name, initElfDebug]);
+
+  const resetElfDebug = useCallback(async () => {
+    setDebugBusy(true);
+    try {
+      await callDebugWorker('reset');
+    } catch {
+      // reset best-effort
+    } finally {
+      setDebugBusy(false);
+      setDebugReady(false);
+      setDebugState(null);
+      resetDebugDiff();
+      setElfRunStatus('Debug session reset.');
+    }
+  }, [callDebugWorker, resetDebugDiff]);
 
   const runPrintIsa = useCallback(async () => {
     refreshIsa((value) => value + 1);
@@ -408,6 +610,30 @@ function App() {
     }
     return null;
   }, [assemblyInput, binInput, hexInput, udbState]);
+
+  const debugRegisterRows = useMemo(() => {
+    if (!debugState || typeof debugState !== 'object') {
+      return [];
+    }
+    if (registerView === 'f') {
+      const fregs = Array.isArray(debugState.fregs) ? debugState.fregs : [];
+      return fregs.map((value, index) => ({
+        key: `f${index}`,
+        name: `f${index}`,
+        value: String(value),
+        changed: Boolean(changedFRegs[index]),
+      }));
+    }
+    const xregs = Array.isArray(debugState.xregs) ? debugState.xregs : [];
+    const abi = Array.isArray(debugState.xregAbi) ? debugState.xregAbi : [];
+    return xregs.map((value, index) => ({
+      key: `x${index}`,
+      name: `x${index}`,
+      alias: abi[index] || '',
+      value: String(value),
+      changed: Boolean(changedXRegs[index]),
+    }));
+  }, [changedFRegs, changedXRegs, debugState, registerView]);
 
   const renderUdbValue = (value) => {
     if (!value) return null;
@@ -882,14 +1108,62 @@ function App() {
                       className="mt-2 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700"
                     />
                   </label>
-                  <button
-                    type="button"
-                    onClick={runElf}
-                    disabled={!elfFile}
-                    className="h-10 rounded-lg border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Run ELF
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={initElfDebug}
+                      disabled={!elfFile || debugBusy}
+                      className="h-10 rounded-lg border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Init ELF
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => stepElfDebug(1)}
+                      disabled={!debugReady || debugBusy}
+                      className="h-10 rounded-lg border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Step
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={stepBatchInput}
+                      onChange={(event) => {
+                        const next = event.target.value.replace(/[^\d]/g, '');
+                        setStepBatchInput(next);
+                      }}
+                      className="h-10 w-20 rounded-lg border border-slate-300 bg-white px-2 text-center text-xs font-semibold text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const parsed = Number.parseInt(stepBatchInput, 10);
+                        stepElfDebug(Number.isFinite(parsed) && parsed > 0 ? parsed : 1);
+                      }}
+                      disabled={!debugReady || debugBusy}
+                      className="h-10 rounded-lg border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Step ×N
+                    </button>
+                    <button
+                      type="button"
+                      onClick={runElfDebug}
+                      disabled={debugBusy || (!debugReady && !elfFile)}
+                      className="h-10 rounded-lg border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Run
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resetElfDebug}
+                      disabled={debugBusy}
+                      className="h-10 rounded-lg border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Reset
+                    </button>
+                  </div>
                 </div>
                 <p className="mt-2 text-xs text-slate-500">
                   {elfFile ? `Selected: ${elfFile.name}` : 'No ELF selected.'}
@@ -897,6 +1171,74 @@ function App() {
                 {elfRunStatus && (
                   <p className="mt-1 text-xs text-slate-600">{elfRunStatus}</p>
                 )}
+
+                <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Debug State</p>
+                    <div className="flex items-center gap-2 text-[11px] text-slate-600">
+                      <span className={`rounded-full border px-2 py-0.5 ${debugReady ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>
+                        {debugReady ? 'ready' : 'not initialized'}
+                      </span>
+                      {debugBusy && (
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700">
+                          busy
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {debugState ? (
+                    <div className="mt-2 grid gap-2 text-[11px] text-slate-700 md:grid-cols-4">
+                      <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono">pc: {debugState.pc || '-'}</div>
+                      <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono">step: {debugState.step ?? '-'}</div>
+                      <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono">halted: {String(Boolean(debugState.halted))}</div>
+                      <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1 font-mono">exit: {debugState.exitCode ?? '-'}</div>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-[11px] text-slate-500">No debug state yet.</p>
+                  )}
+                </div>
+
+                <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Registers</p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setRegisterView('x')}
+                        className={`rounded border px-2 py-1 text-[11px] ${registerView === 'x' ? 'border-slate-400 bg-slate-100 text-slate-900' : 'border-slate-200 bg-white text-slate-600'}`}
+                      >
+                        X
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRegisterView('f')}
+                        className={`rounded border px-2 py-1 text-[11px] ${registerView === 'f' ? 'border-slate-400 bg-slate-100 text-slate-900' : 'border-slate-200 bg-white text-slate-600'}`}
+                      >
+                        F
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid max-h-72 gap-1 overflow-auto md:grid-cols-2">
+                    {debugRegisterRows.length > 0 ? debugRegisterRows.map((row) => (
+                      <div
+                        key={row.key}
+                        className={`flex items-center justify-between rounded border px-2 py-1 font-mono text-[11px] ${
+                          row.changed
+                            ? 'border-amber-300 bg-amber-50 text-amber-900'
+                            : 'border-slate-200 bg-slate-50 text-slate-700'
+                        }`}
+                      >
+                        <span>
+                          {row.name}
+                          {row.alias ? ` (${row.alias})` : ''}
+                        </span>
+                        <span>{row.value}</span>
+                      </div>
+                    )) : (
+                      <p className="text-[11px] text-slate-500">No registers available.</p>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="md:col-span-2 rounded-xl border border-slate-200 bg-white p-3">
@@ -914,7 +1256,7 @@ function App() {
                   <div>
                     <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Program Output (HTIF)</p>
                     <pre className="h-28 overflow-auto rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-[11px] leading-relaxed text-slate-800 whitespace-pre-wrap">
-                      {parsedRuntimeOutput.programText || '(no decoded program output)'}
+                      {displayedProgramOutput || '(no decoded program output)'}
                     </pre>
                   </div>
                   <div>

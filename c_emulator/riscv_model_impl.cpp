@@ -8,7 +8,18 @@
 #include "symbol_table.h"
 
 int term_fd = 1; // set during startup
+namespace {
+term_write_hook_t g_term_write_hook = nullptr;
+}
+
+void set_term_write_hook(term_write_hook_t hook) {
+  g_term_write_hook = hook;
+}
+
 void plat_term_write_impl(char c) {
+  if (g_term_write_hook != nullptr) {
+    g_term_write_hook(c);
+  }
   if (write(term_fd, &c, sizeof(c)) < 0) {
     fprintf(stderr, "Unable to write to terminal!\n");
   }

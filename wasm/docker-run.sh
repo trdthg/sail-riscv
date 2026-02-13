@@ -43,7 +43,7 @@ docker run --rm -i \
     build_dir=\"\${repo_root}/build-emscripten\"
     GMP_WASM_DIST=\"\${GMP_WASM_DIST:-\${gmp_dist_default}}\"
 
-    link_flags=\"-s MODULARIZE=1 -s EXPORT_NAME=createSailModule -s INVOKE_RUN=0 -s EXIT_RUNTIME=0 -s ALLOW_MEMORY_GROWTH=1 -s EXPORTED_RUNTIME_METHODS=callMain,FS -s DISABLE_EXCEPTION_CATCHING=0 -s WASM_BIGINT=1 -s EMULATE_FUNCTION_POINTER_CASTS=1 -s ASSERTIONS=2 -s STACK_SIZE=4194304\"
+    link_flags=\"-s MODULARIZE=1 -s EXPORT_NAME=createSailModule -s INVOKE_RUN=0 -s EXIT_RUNTIME=0 -s ALLOW_MEMORY_GROWTH=1 -s EXPORTED_RUNTIME_METHODS=callMain,FS,HEAPU8 -s DISABLE_EXCEPTION_CATCHING=0 -s WASM_BIGINT=1 -s EMULATE_FUNCTION_POINTER_CASTS=1 -s ASSERTIONS=2 -s STACK_SIZE=4194304\"
 
     emcmake cmake -S \"\${repo_root}\" -B \"\${build_dir}\" \\
       -DCMAKE_BUILD_TYPE=Release \\
@@ -51,7 +51,7 @@ docker run --rm -i \
       -DCMAKE_EXE_LINKER_FLAGS=\"\${link_flags}\" \\
       -DCMAKE_CROSSCOMPILING_EMULATOR=\"/bin/true\"
 
-    cmake --build \"\${build_dir}\" --target sail_riscv_web sail_riscv_sim -j
+    cmake --build \"\${build_dir}\" --target sail_riscv_web sail_riscv_sim sail_riscv_debug -j
 
   "
 
@@ -61,10 +61,14 @@ cp -f "${repo_root}/build-emscripten/c_emulator/sail_riscv_web.js" "${repo_root}
 cp -f "${repo_root}/build-emscripten/c_emulator/sail_riscv_web.wasm" "${repo_root}/wasm/web/public/sail_riscv_web.wasm"
 cp -f "${repo_root}/build-emscripten/c_emulator/sail_riscv_sim.js" "${repo_root}/wasm/web/public/sail_riscv_sim.js"
 cp -f "${repo_root}/build-emscripten/c_emulator/sail_riscv_sim.wasm" "${repo_root}/wasm/web/public/sail_riscv_sim.wasm"
+cp -f "${repo_root}/build-emscripten/c_emulator/sail_riscv_debug.js" "${repo_root}/wasm/web/public/sail_riscv_debug.js"
+cp -f "${repo_root}/build-emscripten/c_emulator/sail_riscv_debug.wasm" "${repo_root}/wasm/web/public/sail_riscv_debug.wasm"
 echo "built: ${repo_root}/wasm/web/public/sail_riscv_web.js"
 echo "built: ${repo_root}/wasm/web/public/sail_riscv_web.wasm"
 echo "built: ${repo_root}/wasm/web/public/sail_riscv_sim.js"
 echo "built: ${repo_root}/wasm/web/public/sail_riscv_sim.wasm"
+echo "built: ${repo_root}/wasm/web/public/sail_riscv_debug.js"
+echo "built: ${repo_root}/wasm/web/public/sail_riscv_debug.wasm"
 cp -f "${repo_root}/wasm/web/public/"*.wasm "${repo_root}/wasm/web/public/"*.js "${repo_root}/wasm/web/public/wasm/"
 config_src="${repo_root}/build-emscripten/config"
 if compgen -G "${config_src}/*.json" > /dev/null; then
