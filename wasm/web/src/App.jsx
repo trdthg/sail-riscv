@@ -22,15 +22,6 @@ import { udbIndexLoadableAtom } from './lib/udbIndex.js';
 import { configEditorAtom, configPathAtom, configsLoadableAtom } from './state/configAtoms.js';
 import { isaLoadableAtom, isaRefreshAtom } from './state/isaAtoms.js';
 
-
-const assemblyStatusStyles = {
-  waiting: 'border-slate-200 bg-slate-50 text-slate-500',
-  updating: 'border-amber-200 bg-amber-50 text-amber-700',
-  updated: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  empty: 'border-rose-200 bg-rose-50 text-rose-700',
-  error: 'border-rose-200 bg-rose-50 text-rose-700',
-};
-
 function App() {
   const [configsState] = useAtom(configsLoadableAtom);
   const [configPath, setConfigPath] = useAtom(configPathAtom);
@@ -261,7 +252,6 @@ function App() {
     assemblyInput,
     setAssemblyInput,
     assemblyStatus,
-    assemblyStatusStyles,
     assemblyMessage,
     setAssemblyMessage,
     asmInputRef,

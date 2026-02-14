@@ -22,7 +22,7 @@ function RuntimePageLayout({
 }) {
   const sessionState = useRuntimeSessionState()
   const mainRef = useRef(null)
-  const [splitRatio, setSplitRatio] = useState(66)
+  const [splitRatio, setSplitRatio] = useState(80)
   const [isResizing, setIsResizing] = useState(false)
   const shellClass = isDark
     ? 'border-l border-slate-700 bg-slate-900 text-slate-100'
@@ -55,7 +55,7 @@ function RuntimePageLayout({
       const relativeX = event.clientX - bounds.left
       const leftRatio = (relativeX / bounds.width) * 100
       const editorRatio = 100 - leftRatio
-      const clampedEditor = Math.max(40, Math.min(90, editorRatio))
+      const clampedEditor = Math.max(60, Math.min(94, editorRatio))
       setSplitRatio(clampedEditor)
     }
     const onMouseUp = () => setIsResizing(false)
@@ -79,11 +79,13 @@ function RuntimePageLayout({
     >
       <main
         ref={mainRef}
-        className="flex-1 w-full min-h-0 lg:grid"
-        style={{ gridTemplateColumns: `${100 - splitRatio}fr 8px ${splitRatio}fr` }}
+        className="flex-1 w-full min-h-0 min-w-0 lg:grid"
+        style={{
+          gridTemplateColumns: `minmax(240px, ${100 - splitRatio}fr) 8px minmax(0, ${splitRatio}fr)`,
+        }}
       >
         <section
-          className={`flex min-h-0 flex-col overflow-hidden lg:col-start-3 lg:row-start-1 ${shellClass}`}
+          className={`flex min-h-0 min-w-0 flex-col overflow-hidden lg:col-start-3 lg:row-start-1 ${shellClass}`}
         >
           <RuntimeToolbar
             isDark={isDark}
@@ -112,7 +114,7 @@ function RuntimePageLayout({
           aria-label="Resize panes"
         />
 
-        <div className="min-h-0 lg:col-start-1 lg:row-start-1">
+        <div className="min-h-0 min-w-0 lg:col-start-1 lg:row-start-1">
           <RuntimeSidebar
             isDark={isDark}
             configsState={configsState}

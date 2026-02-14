@@ -2,6 +2,14 @@ import { createPortal } from 'react-dom';
 
 import { BinaryInput } from '../components/BinaryInput.jsx';
 
+const assemblyStatusStyles = {
+  waiting: 'border-slate-200 bg-slate-50 text-slate-500',
+  updating: 'border-amber-200 bg-amber-50 text-amber-700',
+  updated: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  empty: 'border-rose-200 bg-rose-50 text-rose-700',
+  error: 'border-rose-200 bg-rose-50 text-rose-700',
+};
+
 export function ExplorerPage({
   isDark,
   configPath,
@@ -16,7 +24,6 @@ export function ExplorerPage({
   assemblyInput,
   setAssemblyInput,
   assemblyStatus,
-  assemblyStatusStyles,
   assemblyMessage,
   setAssemblyMessage,
   asmInputRef,

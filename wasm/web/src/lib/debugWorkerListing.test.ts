@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import path from 'node:path'
 import vm from 'node:vm'
 
 import { describe, expect, it, vi } from 'vitest'
@@ -18,15 +19,29 @@ type WorkerTestApi = {
   >
 }
 
+const workerUrl = new URL('../../public/workers/debugWorker.js', import.meta.url)
+const workerDir = path.dirname(workerUrl.pathname)
+
+const createWorkerSandbox = () => {
+  const sandbox: Record<string, unknown> = {
+    self: { postMessage: vi.fn(), onmessage: null },
+    __SAIL_DEBUG_WORKER_TEST_API__: {},
+  }
+  sandbox.globalThis = sandbox
+  sandbox.importScripts = (...scriptPaths: string[]) => {
+    for (const scriptPath of scriptPaths) {
+      const resolvedPath = path.resolve(workerDir, scriptPath)
+      const source = fs.readFileSync(resolvedPath, 'utf8')
+      vm.runInNewContext(source, sandbox, { filename: resolvedPath })
+    }
+  }
+  return sandbox
+}
+
 describe('debugWorker disassembly mapping', () => {
   it('builds source/disassembly links from objdump address mapping', () => {
-    const workerUrl = new URL('../../public/workers/debugWorker.js', import.meta.url)
     const workerSource = fs.readFileSync(workerUrl, 'utf8')
-    const sandbox: Record<string, unknown> = {
-      self: { postMessage: vi.fn(), onmessage: null },
-      __SAIL_DEBUG_WORKER_TEST_API__: {},
-    }
-    sandbox.globalThis = sandbox
+    const sandbox = createWorkerSandbox()
     vm.runInNewContext(workerSource, sandbox, { filename: 'debugWorker.js' })
 
     const api = sandbox.__SAIL_DEBUG_WORKER_TEST_API__ as WorkerTestApi
@@ -64,13 +79,8 @@ Disassembly of section .text:
   })
 
   it('extracts reg+mem writes from committed instruction block', () => {
-    const workerUrl = new URL('../../public/workers/debugWorker.js', import.meta.url)
     const workerSource = fs.readFileSync(workerUrl, 'utf8')
-    const sandbox: Record<string, unknown> = {
-      self: { postMessage: vi.fn(), onmessage: null },
-      __SAIL_DEBUG_WORKER_TEST_API__: {},
-    }
-    sandbox.globalThis = sandbox
+    const sandbox = createWorkerSandbox()
     vm.runInNewContext(workerSource, sandbox, { filename: 'debugWorker.js' })
 
     const api = sandbox.__SAIL_DEBUG_WORKER_TEST_API__ as WorkerTestApi
@@ -94,6 +104,62 @@ Disassembly of section .text:
         access: 'W',
         address: '0x00000000020C0000',
         value: '0x00000048',
+      },
+    ])
+  })
+
+  it('extracts htif writes as memory writes for lens rendering', () => {
+    const workerSource = fs.readFileSync(workerUrl, 'utf8')
+    const sandbox = createWorkerSandbox()
+    vm.runInNewContext(workerSource, sandbox, { filename: 'debugWorker.js' })
+
+    const api = sandbox.__SAIL_DEBUG_WORKER_TEST_API__ as WorkerTestApi
+    expect(typeof api.extractTraceRegWrites).toBe('function')
+
+    const writes =
+      api.extractTraceRegWrites?.(
+        [
+          '[5] [M]: 0x0000000080002014 (0x00A2A223) sw a0, 0x4(t0)',
+          'htif[0x00000000020C0004] <- 0x01010000',
+          '[6] [M]: 0x0000000080002018 (0x06500513) addi a0, zero, 0x65',
+        ],
+        '0x0000000080002014'
+      ) ?? []
+
+    expect(writes).toEqual([
+      {
+        kind: 'mem',
+        access: 'W',
+        address: '0x00000000020C0004',
+        value: '0x01010000',
+      },
+    ])
+  })
+
+  it('extracts memory writes when trace lines are chunked or prefixed', () => {
+    const workerSource = fs.readFileSync(workerUrl, 'utf8')
+    const sandbox = createWorkerSandbox()
+    vm.runInNewContext(workerSource, sandbox, { filename: 'debugWorker.js' })
+
+    const api = sandbox.__SAIL_DEBUG_WORKER_TEST_API__ as WorkerTestApi
+    expect(typeof api.extractTraceRegWrites).toBe('function')
+
+    const writes =
+      api.extractTraceRegWrites?.(
+        [
+          '[13] [M]: 0x0000000080002034 (0x00A2A223) sw a0, 0x4(t0)\nmem[W,0x00000000020C0004] <- 0x01010000',
+          '[14] [M]: 0x0000000080002038 (0x06c00513) addi a0,zero,108',
+          'Hmem[W,0x00000000020C0000] <- 0x0000006c',
+        ],
+        '0x0000000080002034'
+      ) ?? []
+
+    expect(writes).toEqual([
+      {
+        kind: 'mem',
+        access: 'W',
+        address: '0x00000000020C0004',
+        value: '0x01010000',
       },
     ])
   })

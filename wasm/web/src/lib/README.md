@@ -10,8 +10,7 @@ Pure logic modules (no React rendering).
 - `singleInstructionAsm.ts` — strict single-instruction validation/normalization for Explorer assembly mode.
 - `binutilsObjdumpParse.ts` — parse one instruction from `objdump` output into `{hex, bin, width}`.
 - `monacoPrewarm.ts` — idle-time Monaco loader prewarm (strict-mode safe, once-only).
-- `runtimeLogs.ts` — split runtime output into summary/program/trace channels.
-- `sailRuntime.js` / `sailDebugRuntime.js` — Sail debug WASM module loaders.
+- `sailRuntime.js` — Sail debug WASM module loader.
 - `toolOutput.ts` — parser for tool output streams.
 - `paths.ts` / `udbIndex.js` — base-path helpers and unified-db load atom.
 

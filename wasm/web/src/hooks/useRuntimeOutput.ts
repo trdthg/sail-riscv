@@ -1,5 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
-import { parseRuntimeOutputLines } from '../lib/runtimeLogs';
+import {
+  appendRuntimeOutputLines,
+  createRuntimeOutputInitialState,
+  setRuntimeOutputText,
+} from './runtimeOutputReducer';
 
 type RuntimeOutputState = {
   debugState: any;
@@ -12,31 +16,29 @@ export const useRuntimeOutput = ({
   runtimeLogTab,
   elfRunStatus,
 }: RuntimeOutputState) => {
-  const [output, setOutput] = useState('');
+  const [outputState, setOutputState] = useState(createRuntimeOutputInitialState);
 
   const append = useCallback((line: string) => {
-    setOutput((prev) => (prev ? `${prev}\n${line}` : line));
+    setOutputState((prev) => appendRuntimeOutputLines(prev, [line]));
   }, []);
 
   const appendOutputLines = useCallback((lines: string[]) => {
     if (!Array.isArray(lines) || lines.length === 0) {
       return;
     }
-    const chunk = lines.map((line) => String(line)).join('\n');
-    setOutput((prev) => (prev ? `${prev}\n${chunk}` : chunk));
+    setOutputState((prev) => appendRuntimeOutputLines(prev, lines));
   }, []);
 
-  const parsedRuntimeOutput = useMemo(() => {
-    const lines = output ? output.split('\n').filter((line) => line.length > 0) : [];
-    return parseRuntimeOutputLines(lines);
-  }, [output]);
+  const setOutput = useCallback((value: string) => {
+    setOutputState(setRuntimeOutputText(value));
+  }, []);
 
   const displayedProgramOutput = useMemo(() => {
     if (debugState && typeof debugState === 'object' && typeof debugState.programOutput === 'string') {
       return debugState.programOutput;
     }
-    return parsedRuntimeOutput.programText;
-  }, [debugState, parsedRuntimeOutput.programText]);
+    return outputState.programText;
+  }, [debugState, outputState.programText]);
 
   const runtimeLogText = useMemo(() => {
     if (runtimeLogTab === 'status') {
@@ -44,34 +46,45 @@ export const useRuntimeOutput = ({
       if (elfRunStatus) {
         lines.push(elfRunStatus);
       }
-      if (parsedRuntimeOutput.runtimeLines.length > 0) {
-        lines.push(...parsedRuntimeOutput.runtimeLines);
+      if (outputState.runtimeLines.length > 0) {
+        lines.push(...outputState.runtimeLines);
       }
       return lines.length ? lines.join('\n') : '(no status lines)';
     }
     if (runtimeLogTab === 'build') {
-      const sourceLines = output ? output.split('\n').filter((line) => line.length > 0) : [];
-      const buildLines = sourceLines.filter((line) => /(\[gas\]|\[ld\]|\[readelf\]|gas failed|ld failed|readelf failed|error:|undefined reference|collect2:)/i.test(line));
+      const buildLines = [...outputState.buildLines];
       if (elfRunStatus && /(build failed|gas failed|ld failed|readelf failed|error)/i.test(elfRunStatus)) {
         buildLines.unshift(elfRunStatus);
       }
       return buildLines.length ? buildLines.join('\n') : '(no build/link errors)';
     }
     if (runtimeLogTab === 'summary') {
-      return parsedRuntimeOutput.runtimeLines.join('\n') || '(no runtime summary)';
+      return outputState.runtimeLines.join('\n') || '(no runtime summary)';
     }
     if (runtimeLogTab === 'trace') {
-      return parsedRuntimeOutput.traceLines.join('\n') || '(no trace lines)';
+      return outputState.traceLines.join('\n') || '(no trace lines)';
     }
     return displayedProgramOutput || '(no decoded program output)';
-  }, [displayedProgramOutput, elfRunStatus, output, parsedRuntimeOutput.runtimeLines, parsedRuntimeOutput.traceLines, runtimeLogTab]);
+  }, [
+    displayedProgramOutput,
+    elfRunStatus,
+    outputState.buildLines,
+    outputState.runtimeLines,
+    outputState.traceLines,
+    runtimeLogTab,
+  ]);
 
   return {
-    output,
+    output: outputState.rawOutput,
     setOutput,
     append,
     appendOutputLines,
-    parsedRuntimeOutput,
+    parsedRuntimeOutput: {
+      allLines: outputState.allLines,
+      traceLines: outputState.traceLines,
+      runtimeLines: outputState.runtimeLines,
+      programText: outputState.programText,
+    },
     displayedProgramOutput,
     runtimeLogText,
   };
