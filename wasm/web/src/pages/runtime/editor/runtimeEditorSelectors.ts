@@ -93,15 +93,13 @@ export function selectActiveRuntimeEditorLine(args: {
     }
     return args.activeSourceLine
   }
-  if (args.runtimeActiveEditorTab === 'crt0') {
-    return args.activeSourceFile === 'crt0.s' ? args.activeSourceLine : null
-  }
   return null
 }
 
 export function selectRuntimeEditorValue(args: {
   runtimeInputMode: RuntimeInputMode
   runtimeActiveEditorTab: RuntimeActiveEditorTab
+  configEditorValue: string
   state: RuntimeEditorState
 }): string {
   if (args.runtimeInputMode === 'upload') {
@@ -110,11 +108,11 @@ export function selectRuntimeEditorValue(args: {
   if (args.runtimeActiveEditorTab === 'program') {
     return args.state.asmSourceInput
   }
-  if (args.runtimeActiveEditorTab === 'crt0') {
-    return args.state.crt0SourceInput
-  }
   if (args.runtimeActiveEditorTab === 'expanded') {
     return args.state.expandedAsmSourceInput
+  }
+  if (args.runtimeActiveEditorTab === 'config') {
+    return args.configEditorValue
   }
   return args.state.linkerScriptInput
 }
@@ -126,7 +124,9 @@ export function selectRuntimeEditorLanguage(args: {
   if (args.runtimeInputMode === 'upload') {
     return 'asm'
   }
-  return args.runtimeActiveEditorTab === 'linker' ? 'plaintext' : 'asm'
+  return args.runtimeActiveEditorTab === 'linker' || args.runtimeActiveEditorTab === 'config'
+    ? 'plaintext'
+    : 'asm'
 }
 
 export function selectRuntimeEditorReadOnly(args: {

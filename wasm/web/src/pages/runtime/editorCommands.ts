@@ -1,5 +1,5 @@
-export const runtimeEditorTabs = ['program', 'crt0', 'expanded', 'linker', 'upload-disasm'] as const
-export const runtimeEditEditorTabs = ['program', 'crt0', 'expanded', 'linker'] as const
+export const runtimeEditorTabs = ['program', 'config', 'expanded', 'linker', 'upload-disasm'] as const
+export const runtimeEditEditorTabs = ['program', 'config', 'expanded', 'linker'] as const
 
 export const runtimeEditorCommandTypes = {
   openTab: 'open-tab',

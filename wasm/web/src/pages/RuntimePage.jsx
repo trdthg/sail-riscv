@@ -13,8 +13,9 @@ function RuntimePageLayout({
   isDark,
   isActive,
   editorTheme,
-  configPath,
-  setConfigPath,
+  configTemplatePath,
+  setConfigTemplatePath,
+  resetConfigFromTemplatePath,
   configsState,
   callDebugWorker,
   setDebugWorkerLineSink,
@@ -90,8 +91,9 @@ function RuntimePageLayout({
         >
           <RuntimeToolbar
             isDark={isDark}
-            configPath={configPath}
-            setConfigPath={setConfigPath}
+            configTemplatePath={configTemplatePath}
+            setConfigTemplatePath={setConfigTemplatePath}
+            resetConfigFromTemplatePath={resetConfigFromTemplatePath}
             configsState={configsState}
             resolveConfigText={resolveConfigText}
             callDebugWorker={callDebugWorker}
@@ -131,8 +133,9 @@ function RuntimePageComponent({
   isDark,
   isActive,
   editorTheme,
-  configPath,
-  setConfigPath,
+  configTemplatePath,
+  setConfigTemplatePath,
+  resetConfigFromTemplatePath,
   configsState,
   callDebugWorker,
   setDebugWorkerLineSink,
@@ -147,8 +150,9 @@ function RuntimePageComponent({
             isDark={isDark}
             isActive={isActive}
             editorTheme={editorTheme}
-            configPath={configPath}
-            setConfigPath={setConfigPath}
+            configTemplatePath={configTemplatePath}
+            setConfigTemplatePath={setConfigTemplatePath}
+            resetConfigFromTemplatePath={resetConfigFromTemplatePath}
             configsState={configsState}
             callDebugWorker={callDebugWorker}
             setDebugWorkerLineSink={setDebugWorkerLineSink}

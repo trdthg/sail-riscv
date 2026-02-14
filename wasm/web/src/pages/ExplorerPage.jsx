@@ -43,6 +43,9 @@ export function ExplorerPage({
   renderUdbValue,
   configEditor,
   setConfigEditor,
+  configTemplatePath,
+  setConfigTemplatePath,
+  loadConfigTemplateToEditor,
   configEditorStatus,
   applyTimerRef,
   applyConfigToRuntime,
@@ -384,8 +387,37 @@ export function ExplorerPage({
           <p className={subtitleClass}>
             Edit runtime config. Changes are auto-applied to <code className={isDark ? 'text-slate-200' : 'text-slate-800'}>/config.json</code>.
           </p>
+          <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
+            <select
+              value={configTemplatePath}
+              onChange={(e) => setConfigTemplatePath(e.target.value)}
+              disabled={configsState.state !== 'hasData'}
+              className={inputClass}
+            >
+              {configsState.state === 'hasData' && configsState.data.map((cfg) => (
+                <option key={`tpl-${cfg.path}`} value={cfg.path}>{cfg.label}</option>
+              ))}
+              {configsState.state === 'loading' && <option value="">Loading templates...</option>}
+              {configsState.state === 'hasError' && <option value="">Template list unavailable</option>}
+            </select>
+            <button
+              type="button"
+              onClick={loadConfigTemplateToEditor}
+              disabled={configsState.state !== 'hasData'}
+              className={`${buttonClass} h-11 whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50`}
+            >
+              Reset Config
+            </button>
+            <button
+              type="button"
+              onClick={applyConfigToRuntime}
+              className={`${buttonClass} h-11 whitespace-nowrap`}
+            >
+              Apply now
+            </button>
+          </div>
           <textarea
-            className={`mt-4 w-full flex-1 resize-none rounded-2xl px-4 py-3 font-mono text-xs leading-relaxed shadow-sm focus:outline-none ${
+            className={`mt-3 w-full flex-1 resize-none rounded-2xl px-4 py-3 font-mono text-xs leading-relaxed shadow-sm focus:outline-none ${
               isDark
                 ? 'border border-slate-600 bg-slate-950 text-slate-100 focus:border-slate-400 focus:ring-2 focus:ring-slate-700'
                 : 'border border-slate-200 bg-white text-slate-900 focus:border-slate-400 focus:ring-2 focus:ring-slate-200'

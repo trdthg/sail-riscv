@@ -31,7 +31,6 @@ type StartRequest = {
 
 type AssembleStartRequest = {
   configText: string
-  crt0Text: string
   asmText: string
   linkScriptText: string
   gasMarch?: string

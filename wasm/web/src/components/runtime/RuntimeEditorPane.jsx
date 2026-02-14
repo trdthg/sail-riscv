@@ -50,23 +50,20 @@ export function RuntimeEditorPane({ isDark, editorTheme, runtimeLogText, setOutp
   const panelBarClass = isDark ? 'border-b border-slate-700 bg-slate-800/80' : 'border-b border-slate-200 bg-slate-50/90'
 
   const isUploadMode = sessionState.runtimeInputMode === 'upload'
-  const leftTab = editorBuffers.editEditorTab === 'crt0'
-    ? 'crt0'
-    : editorBuffers.editEditorTab === 'linker'
-      ? 'linker'
+  const leftTab = editorBuffers.editEditorTab === 'linker'
+    ? 'linker'
+    : editorBuffers.editEditorTab === 'config'
+      ? 'config'
       : 'program'
   const leftIsProgram = leftTab === 'program'
-  const leftIsCrt0 = leftTab === 'crt0'
   const showDualPane = !isUploadMode && leftIsProgram
 
   const rightEditorBaseValue =
     editorBuffers.expandedAsmSourceInput || '; objdump disassembly is not available yet'
   const leftEditorValue = leftIsProgram
     ? editorBuffers.asmSourceInput
-    : leftIsCrt0
-      ? editorBuffers.crt0SourceInput
-      : editorBuffers.linkerScriptInput
-  const leftEditorLanguage = leftTab === 'linker' ? 'plaintext' : 'asm'
+    : editorBuffers.linkerScriptInput
+  const leftEditorLanguage = leftTab === 'program' ? 'asm' : 'plaintext'
   const activeProgramSourceLine =
     leftIsProgram && (!editorState.activeSourceFile || editorState.activeSourceFile === 'program.s')
       ? editorState.activeSourceLine

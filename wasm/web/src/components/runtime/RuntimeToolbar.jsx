@@ -11,8 +11,9 @@ import { useRuntimeSessionActions, useRuntimeSessionState } from '../../pages/ru
 
 export function RuntimeToolbar({
   isDark,
-  configPath,
-  setConfigPath,
+  configTemplatePath,
+  setConfigTemplatePath,
+  resetConfigFromTemplatePath,
   configsState,
   resolveConfigText,
   callDebugWorker,
@@ -111,14 +112,17 @@ export function RuntimeToolbar({
           </button>
         </div>
         <label className={controlLabelClass}>
-          Config
+          Reset Config
           <select
-            value={configPath}
-            onChange={(event) => setConfigPath(event.target.value)}
+            value={configTemplatePath}
+            onChange={async (event) => {
+              const nextPath = event.target.value
+              setConfigTemplatePath(nextPath)
+              await resetConfigFromTemplatePath(nextPath)
+            }}
             disabled={configsState.state !== 'hasData'}
             className={`ml-2 h-8 px-2 text-[11px] ${controlInputClass}`}
           >
-            <option value="/config.json">runtime config (edited)</option>
             {configsState.state === 'hasData' && configsState.data.map((cfg) => (
               <option key={cfg.path} value={cfg.path}>{cfg.label}</option>
             ))}
@@ -269,10 +273,10 @@ export function RuntimeToolbar({
             </button>
             <button
               type="button"
-              onClick={() => openEditorTab('crt0')}
-              className={`ml-1 rounded px-3 py-1 text-xs font-medium ${editorSelectors.runtimeActiveEditorTab === 'crt0' ? tabActiveClass : tabInactiveClass}`}
+              onClick={() => openEditorTab('config')}
+              className={`ml-1 rounded px-3 py-1 text-xs font-medium ${editorSelectors.runtimeActiveEditorTab === 'config' ? tabActiveClass : tabInactiveClass}`}
             >
-              crt0.S
+              config.json
             </button>
             <button
               type="button"
@@ -298,8 +302,8 @@ export function RuntimeToolbar({
               : 'Upload an ELF to inspect')
             : editorState.editEditorTab === 'linker' && sessionState.debugReady
               ? 'link.ld editing mode'
-              : editorState.editEditorTab === 'crt0' && sessionState.debugReady
-                ? 'crt0.S editing mode'
+              : editorState.editEditorTab === 'config'
+                ? 'config.json editing mode'
               : hasExpandedSource && editorSelectors.activeExpandedSourceLine
                 ? `objdump line ${editorSelectors.activeExpandedSourceLine}`
                 : ''}

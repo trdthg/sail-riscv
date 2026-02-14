@@ -25,6 +25,12 @@ describe('runtimeEditorSelectors', () => {
       })
     ).toBe('plaintext')
     expect(
+      selectRuntimeEditorLanguage({
+        runtimeInputMode: 'edit',
+        runtimeActiveEditorTab: 'config',
+      })
+    ).toBe('plaintext')
+    expect(
       selectRuntimeEditorReadOnly({
         runtimeInputMode: 'upload',
         runtimeActiveEditorTab: 'upload-disasm',
@@ -36,7 +42,6 @@ describe('runtimeEditorSelectors', () => {
     const state = {
       ...runtimeEditorInitialState,
       asmSourceInput: 'addi x1, x2, 1',
-      crt0SourceInput: 'call main',
       uploadDisasmInput: '0000: addi x1, x2, 1',
       linkerScriptInput: 'ENTRY(_start)',
     }
@@ -44,20 +49,23 @@ describe('runtimeEditorSelectors', () => {
       selectRuntimeEditorValue({
         runtimeInputMode: 'edit',
         runtimeActiveEditorTab: 'program',
+        configEditorValue: '{"foo":1}',
         state,
       })
     ).toBe('addi x1, x2, 1')
     expect(
       selectRuntimeEditorValue({
         runtimeInputMode: 'edit',
-        runtimeActiveEditorTab: 'crt0',
+        runtimeActiveEditorTab: 'config',
+        configEditorValue: '{"foo":1}',
         state,
       })
-    ).toBe('call main')
+    ).toBe('{"foo":1}')
     expect(
       selectRuntimeEditorValue({
         runtimeInputMode: 'upload',
         runtimeActiveEditorTab: 'upload-disasm',
+        configEditorValue: '{"foo":1}',
         state,
       })
     ).toContain('0000: addi x1, x2, 1')
@@ -77,19 +85,9 @@ describe('runtimeEditorSelectors', () => {
     expect(
       selectActiveRuntimeEditorLine({
         runtimeInputMode: 'edit',
-        runtimeActiveEditorTab: 'crt0',
-        activeSourceLine: 5,
-        activeSourceFile: 'crt0.s',
-        activeExpandedSourceLine: 41,
-        activeUploadDisasmLine: 7,
-      })
-    ).toBe(5)
-    expect(
-      selectActiveRuntimeEditorLine({
-        runtimeInputMode: 'edit',
         runtimeActiveEditorTab: 'program',
         activeSourceLine: 5,
-        activeSourceFile: 'crt0.s',
+        activeSourceFile: 'other.s',
         activeExpandedSourceLine: 41,
         activeUploadDisasmLine: 7,
       })
@@ -117,6 +115,16 @@ describe('runtimeEditorSelectors', () => {
     expect(
       selectActiveRuntimeEditorLine({
         runtimeInputMode: 'edit',
+        runtimeActiveEditorTab: 'config',
+        activeSourceLine: 12,
+        activeSourceFile: 'program.s',
+        activeExpandedSourceLine: 41,
+        activeUploadDisasmLine: 7,
+      })
+    ).toBeNull()
+    expect(
+      selectActiveRuntimeEditorLine({
+        runtimeInputMode: 'edit',
         runtimeActiveEditorTab: 'linker',
         activeSourceLine: 12,
         activeSourceFile: 'program.s',
@@ -128,7 +136,6 @@ describe('runtimeEditorSelectors', () => {
 
   it('reads source file basename from debug state', () => {
     expect(selectActiveSourceFile({ sourceFile: '/tmp/edit/program.S' })).toBe('program.s')
-    expect(selectActiveSourceFile({ sourceFile: '/tmp/edit/crt0.S' })).toBe('crt0.s')
     expect(selectActiveSourceFile({ sourceFile: 12 })).toBeNull()
   })
 

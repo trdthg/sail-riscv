@@ -19,8 +19,15 @@ import {
 } from './lib/instructionInput';
 import { getOutputLines } from './lib/toolOutput';
 import { udbIndexLoadableAtom } from './lib/udbIndex.js';
-import { configEditorAtom, configPathAtom, configsLoadableAtom } from './state/configAtoms.js';
+import {
+  configEditorAtom,
+  configEditorByPathAtom,
+  configPathAtom,
+  configsLoadableAtom,
+} from './state/configAtoms.js';
 import { isaLoadableAtom, isaRefreshAtom } from './state/isaAtoms.js';
+
+const PREFERRED_DEFAULT_CONFIG_PATH = '/config/rv64d_v128_e64.json';
 
 function App() {
   const [configsState] = useAtom(configsLoadableAtom);
@@ -29,7 +36,9 @@ function App() {
   const [, refreshIsa] = useAtom(isaRefreshAtom);
   const [udbState] = useAtom(udbIndexLoadableAtom);
   const [configEditor, setConfigEditor] = useAtom(configEditorAtom);
+  const [, setConfigEditorByPath] = useAtom(configEditorByPathAtom);
   const [configEditorStatus, setConfigEditorStatus] = useState('');
+  const [configTemplatePath, setConfigTemplatePath] = useState('');
   const [activePage, setActivePage] = useState('explorer');
   const [runtimeEverMounted, setRuntimeEverMounted] = useState(false);
   const [theme, setTheme] = useState(() => {
@@ -101,6 +110,21 @@ function App() {
     };
   }, [activePage]);
 
+  useEffect(() => {
+    if (configsState.state !== 'hasData' || !Array.isArray(configsState.data) || configsState.data.length === 0) {
+      return;
+    }
+    const hasTemplate = configsState.data.some((cfg) => cfg.path === configTemplatePath);
+    if (hasTemplate) {
+      return;
+    }
+    const defaultTemplate =
+      configsState.data.find((cfg) => cfg.path === PREFERRED_DEFAULT_CONFIG_PATH) ||
+      configsState.data.find((cfg) => cfg.default) ||
+      configsState.data[0];
+    setConfigTemplatePath(defaultTemplate.path);
+  }, [configTemplatePath, configsState]);
+
   const clearRuntimeTimers = useCallback(() => {
     if (applyTimerRef.current) clearTimeout(applyTimerRef.current);
   }, []);
@@ -114,18 +138,19 @@ function App() {
       append('No config available. Please refresh or check /config/configs.json.');
       return null;
     }
-    let configText = '';
-    if (configPath === '/config.json' && configEditor.trim()) {
-      configText = configEditor;
-    } else {
-      const configResp = await fetch(maybeWithBase(configPath));
-      if (!configResp.ok) {
-        append(`Failed to load config: ${configResp.status} ${configResp.statusText}`);
+    if (configPath === '/config.json') {
+      if (!configEditor.trim()) {
+        append('Runtime config (/config.json) is empty. Click Reset Config to load a template.');
         return null;
       }
-      configText = await configResp.text();
+      return configEditor;
     }
-    return configText;
+    const configResp = await fetch(maybeWithBase(configPath));
+    if (!configResp.ok) {
+      append(`Failed to load config: ${configResp.status} ${configResp.statusText}`);
+      return null;
+    }
+    return await configResp.text();
   }, [append, configEditor, configPath]);
 
   const runTool = useCallback(async (args) => {
@@ -236,6 +261,55 @@ function App() {
     }
   };
 
+  const resetConfigFromTemplatePath = useCallback(async (targetTemplatePath) => {
+    if (configsState.state !== 'hasData' || !Array.isArray(configsState.data) || configsState.data.length === 0) {
+      setStatus('Config template list is unavailable.');
+      return false;
+    }
+    const requestedPath = typeof targetTemplatePath === 'string' ? targetTemplatePath : '';
+    const selectedTemplate =
+      configsState.data.find((cfg) => cfg.path === requestedPath) ||
+      configsState.data.find((cfg) => cfg.path === PREFERRED_DEFAULT_CONFIG_PATH) ||
+      configsState.data.find((cfg) => cfg.default) ||
+      configsState.data[0];
+    if (!selectedTemplate?.path) {
+      setStatus('No config template selected.');
+      return false;
+    }
+
+    try {
+      const resp = await fetch(maybeWithBase(selectedTemplate.path));
+      if (!resp.ok) {
+        setStatus(`Failed to load template: ${resp.status} ${resp.statusText}`);
+        return false;
+      }
+      const templateText = await resp.text();
+      setConfigEditorByPath({ path: '/config.json', text: templateText });
+      setConfigPath('/config.json');
+      setConfigTemplatePath(selectedTemplate.path);
+
+      try {
+        const Module = await getRuntimeModule();
+        if (Module.FS && Module.FS.writeFile) {
+          Module.FS.writeFile('/config.json', templateText);
+        }
+      } catch {
+        // runtime FS sync is best-effort; editor content is still updated
+      }
+
+      setStatus(`Config reset from template: ${selectedTemplate.label} → /config.json`);
+      return true;
+    } catch (err) {
+      console.error('loadConfigTemplateToEditor:', err);
+      setStatus('Failed to load config template.');
+      return false;
+    }
+  }, [configsState, setConfigEditorByPath, setConfigPath]);
+
+  const loadConfigTemplateToEditor = useCallback(async () => {
+    await resetConfigFromTemplatePath(configTemplatePath);
+  }, [configTemplatePath, resetConfigFromTemplatePath]);
+
   const sharedPageProps = {
     isDark,
     configPath,
@@ -272,6 +346,9 @@ function App() {
     renderUdbValue,
     configEditor,
     setConfigEditor,
+    configTemplatePath,
+    setConfigTemplatePath,
+    loadConfigTemplateToEditor,
     configEditorStatus,
     applyTimerRef,
     applyConfigToRuntime,
@@ -288,6 +365,9 @@ function App() {
   const runtimePagePrivateProps = {
     editorTheme,
     isActive: activePage === 'runtime',
+    configTemplatePath,
+    setConfigTemplatePath,
+    resetConfigFromTemplatePath,
     callDebugWorker,
     setDebugWorkerLineSink,
     forceStopDebugWorker: resetDebugWorker,

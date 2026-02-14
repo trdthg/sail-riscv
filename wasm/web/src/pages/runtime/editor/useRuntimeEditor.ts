@@ -1,4 +1,5 @@
 import { useContext, useMemo } from 'react'
+import { useAtom } from 'jotai'
 
 import {
   isRuntimeEditEditorTab,
@@ -20,6 +21,7 @@ import {
 } from './runtimeEditorSelectors'
 import { RuntimeEditorContext } from './runtimeEditorContext'
 import type { RuntimeEditorState } from './runtimeEditorReducer'
+import { configEditorAtom } from '../../../state/configAtoms'
 
 function useRuntimeEditorContext() {
   const context = useContext(RuntimeEditorContext)
@@ -76,6 +78,7 @@ export function useRuntimeEditorActions() {
 export function useRuntimeEditorSelectors() {
   const editorState = useRuntimeEditorState()
   const sessionState = useRuntimeSessionState()
+  const [configEditor] = useAtom(configEditorAtom)
   return useMemo(() => {
     const runtimeActiveEditorTab = selectRuntimeActiveEditorTab(
       sessionState.runtimeInputMode,
@@ -102,6 +105,7 @@ export function useRuntimeEditorSelectors() {
     const runtimeEditorValue = selectRuntimeEditorValue({
       runtimeInputMode: sessionState.runtimeInputMode,
       runtimeActiveEditorTab,
+      configEditorValue: configEditor,
       state: editorState,
     })
     const runtimeEditorLanguage = selectRuntimeEditorLanguage({
@@ -125,5 +129,5 @@ export function useRuntimeEditorSelectors() {
       runtimeEditorLanguage,
       runtimeEditorReadOnly,
     }
-  }, [editorState, sessionState.debugState, sessionState.runtimeInputMode])
+  }, [configEditor, editorState, sessionState.debugState, sessionState.runtimeInputMode])
 }

@@ -24,7 +24,6 @@ describe('runtimeEditorReducer', () => {
       payload: {
         editEditorTab: 'linker',
         asmSourceInput: 'li a0, 1',
-        crt0SourceInput: 'call foo',
         linkerScriptInput: 'ENTRY(foo)',
         expandedAsmSourceInput: 'expanded',
         expandedSourceLinks: [{ sourceLine: 12, expandedLines: [18, 19] }],
@@ -36,7 +35,6 @@ describe('runtimeEditorReducer', () => {
     })
     expect(reset.editEditorTab).toBe('program')
     expect(reset.asmSourceInput).toBe(runtimeEditorInitialState.asmSourceInput)
-    expect(reset.crt0SourceInput).toBe(runtimeEditorInitialState.crt0SourceInput)
     expect(reset.linkerScriptInput).toBe(runtimeEditorInitialState.linkerScriptInput)
     expect(reset.expandedAsmSourceInput).toBe('')
     expect(reset.expandedSourceLinks).toEqual([])

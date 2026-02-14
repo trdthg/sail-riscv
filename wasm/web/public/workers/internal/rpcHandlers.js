@@ -890,7 +890,6 @@ const assembleAndStartSession = async ({
   baseUrl,
   cacheBust,
   configText,
-  crt0Text,
   asmText,
   linkScriptText,
   gasMarch,
@@ -898,12 +897,8 @@ const assembleAndStartSession = async ({
   traceEnabled = true,
 }) => {
   const Module = await getDebugModule(baseUrl, cacheBust);
-  const startupText = String(crt0Text || '');
   const sourceText = String(asmText || '');
   const linkerText = String(linkScriptText || '');
-  if (!startupText.trim()) {
-    throw new Error('CRT0 source is empty.');
-  }
   if (!sourceText.trim()) {
     throw new Error('Assembly source is empty.');
   }
@@ -913,14 +908,12 @@ const assembleAndStartSession = async ({
 
   clearOutput();
   clearDisassemblyText();
-  const startupPath = `${EDIT_TMP_DIR}/crt0.S`;
-  const startupObjectPath = `${EDIT_TMP_DIR}/crt0.o`;
   const sourcePath = `${EDIT_TMP_DIR}/program.S`;
   const objectPath = `${EDIT_TMP_DIR}/program.o`;
   const linkerPath = `${EDIT_TMP_DIR}/link.ld`;
   const generatedElfPath = `${EDIT_TMP_DIR}/generated_program.elf`;
 
-  pushOutputLine(`Running in worker: assembling ${startupPath} and ${sourcePath}`);
+  pushOutputLine(`Running in worker: assembling ${sourcePath}`);
   flushOutput(requestId, false);
 
   const asFactory = getGasFactory({ baseUrl, cacheBust });
@@ -931,38 +924,6 @@ const assembleAndStartSession = async ({
     `-march=${String(gasMarch || 'rv64imac')}`,
     `-mabi=${String(gasAbi || 'lp64')}`,
   ];
-  const startupGasArgs = [
-    ...commonGasArgs,
-    '-o',
-    startupObjectPath,
-    startupPath,
-  ];
-  const startupGasResult = await runBinutilsModule({
-    requestId,
-    factory: asFactory,
-    label: 'gas',
-    args: startupGasArgs,
-    preRun: (gasModule) => {
-      gasModule.FS.writeFile(startupPath, startupText);
-    },
-  });
-
-  let startupObjectFile = null;
-  try {
-    startupObjectFile = startupGasResult.module.FS.readFile(startupObjectPath);
-  } catch {
-    startupObjectFile = null;
-  }
-  if (!startupObjectFile || startupObjectFile.length === 0) {
-    const details = [...startupGasResult.stderrLines, ...startupGasResult.stdoutLines]
-      .filter((line) => line && line.trim())
-      .slice(-6)
-      .join('\n');
-    throw new Error(details ? `gas failed (crt0):\n${details}` : 'gas failed (crt0): no object file produced');
-  }
-  pushOutputLine(`gas: produced ${startupObjectPath} (${startupObjectFile.length} bytes)`);
-  flushOutput(requestId, false);
-
   const gasArgs = [
     ...commonGasArgs,
     '-o',
@@ -1003,7 +964,6 @@ const assembleAndStartSession = async ({
     linkerPath,
     '-o',
     generatedElfPath,
-    startupObjectPath,
     objectPath,
   ];
   const ldResult = await runBinutilsModule({
@@ -1012,7 +972,6 @@ const assembleAndStartSession = async ({
     label: 'ld',
     args: ldArgs,
     preRun: (ldModule) => {
-      ldModule.FS.writeFile(startupObjectPath, startupObjectFile);
       ldModule.FS.writeFile(objectPath, objectFile);
       ldModule.FS.writeFile(linkerPath, linkerText);
     },
@@ -1271,7 +1230,6 @@ self.onmessage = async (event) => {
           baseUrl: message.baseUrl,
           cacheBust: message.cacheBust,
           configText: message.configText,
-          crt0Text: message.crt0Text,
           asmText: message.asmText,
           linkScriptText: message.linkScriptText,
           gasMarch: message.gasMarch,

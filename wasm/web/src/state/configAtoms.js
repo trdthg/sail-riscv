@@ -3,6 +3,8 @@ import { loadable } from 'jotai/utils';
 
 import { withBase, maybeWithBase } from '../lib/paths';
 
+const PREFERRED_DEFAULT_CONFIG_PATH = '/config/rv64d_v128_e64.json';
+
 const configsAtom = atom(async () => {
   const resp = await fetch(`${withBase('/config/configs.json')}?${Date.now()}`);
   if (!resp.ok) {
@@ -21,6 +23,33 @@ const configContentAtom = atom(async (get) => {
   const configsState = get(configsLoadableAtom);
   const currentPath = get(configPathAtom);
   if (!currentPath || configsState.state !== 'hasData') return '';
+  if (currentPath === '/config.json') {
+    const editorMap = get(configEditorMapAtom);
+    const edited = editorMap[currentPath];
+    if (typeof edited === 'string') {
+      return edited;
+    }
+    const selected = get(selectedConfigAtom);
+    const configs = Array.isArray(configsState.data) ? configsState.data : [];
+    const preferredTemplate = configs.find((cfg) => cfg.path === PREFERRED_DEFAULT_CONFIG_PATH);
+    const selectedTemplate = configs.find((cfg) => cfg.path === selected && cfg.path !== '/config.json');
+    const defaultTemplate = configs.find((cfg) => cfg.default && cfg.path !== '/config.json');
+    const firstTemplate = configs.find((cfg) => cfg.path !== '/config.json');
+    const fallbackPath =
+      preferredTemplate?.path ||
+      selectedTemplate?.path ||
+      defaultTemplate?.path ||
+      firstTemplate?.path ||
+      '';
+    if (!fallbackPath) {
+      return '';
+    }
+    const fallbackResp = await fetch(`${maybeWithBase(fallbackPath)}?${Date.now()}`);
+    if (!fallbackResp.ok) {
+      throw new Error(`config: ${fallbackResp.status} ${fallbackResp.statusText}`);
+    }
+    return await fallbackResp.text();
+  }
   const resp = await fetch(`${maybeWithBase(currentPath)}?${Date.now()}`);
   if (!resp.ok) {
     throw new Error(`config: ${resp.status} ${resp.statusText}`);
@@ -51,6 +80,15 @@ export const configPathAtom = atom(
 );
 
 const configEditorMapAtom = atom({});
+
+export const configEditorByPathAtom = atom(
+  null,
+  (_get, set, next) => {
+    const path = typeof next?.path === 'string' ? next.path : '';
+    if (!path) return;
+    set(configEditorMapAtom, (prev) => ({ ...prev, [path]: String(next?.text ?? '') }));
+  },
+);
 
 export const configEditorAtom = atom(
   (get) => {
