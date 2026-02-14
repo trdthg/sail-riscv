@@ -11,7 +11,6 @@ import { useRuntimeSessionActions, useRuntimeSessionState } from '../../pages/ru
 
 export function RuntimeToolbar({
   isDark,
-  configTemplatePath,
   setConfigTemplatePath,
   resetConfigFromTemplatePath,
   configsState,
@@ -114,15 +113,20 @@ export function RuntimeToolbar({
         <label className={controlLabelClass}>
           Reset Config
           <select
-            value={configTemplatePath}
+            defaultValue=""
             onChange={async (event) => {
               const nextPath = event.target.value
+              if (!nextPath) {
+                return
+              }
               setConfigTemplatePath(nextPath)
               await resetConfigFromTemplatePath(nextPath)
+              event.target.value = ''
             }}
             disabled={configsState.state !== 'hasData'}
             className={`ml-2 h-8 px-2 text-[11px] ${controlInputClass}`}
           >
+            <option value="">Reset Config</option>
             {configsState.state === 'hasData' && configsState.data.map((cfg) => (
               <option key={cfg.path} value={cfg.path}>{cfg.label}</option>
             ))}

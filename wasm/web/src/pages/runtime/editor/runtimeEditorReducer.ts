@@ -12,15 +12,19 @@ tohost: .zero 8
 .global fromhost
 fromhost: .zero 8
 
-.macro htif_putc_reg reg
+.macro print_reg reg
+  la t0, tohost
   sw \\reg, 0(t0)
   li t3, 0x01010000
   sw t3, 4(t0)
 .endm
 
-.macro htif_putc imm
-  li t2, \\imm
-  htif_putc_reg t2
+.macro exit reg
+  la t0, tohost
+exit_loop_\\@:
+  sw \\reg, 0(t0)
+  sw zero, 4(t0)
+  j exit_loop_\\@
 .endm
 
 .macro print_string ptr_reg tmp_reg
@@ -28,7 +32,7 @@ fromhost: .zero 8
   lbu \\tmp_reg, 0(\\ptr_reg)
   beqz \\tmp_reg, 2f
   addi \\ptr_reg, \\ptr_reg, 1
-  htif_putc_reg \\tmp_reg
+  print_reg \\tmp_reg
   j 1b
 2:
 .endm
@@ -36,15 +40,15 @@ fromhost: .zero 8
 .section .text
 .global _start
 _start:
-  la t0, tohost
+  .option push
+  .option norelax
+  la gp, __global_pointer$
+  .option pop
   la t1, hello_str
   print_string t1, t2
 
   li a0, 1
-3:
-  sw a0, 0(t0)
-  sw zero, 4(t0)
-  j 3b
+  exit a0
 `
 
 export const DEFAULT_DEBUG_LINKER_SCRIPT = `OUTPUT_ARCH("riscv")

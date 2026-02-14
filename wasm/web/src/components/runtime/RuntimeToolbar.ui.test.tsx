@@ -37,7 +37,6 @@ function ToolbarHarnessInner() {
       </button>
       <RuntimeToolbar
         isDark={false}
-        configTemplatePath="/config/rv64d_v128_e64.json"
         setConfigTemplatePath={() => {}}
         resetConfigFromTemplatePath={async () => true}
         configsState={{
