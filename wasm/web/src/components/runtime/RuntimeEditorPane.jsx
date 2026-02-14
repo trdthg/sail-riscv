@@ -50,27 +50,40 @@ export function RuntimeEditorPane({ isDark, editorTheme, runtimeLogText, setOutp
   const panelBarClass = isDark ? 'border-b border-slate-700 bg-slate-800/80' : 'border-b border-slate-200 bg-slate-50/90'
 
   const isUploadMode = sessionState.runtimeInputMode === 'upload'
-  const leftTab = editorBuffers.editEditorTab === 'linker' ? 'linker' : 'program'
+  const leftTab = editorBuffers.editEditorTab === 'crt0'
+    ? 'crt0'
+    : editorBuffers.editEditorTab === 'linker'
+      ? 'linker'
+      : 'program'
   const leftIsProgram = leftTab === 'program'
+  const leftIsCrt0 = leftTab === 'crt0'
   const showDualPane = !isUploadMode && leftIsProgram
 
   const rightEditorBaseValue =
     editorBuffers.expandedAsmSourceInput || '; objdump disassembly is not available yet'
-  const leftEditorValue = leftIsProgram ? editorBuffers.asmSourceInput : editorBuffers.linkerScriptInput
-  const leftEditorLanguage = leftIsProgram ? 'asm' : 'plaintext'
+  const leftEditorValue = leftIsProgram
+    ? editorBuffers.asmSourceInput
+    : leftIsCrt0
+      ? editorBuffers.crt0SourceInput
+      : editorBuffers.linkerScriptInput
+  const leftEditorLanguage = leftTab === 'linker' ? 'plaintext' : 'asm'
+  const activeProgramSourceLine =
+    leftIsProgram && (!editorState.activeSourceFile || editorState.activeSourceFile === 'program.s')
+      ? editorState.activeSourceLine
+      : null
 
   const visibleLinkedGroups = useMemo(
     () =>
       buildVisibleLinkedGroups({
         links: editorBuffers.expandedSourceLinks,
-        sourceLine: editorState.activeSourceLine,
+        sourceLine: activeProgramSourceLine,
         fallbackSourceLine: editorState.activeExpandedSourceOriginLine,
         paletteSize: LINK_COLOR_PALETTE_SIZE,
       }),
     [
+      activeProgramSourceLine,
       editorBuffers.expandedSourceLinks,
       editorState.activeExpandedSourceOriginLine,
-      editorState.activeSourceLine,
     ]
   )
 
@@ -119,7 +132,7 @@ export function RuntimeEditorPane({ isDark, editorTheme, runtimeLogText, setOutp
     showDualPane,
     leftIsProgram,
     visibleLinkedGroups,
-    activeSourceLine: editorState.activeSourceLine,
+    activeSourceLine: activeProgramSourceLine,
     rightActiveLine,
     latestLensLine,
     persistentLensByLine,

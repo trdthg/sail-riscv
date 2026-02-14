@@ -8,12 +8,17 @@ import type {
 } from '../pages/runtime/services/debugWorkerTypes';
 
 type DebugWorkerLineSink = ((lines: string[]) => void) | null;
+type PendingRequest = {
+  reject: (error: Error) => void
+  cleanup: () => void
+}
 
 export const useDebugWorkerRpc = () => {
   const debugWorkerRef = useRef(null);
   const debugWorkerCacheBustRef = useRef('');
   const debugRequestCounterRef = useRef(0);
   const debugWorkerLineSinkRef = useRef<DebugWorkerLineSink>(null);
+  const pendingRequestsRef = useRef<Map<string, PendingRequest>>(new Map());
 
   const setDebugWorkerLineSink = useCallback((sink: DebugWorkerLineSink) => {
     debugWorkerLineSinkRef.current = sink;
@@ -30,6 +35,20 @@ export const useDebugWorkerRpc = () => {
     return worker;
   }, []);
 
+  const resetDebugWorker = useCallback((reason = 'Worker force-stopped.') => {
+    const pendingRequests = Array.from(pendingRequestsRef.current.values());
+    pendingRequestsRef.current.clear();
+    for (const pending of pendingRequests) {
+      pending.cleanup();
+      pending.reject(new Error(reason));
+    }
+    if (debugWorkerRef.current) {
+      debugWorkerRef.current.terminate();
+      debugWorkerRef.current = null;
+    }
+    debugWorkerCacheBustRef.current = '';
+  }, []);
+
   const callDebugWorker = useCallback<CallDebugWorker>(
     <M extends DebugWorkerMethod>(
       method: M,
@@ -41,9 +60,15 @@ export const useDebugWorkerRpc = () => {
 
       return new Promise<DebugWorkerResponseMap[M]>((resolve, reject) => {
         const timeout = setTimeout(() => {
+          pendingRequestsRef.current.delete(requestId);
           worker.removeEventListener('message', onMessage);
           reject(new Error(`Worker timeout: ${method}`));
         }, 60000);
+
+        const cleanup = () => {
+          clearTimeout(timeout);
+          worker.removeEventListener('message', onMessage);
+        };
 
         const onMessage = (event: MessageEvent) => {
           const message = (event.data || {}) as Record<string, unknown>;
@@ -62,8 +87,8 @@ export const useDebugWorkerRpc = () => {
           }
 
           if (message.type === 'result') {
-            clearTimeout(timeout);
-            worker.removeEventListener('message', onMessage);
+            pendingRequestsRef.current.delete(requestId);
+            cleanup();
             if (message.ok) {
               const { type, ok, requestId: _requestId, ...payloadOnly } = message;
               void type;
@@ -76,6 +101,7 @@ export const useDebugWorkerRpc = () => {
           }
         };
 
+        pendingRequestsRef.current.set(requestId, { reject, cleanup });
         worker.addEventListener('message', onMessage);
         worker.postMessage(
           {
@@ -94,14 +120,12 @@ export const useDebugWorkerRpc = () => {
   );
 
   useEffect(() => () => {
-    if (debugWorkerRef.current) {
-      debugWorkerRef.current.terminate();
-      debugWorkerRef.current = null;
-    }
-  }, []);
+    resetDebugWorker('Worker disposed.');
+  }, [resetDebugWorker]);
 
   return {
     callDebugWorker,
     setDebugWorkerLineSink,
+    resetDebugWorker,
   };
 };

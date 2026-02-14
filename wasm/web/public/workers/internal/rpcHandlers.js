@@ -474,7 +474,16 @@ const parseReadelfDecodedLine = (lines) => {
   };
 };
 
-const findNearestSourceLineByAddress = (lineEntries, address) => {
+const fileBaseName = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '';
+  }
+  const parts = raw.split(/[\\/]/);
+  return String(parts[parts.length - 1] || raw).trim().toLowerCase();
+};
+
+const findNearestSourceEntryByAddress = (lineEntries, address) => {
   if (!Array.isArray(lineEntries) || lineEntries.length === 0) {
     return null;
   }
@@ -500,20 +509,29 @@ const findNearestSourceLineByAddress = (lineEntries, address) => {
   while (best >= 0) {
     const entry = lineEntries[best];
     if (entry && Number.isInteger(entry.line) && entry.line > 0) {
-      return entry.line;
+      return entry;
     }
     best -= 1;
   }
   return null;
 };
 
-const buildSourceToDisasmLinks = (lineEntries, disasmEntries) => {
+const findNearestSourceLineByAddress = (lineEntries, address) => {
+  const entry = findNearestSourceEntryByAddress(lineEntries, address);
+  if (!entry) {
+    return null;
+  }
+  return Number(entry.line);
+};
+
+const buildSourceToDisasmLinks = (lineEntries, disasmEntries, sourceFilter = '') => {
   if (!Array.isArray(lineEntries) || lineEntries.length === 0) {
     return [];
   }
   if (!Array.isArray(disasmEntries) || disasmEntries.length === 0) {
     return [];
   }
+  const filterBase = fileBaseName(sourceFilter);
   const buckets = new Map();
   for (const disasmEntry of disasmEntries) {
     const disasmLine = Number(disasmEntry?.line);
@@ -524,7 +542,12 @@ const buildSourceToDisasmLinks = (lineEntries, disasmEntries) => {
     if (!Number.isFinite(disasmAddress)) {
       continue;
     }
-    const sourceLine = findNearestSourceLineByAddress(lineEntries, disasmAddress);
+    const sourceEntry = findNearestSourceEntryByAddress(lineEntries, disasmAddress);
+    const sourceLine = Number(sourceEntry?.line);
+    const sourceFile = fileBaseName(sourceEntry?.file);
+    if (filterBase && sourceFile !== filterBase) {
+      continue;
+    }
     if (!Number.isInteger(sourceLine) || sourceLine <= 0) {
       continue;
     }
@@ -543,6 +566,10 @@ const buildSourceToDisasmLinks = (lineEntries, disasmEntries) => {
 
 const lookupSourceLineByPc = (pcValue) => {
   return findNearestSourceLineByAddress(debugLineEntries, Number(pcValue));
+};
+
+const lookupSourceEntryByPc = (pcValue) => {
+  return findNearestSourceEntryByAddress(debugLineEntries, Number(pcValue));
 };
 
 const parseObjdumpAddressMap = (text) => {
@@ -573,10 +600,14 @@ const annotateDisassemblyEntriesWithSource = (lineEntries, disasmEntries) => {
   if (!Array.isArray(disasmEntries) || disasmEntries.length === 0) {
     return [];
   }
-  return disasmEntries.map((entry) => ({
-    ...entry,
-    sourceLine: findNearestSourceLineByAddress(lineEntries, Number(entry.address)),
-  }));
+  return disasmEntries.map((entry) => {
+    const sourceEntry = findNearestSourceEntryByAddress(lineEntries, Number(entry.address));
+    return {
+      ...entry,
+      sourceLine: Number.isInteger(sourceEntry?.line) ? sourceEntry.line : null,
+      sourceFile: sourceEntry?.file || '',
+    };
+  });
 };
 
 const findNearestDisassemblyEntryByAddress = (entries, address) => {
@@ -653,12 +684,16 @@ const augmentStateWithSourceLine = (state) => {
     return state;
   }
   const pc = parsePcValue(state.pc);
-  const sourceLine = lookupSourceLineByPc(pc);
-  if (sourceLine !== null) {
+  const sourceEntry = lookupSourceEntryByPc(pc);
+  const sourceLine = Number(sourceEntry?.line);
+  if (Number.isInteger(sourceLine) && sourceLine > 0) {
     state.sourceLine = sourceLine;
   }
+  if (sourceEntry?.file) {
+    state.sourceFile = sourceEntry.file;
+  }
   if (debugLineFile) {
-    state.sourceFile = debugLineFile;
+    state.debugLineFile = debugLineFile;
   }
   const expandedSource = lookupExpandedSourceByPc(pc);
   if (expandedSource) {
@@ -684,9 +719,13 @@ const augmentStateWithSourceLine = (state) => {
     if (lastCommittedExpanded && Number.isInteger(lastCommittedExpanded.line) && lastCommittedExpanded.line > 0) {
       state.lastCommittedExpandedSourceLine = lastCommittedExpanded.line;
     }
-    const lastCommittedSourceLine = lookupSourceLineByPc(lastCommittedPc);
+    const lastCommittedSourceEntry = lookupSourceEntryByPc(lastCommittedPc);
+    const lastCommittedSourceLine = Number(lastCommittedSourceEntry?.line);
     if (Number.isInteger(lastCommittedSourceLine) && lastCommittedSourceLine > 0) {
       state.lastCommittedSourceLine = lastCommittedSourceLine;
+    }
+    if (lastCommittedSourceEntry?.file) {
+      state.lastCommittedSourceFile = lastCommittedSourceEntry.file;
     }
   }
   return state;
@@ -739,7 +778,7 @@ const refreshExpandedSourceMapFromDisassembly = (disassemblyText, disassemblyEnt
   }
   expandedSourceText = disassemblyText;
   expandedSourceEntries = Array.isArray(disassemblyEntries) ? disassemblyEntries : [];
-  expandedSourceLinks = buildSourceToDisasmLinks(debugLineEntries, expandedSourceEntries);
+  expandedSourceLinks = buildSourceToDisasmLinks(debugLineEntries, expandedSourceEntries, 'program.S');
   const elfName = basenameFromPath(elfPath, 'generated_program.elf');
   expandedSourceFile = `${elfName} (objdump)`;
   return expandedSourceLinks.length;
@@ -851,6 +890,7 @@ const assembleAndStartSession = async ({
   baseUrl,
   cacheBust,
   configText,
+  crt0Text,
   asmText,
   linkScriptText,
   gasMarch,
@@ -858,8 +898,12 @@ const assembleAndStartSession = async ({
   traceEnabled = true,
 }) => {
   const Module = await getDebugModule(baseUrl, cacheBust);
+  const startupText = String(crt0Text || '');
   const sourceText = String(asmText || '');
   const linkerText = String(linkScriptText || '');
+  if (!startupText.trim()) {
+    throw new Error('CRT0 source is empty.');
+  }
   if (!sourceText.trim()) {
     throw new Error('Assembly source is empty.');
   }
@@ -869,21 +913,58 @@ const assembleAndStartSession = async ({
 
   clearOutput();
   clearDisassemblyText();
+  const startupPath = `${EDIT_TMP_DIR}/crt0.S`;
+  const startupObjectPath = `${EDIT_TMP_DIR}/crt0.o`;
   const sourcePath = `${EDIT_TMP_DIR}/program.S`;
   const objectPath = `${EDIT_TMP_DIR}/program.o`;
   const linkerPath = `${EDIT_TMP_DIR}/link.ld`;
   const generatedElfPath = `${EDIT_TMP_DIR}/generated_program.elf`;
 
-  pushOutputLine(`Running in worker: assembling ${sourcePath}`);
+  pushOutputLine(`Running in worker: assembling ${startupPath} and ${sourcePath}`);
   flushOutput(requestId, false);
 
   const asFactory = getGasFactory({ baseUrl, cacheBust });
   const linkerFactory = getLdFactory({ baseUrl, cacheBust });
 
-  const gasArgs = [
+  const commonGasArgs = [
     '-g',
     `-march=${String(gasMarch || 'rv64imac')}`,
     `-mabi=${String(gasAbi || 'lp64')}`,
+  ];
+  const startupGasArgs = [
+    ...commonGasArgs,
+    '-o',
+    startupObjectPath,
+    startupPath,
+  ];
+  const startupGasResult = await runBinutilsModule({
+    requestId,
+    factory: asFactory,
+    label: 'gas',
+    args: startupGasArgs,
+    preRun: (gasModule) => {
+      gasModule.FS.writeFile(startupPath, startupText);
+    },
+  });
+
+  let startupObjectFile = null;
+  try {
+    startupObjectFile = startupGasResult.module.FS.readFile(startupObjectPath);
+  } catch {
+    startupObjectFile = null;
+  }
+  if (!startupObjectFile || startupObjectFile.length === 0) {
+    const details = [...startupGasResult.stderrLines, ...startupGasResult.stdoutLines]
+      .filter((line) => line && line.trim())
+      .slice(-6)
+      .join('\n');
+    throw new Error(details ? `gas failed (crt0):\n${details}` : 'gas failed (crt0): no object file produced');
+  }
+  pushOutputLine(`gas: produced ${startupObjectPath} (${startupObjectFile.length} bytes)`);
+  flushOutput(requestId, false);
+
+  const gasArgs = [
+    ...commonGasArgs,
     '-o',
     objectPath,
     sourcePath,
@@ -922,6 +1003,7 @@ const assembleAndStartSession = async ({
     linkerPath,
     '-o',
     generatedElfPath,
+    startupObjectPath,
     objectPath,
   ];
   const ldResult = await runBinutilsModule({
@@ -930,6 +1012,7 @@ const assembleAndStartSession = async ({
     label: 'ld',
     args: ldArgs,
     preRun: (ldModule) => {
+      ldModule.FS.writeFile(startupObjectPath, startupObjectFile);
       ldModule.FS.writeFile(objectPath, objectFile);
       ldModule.FS.writeFile(linkerPath, linkerText);
     },
@@ -1188,6 +1271,7 @@ self.onmessage = async (event) => {
           baseUrl: message.baseUrl,
           cacheBust: message.cacheBust,
           configText: message.configText,
+          crt0Text: message.crt0Text,
           asmText: message.asmText,
           linkScriptText: message.linkScriptText,
           gasMarch: message.gasMarch,

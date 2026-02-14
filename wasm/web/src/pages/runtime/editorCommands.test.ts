@@ -13,9 +13,11 @@ import {
 describe('runtime editor commands', () => {
   it('accepts known tabs', () => {
     expect(isRuntimeEditorTab('program')).toBe(true)
+    expect(isRuntimeEditorTab('crt0')).toBe(true)
     expect(isRuntimeEditorTab('upload-disasm')).toBe(true)
     expect(isRuntimeEditorTab('unknown')).toBe(false)
     expect(isRuntimeEditEditorTab('program')).toBe(true)
+    expect(isRuntimeEditEditorTab('crt0')).toBe(true)
     expect(isRuntimeEditEditorTab('upload-disasm')).toBe(false)
   })
 

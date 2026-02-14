@@ -7,8 +7,9 @@ import { describe, expect, it, vi } from 'vitest'
 type WorkerTestApi = {
   parseObjdumpAddressMap?: (text: string) => Array<{ address: number; line: number; text: string }>
   buildSourceToDisasmLinks?: (
-    lineEntries: Array<{ address: number; line: number | null }>,
-    disasmEntries: Array<{ address: number; line: number }>
+    lineEntries: Array<{ address: number; line: number | null; file?: string }>,
+    disasmEntries: Array<{ address: number; line: number }>,
+    sourceFilter?: string
   ) => Array<{ sourceLine: number; expandedLines: number[] }>
   extractTraceRegWrites?: (
     lines: string[],
@@ -75,6 +76,31 @@ Disassembly of section .text:
     expect(links).toEqual([
       { sourceLine: 15, expandedLines: [disasmEntries[0].line, disasmEntries[1].line] },
       { sourceLine: 16, expandedLines: [disasmEntries[2].line, disasmEntries[3].line] },
+    ])
+  })
+
+  it('filters source/disassembly links by source file when requested', () => {
+    const workerSource = fs.readFileSync(workerUrl, 'utf8')
+    const sandbox = createWorkerSandbox()
+    vm.runInNewContext(workerSource, sandbox, { filename: 'debugWorker.js' })
+
+    const api = sandbox.__SAIL_DEBUG_WORKER_TEST_API__ as WorkerTestApi
+    expect(typeof api.buildSourceToDisasmLinks).toBe('function')
+
+    const lineEntries = [
+      { address: 0x80000000, line: 3, file: '/tmp/edit/crt0.S' },
+      { address: 0x80000010, line: 9, file: '/tmp/edit/program.S' },
+      { address: 0x80000020, line: 10, file: '/tmp/edit/program.S' },
+    ]
+    const disasmEntries = [
+      { address: 0x80000000, line: 40 },
+      { address: 0x80000010, line: 41 },
+      { address: 0x80000020, line: 42 },
+    ]
+    const links = api.buildSourceToDisasmLinks?.(lineEntries, disasmEntries, 'program.S') ?? []
+    expect(links).toEqual([
+      { sourceLine: 9, expandedLines: [41] },
+      { sourceLine: 10, expandedLines: [42] },
     ])
   })
 

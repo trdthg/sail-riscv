@@ -44,6 +44,7 @@ function App() {
   const {
     callDebugWorker,
     setDebugWorkerLineSink,
+    resetDebugWorker,
   } = useDebugWorkerRpc();
 
   const setStatus = (text) => setConfigEditorStatus(text);
@@ -289,6 +290,7 @@ function App() {
     isActive: activePage === 'runtime',
     callDebugWorker,
     setDebugWorkerLineSink,
+    forceStopDebugWorker: resetDebugWorker,
     resolveConfigText,
   };
 

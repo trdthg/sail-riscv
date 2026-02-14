@@ -7,6 +7,7 @@ import type { RuntimeEditorState } from './runtimeEditorReducer'
 
 type DebugStateLike = {
   sourceLine?: unknown
+  sourceFile?: unknown
   expandedSourceLine?: unknown
   expandedSourceOriginLine?: unknown
   lastCommittedExpandedSourceLine?: unknown
@@ -28,6 +29,19 @@ function readDebugState(debugState: unknown): DebugStateLike {
   return debugState as DebugStateLike
 }
 
+const basenameLower = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return null
+  }
+  const normalized = value.trim()
+  if (!normalized) {
+    return null
+  }
+  const parts = normalized.split(/[\\/]/)
+  const last = parts[parts.length - 1] || normalized
+  return last.trim().toLowerCase() || null
+}
+
 export function selectRuntimeActiveEditorTab(
   runtimeInputMode: RuntimeInputMode,
   editEditorTab: RuntimeEditEditorTab
@@ -37,6 +51,10 @@ export function selectRuntimeActiveEditorTab(
 
 export function selectActiveSourceLine(debugState: unknown): number | null {
   return asLine(readDebugState(debugState).sourceLine)
+}
+
+export function selectActiveSourceFile(debugState: unknown): string | null {
+  return basenameLower(readDebugState(debugState).sourceFile)
 }
 
 export function selectActiveExpandedSourceLine(debugState: unknown): number | null {
@@ -59,6 +77,7 @@ export function selectActiveRuntimeEditorLine(args: {
   runtimeInputMode: RuntimeInputMode
   runtimeActiveEditorTab: RuntimeActiveEditorTab
   activeSourceLine: number | null
+  activeSourceFile: string | null
   activeExpandedSourceLine: number | null
   activeUploadDisasmLine: number | null
 }): number | null {
@@ -69,7 +88,13 @@ export function selectActiveRuntimeEditorLine(args: {
     return args.activeExpandedSourceLine
   }
   if (args.runtimeActiveEditorTab === 'program') {
+    if (args.activeSourceFile && args.activeSourceFile !== 'program.s') {
+      return null
+    }
     return args.activeSourceLine
+  }
+  if (args.runtimeActiveEditorTab === 'crt0') {
+    return args.activeSourceFile === 'crt0.s' ? args.activeSourceLine : null
   }
   return null
 }
@@ -84,6 +109,9 @@ export function selectRuntimeEditorValue(args: {
   }
   if (args.runtimeActiveEditorTab === 'program') {
     return args.state.asmSourceInput
+  }
+  if (args.runtimeActiveEditorTab === 'crt0') {
+    return args.state.crt0SourceInput
   }
   if (args.runtimeActiveEditorTab === 'expanded') {
     return args.state.expandedAsmSourceInput

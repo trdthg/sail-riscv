@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   selectActiveExpandedSourceOriginLine,
+  selectActiveSourceFile,
   selectActiveRuntimeEditorLine,
   selectRuntimeActiveEditorTab,
   selectRuntimeEditorLanguage,
@@ -35,6 +36,7 @@ describe('runtimeEditorSelectors', () => {
     const state = {
       ...runtimeEditorInitialState,
       asmSourceInput: 'addi x1, x2, 1',
+      crt0SourceInput: 'call main',
       uploadDisasmInput: '0000: addi x1, x2, 1',
       linkerScriptInput: 'ENTRY(_start)',
     }
@@ -45,6 +47,13 @@ describe('runtimeEditorSelectors', () => {
         state,
       })
     ).toBe('addi x1, x2, 1')
+    expect(
+      selectRuntimeEditorValue({
+        runtimeInputMode: 'edit',
+        runtimeActiveEditorTab: 'crt0',
+        state,
+      })
+    ).toBe('call main')
     expect(
       selectRuntimeEditorValue({
         runtimeInputMode: 'upload',
@@ -60,6 +69,7 @@ describe('runtimeEditorSelectors', () => {
         runtimeInputMode: 'edit',
         runtimeActiveEditorTab: 'program',
         activeSourceLine: 12,
+        activeSourceFile: 'program.s',
         activeExpandedSourceLine: 41,
         activeUploadDisasmLine: 7,
       })
@@ -67,8 +77,29 @@ describe('runtimeEditorSelectors', () => {
     expect(
       selectActiveRuntimeEditorLine({
         runtimeInputMode: 'edit',
+        runtimeActiveEditorTab: 'crt0',
+        activeSourceLine: 5,
+        activeSourceFile: 'crt0.s',
+        activeExpandedSourceLine: 41,
+        activeUploadDisasmLine: 7,
+      })
+    ).toBe(5)
+    expect(
+      selectActiveRuntimeEditorLine({
+        runtimeInputMode: 'edit',
+        runtimeActiveEditorTab: 'program',
+        activeSourceLine: 5,
+        activeSourceFile: 'crt0.s',
+        activeExpandedSourceLine: 41,
+        activeUploadDisasmLine: 7,
+      })
+    ).toBeNull()
+    expect(
+      selectActiveRuntimeEditorLine({
+        runtimeInputMode: 'edit',
         runtimeActiveEditorTab: 'expanded',
         activeSourceLine: 12,
+        activeSourceFile: 'program.s',
         activeExpandedSourceLine: 41,
         activeUploadDisasmLine: 7,
       })
@@ -78,6 +109,7 @@ describe('runtimeEditorSelectors', () => {
         runtimeInputMode: 'upload',
         runtimeActiveEditorTab: 'upload-disasm',
         activeSourceLine: 12,
+        activeSourceFile: 'program.s',
         activeExpandedSourceLine: 41,
         activeUploadDisasmLine: 7,
       })
@@ -87,10 +119,17 @@ describe('runtimeEditorSelectors', () => {
         runtimeInputMode: 'edit',
         runtimeActiveEditorTab: 'linker',
         activeSourceLine: 12,
+        activeSourceFile: 'program.s',
         activeExpandedSourceLine: 41,
         activeUploadDisasmLine: 7,
       })
     ).toBeNull()
+  })
+
+  it('reads source file basename from debug state', () => {
+    expect(selectActiveSourceFile({ sourceFile: '/tmp/edit/program.S' })).toBe('program.s')
+    expect(selectActiveSourceFile({ sourceFile: '/tmp/edit/crt0.S' })).toBe('crt0.s')
+    expect(selectActiveSourceFile({ sourceFile: 12 })).toBeNull()
   })
 
   it('reads expanded source origin line from debug state', () => {

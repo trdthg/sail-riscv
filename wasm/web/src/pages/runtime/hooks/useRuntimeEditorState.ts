@@ -26,6 +26,10 @@ export const useRuntimeEditorState = () => {
         editorActions.setRuntimeEditorField('asmSourceInput', next)
         return
       }
+      if (editorSelectors.runtimeActiveEditorTab === 'crt0') {
+        editorActions.setRuntimeEditorField('crt0SourceInput', next)
+        return
+      }
       if (editorSelectors.runtimeActiveEditorTab === 'expanded') {
         return
       }

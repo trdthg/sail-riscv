@@ -17,6 +17,7 @@ import { createClearDebugDiffPatch, createSwitchToEditPatch } from '../services/
 type UseRuntimeDebugActionsArgs = {
   resolveConfigText: () => Promise<string | null>
   callDebugWorker: CallDebugWorker
+  forceStopDebugWorker: (reason?: string) => void
   setOutput: (value: string) => void
 }
 
@@ -30,6 +31,7 @@ const EMPTY_SNAPSHOT = { xregs: null, fregs: null }
 export const useRuntimeDebugActions = ({
   resolveConfigText,
   callDebugWorker,
+  forceStopDebugWorker,
   setOutput,
 }: UseRuntimeDebugActionsArgs) => {
   const sessionState = useRuntimeSessionState()
@@ -195,6 +197,20 @@ export const useRuntimeDebugActions = ({
     setRuntimeSessionField,
   ])
 
+  const forceStopDebug = useCallback(() => {
+    forceStopDebugWorker('Execution force-stopped by user.')
+    patchRuntimeSession({
+      debugBusy: false,
+      debugReady: false,
+      debugState: null,
+      changedXRegs: [],
+      changedFRegs: [],
+      changedRegLens: [],
+      elfRunStatus: 'Execution force-stopped. Rebuild + Init to continue.',
+    })
+    clearPreviousDebugRegs()
+  }, [clearPreviousDebugRegs, forceStopDebugWorker, patchRuntimeSession])
+
   return {
     initElfDebug,
     onUploadElf,
@@ -205,5 +221,6 @@ export const useRuntimeDebugActions = ({
     runElfDebug,
     resetElfDebug,
     onToolbarReset,
+    forceStopDebug,
   }
 }

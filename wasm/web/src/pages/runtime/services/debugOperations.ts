@@ -134,6 +134,7 @@ export async function buildAsmAndInitDebugOperation(
   try {
     const result = await env.callDebugWorker('assembleStart', {
       configText,
+      crt0Text: args.editorState.crt0SourceInput,
       asmText: args.editorState.asmSourceInput,
       linkScriptText: args.editorState.linkerScriptInput,
       gasMarch: args.editorState.gasMarchInput.trim() || 'rv64imac',

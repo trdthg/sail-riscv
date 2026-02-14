@@ -18,6 +18,7 @@ function RuntimePageLayout({
   configsState,
   callDebugWorker,
   setDebugWorkerLineSink,
+  forceStopDebugWorker,
   resolveConfigText,
 }) {
   const sessionState = useRuntimeSessionState()
@@ -94,6 +95,7 @@ function RuntimePageLayout({
             configsState={configsState}
             resolveConfigText={resolveConfigText}
             callDebugWorker={callDebugWorker}
+            forceStopDebugWorker={forceStopDebugWorker}
             setOutput={setOutput}
           />
           <RuntimeEditorPane
@@ -134,6 +136,7 @@ function RuntimePageComponent({
   configsState,
   callDebugWorker,
   setDebugWorkerLineSink,
+  forceStopDebugWorker,
   resolveConfigText,
 }) {
   return (
@@ -149,6 +152,7 @@ function RuntimePageComponent({
             configsState={configsState}
             callDebugWorker={callDebugWorker}
             setDebugWorkerLineSink={setDebugWorkerLineSink}
+            forceStopDebugWorker={forceStopDebugWorker}
             resolveConfigText={resolveConfigText}
           />
         </RuntimeEditorCommandsProvider>

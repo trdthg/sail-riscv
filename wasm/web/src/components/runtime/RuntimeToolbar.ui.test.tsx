@@ -45,6 +45,7 @@ function ToolbarHarnessInner() {
         }}
         resolveConfigText={async () => '{}'}
         callDebugWorker={async () => ({})}
+        forceStopDebugWorker={() => {}}
         setOutput={() => {}}
       />
       <pre data-testid="editor-value">{selectors.runtimeEditorValue}</pre>

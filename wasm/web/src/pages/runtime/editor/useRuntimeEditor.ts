@@ -8,6 +8,7 @@ import { useRuntimeSessionState } from '../session/useRuntimeSession'
 import {
   selectActiveExpandedSourceOriginLine,
   selectActiveExpandedSourceLine,
+  selectActiveSourceFile,
   selectActiveLastCommittedExpandedSourceLine,
   selectActiveRuntimeEditorLine,
   selectActiveSourceLine,
@@ -81,6 +82,7 @@ export function useRuntimeEditorSelectors() {
       editorState.editEditorTab
     )
     const activeSourceLine = selectActiveSourceLine(sessionState.debugState)
+    const activeSourceFile = selectActiveSourceFile(sessionState.debugState)
     const activeExpandedSourceLine = selectActiveExpandedSourceLine(sessionState.debugState)
     const activeExpandedSourceOriginLine = selectActiveExpandedSourceOriginLine(
       sessionState.debugState
@@ -93,6 +95,7 @@ export function useRuntimeEditorSelectors() {
       runtimeInputMode: sessionState.runtimeInputMode,
       runtimeActiveEditorTab,
       activeSourceLine,
+      activeSourceFile,
       activeExpandedSourceLine,
       activeUploadDisasmLine,
     })
@@ -111,6 +114,7 @@ export function useRuntimeEditorSelectors() {
     })
     return {
       runtimeActiveEditorTab: runtimeActiveEditorTab as RuntimeActiveEditorTab,
+      activeSourceFile,
       activeSourceLine,
       activeExpandedSourceLine,
       activeExpandedSourceOriginLine,

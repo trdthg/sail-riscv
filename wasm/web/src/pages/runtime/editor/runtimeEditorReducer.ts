@@ -1,47 +1,113 @@
 import type { RuntimeEditEditorTab } from '../editorCommands'
 
-export const DEFAULT_DEBUG_ASM_SOURCE = `.section .bss.mmio.htif
-.balign 8
-.global tohost
-tohost:
-  .zero 8
-.balign 8
-.global fromhost
-fromhost:
-  .zero 8
+export const DEFAULT_DEBUG_ASM_SOURCE = `.section .rodata
+hello_str:
+  .asciz "Hello, Sail!\\n"
 
-.macro htif_putc value
-  li a0, \\value
-  sw a0, 0(t0)
-  li a0, 0x01010000
-  sw a0, 4(t0)
+.macro print_reg reg
+  mv a0, \\reg
+  call htif_putc
+.endm
+
+.macro htif_putc imm
+  li t3, \\imm
+  print_reg t3
+.endm
+
+.macro print_string ptr_reg tmp_reg
+1:
+  lbu \\tmp_reg, 0(\\ptr_reg)
+  beqz \\tmp_reg, 2f
+  addi \\ptr_reg, \\ptr_reg, 1
+  print_reg \\tmp_reg
+  j 1b
+2:
 .endm
 
 .section .text
+.global main
+main:
+  la t1, hello_str
+  print_string t1, t2
+  li a0, 0
+  ret
+`
+
+export const DEFAULT_DEBUG_CRT0_SOURCE = `.section .text
 .global _start
 _start:
-  la t0, tohost
-  htif_putc 'H'
-  htif_putc 'e'
-  htif_putc 'l'
-  htif_putc 'l'
-  htif_putc 'o'
-  htif_putc ','
-  htif_putc ' '
-  htif_putc 'S'
-  htif_putc 'a'
-  htif_putc 'i'
-  htif_putc 'l'
-  htif_putc '!'
-  htif_putc 10
+  j reset_handler
 
-  li a0, 0
-  slli a0, a0, 1
-  ori a0, a0, 1
+init_pmp:
+  csrr s1, mtvec
+  la t0, 1f
+  csrw mtvec, t0
+  li t0, -1
+  csrw pmpaddr0, t0
+  li t0, 0x1f
+  csrw pmpcfg0, t0
+  sfence.vma
+.balign 64
+1:
+  csrw mtvec, s1
+  csrw mcause, x0
+  ret
+
+.p2align 6
+.global trap_handler
+trap_handler:
+  li a0, 1001
+  tail htif_exit
+
+.global reset_handler
+reset_handler:
+  .irp i, 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+    li x\\i, 0
+  .endr
+
+  call init_pmp
+  la t0, trap_handler
+  csrw mtvec, t0
+
+  la sp, _stack
+  .option push
+  .option norelax
+  la gp, __global_pointer$
+  .option pop
+
+  addi sp, sp, -8
+  sw zero, 0(sp)
+  sw zero, 4(sp)
+
+  call main
+  tail htif_exit
+
+.section .bss.mmio.htif
+.balign 8
+.global tohost
+tohost: .zero 8
+.balign 8
+.global fromhost
+fromhost: .zero 8
+
+.section .text
+.global htif_exit
+htif_exit:
+  la t0, tohost
+  sll a0, a0, 1
+  or a0, a0, 1
 1:
   sw a0, 0(t0)
   sw zero, 4(t0)
   j 1b
+
+.global htif_putc
+htif_putc:
+  la t0, tohost
+  sw a0, 0(t0)
+  li a0, 0x01010000
+  sw a0, 4(t0)
+  ret
 `
 
 export const DEFAULT_DEBUG_LINKER_SCRIPT = `OUTPUT_ARCH("riscv")
@@ -77,6 +143,7 @@ SECTIONS {
 export type RuntimeEditorState = {
   editEditorTab: RuntimeEditEditorTab
   asmSourceInput: string
+  crt0SourceInput: string
   expandedAsmSourceInput: string
   expandedSourceLinks: RuntimeExpandedSourceLink[]
   uploadDisasmInput: string
@@ -107,6 +174,7 @@ export type RuntimeEditorAction =
 export const runtimeEditorInitialState: RuntimeEditorState = {
   editEditorTab: 'program',
   asmSourceInput: DEFAULT_DEBUG_ASM_SOURCE,
+  crt0SourceInput: DEFAULT_DEBUG_CRT0_SOURCE,
   expandedAsmSourceInput: '',
   expandedSourceLinks: [],
   uploadDisasmInput: '',
@@ -139,6 +207,7 @@ export function runtimeEditorReducer(
       ...state,
       editEditorTab: 'program',
       asmSourceInput: DEFAULT_DEBUG_ASM_SOURCE,
+      crt0SourceInput: DEFAULT_DEBUG_CRT0_SOURCE,
       expandedAsmSourceInput: '',
       expandedSourceLinks: [],
       uploadDisasmInput: '',

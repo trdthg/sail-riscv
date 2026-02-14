@@ -16,6 +16,7 @@ export function RuntimeToolbar({
   configsState,
   resolveConfigText,
   callDebugWorker,
+  forceStopDebugWorker,
   setOutput,
 }) {
   const sessionState = useRuntimeSessionState()
@@ -32,9 +33,11 @@ export function RuntimeToolbar({
     stepElfDebugLine,
     runElfDebug,
     onToolbarReset,
+    forceStopDebug,
   } = useRuntimeDebugActions({
     resolveConfigText,
     callDebugWorker,
+    forceStopDebugWorker,
     setOutput,
   })
 
@@ -244,6 +247,14 @@ export function RuntimeToolbar({
         >
           Run
         </button>
+        <button
+          type="button"
+          onClick={forceStopDebug}
+          disabled={!sessionState.debugBusy}
+          className={`h-8 px-3 text-[11px] font-semibold ${controlButtonClass} disabled:cursor-not-allowed disabled:opacity-50`}
+        >
+          Force Stop
+        </button>
       </div>
 
       <div className={`flex items-center px-2 py-1.5 ${topBarClass}`}>
@@ -255,6 +266,13 @@ export function RuntimeToolbar({
               className={`rounded px-3 py-1 text-xs font-medium ${editorSelectors.runtimeActiveEditorTab === 'program' ? tabActiveClass : tabInactiveClass}`}
             >
               program.S
+            </button>
+            <button
+              type="button"
+              onClick={() => openEditorTab('crt0')}
+              className={`ml-1 rounded px-3 py-1 text-xs font-medium ${editorSelectors.runtimeActiveEditorTab === 'crt0' ? tabActiveClass : tabInactiveClass}`}
+            >
+              crt0.S
             </button>
             <button
               type="button"
@@ -280,6 +298,8 @@ export function RuntimeToolbar({
               : 'Upload an ELF to inspect')
             : editorState.editEditorTab === 'linker' && sessionState.debugReady
               ? 'link.ld editing mode'
+              : editorState.editEditorTab === 'crt0' && sessionState.debugReady
+                ? 'crt0.S editing mode'
               : hasExpandedSource && editorSelectors.activeExpandedSourceLine
                 ? `objdump line ${editorSelectors.activeExpandedSourceLine}`
                 : ''}
