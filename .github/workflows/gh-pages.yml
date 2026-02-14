@@ -51,6 +51,12 @@ jobs:
       - name: Install web dependencies
         run: pnpm -C wasm/web install
 
+      - name: Run web lint
+        run: pnpm -C wasm/web lint
+
+      - name: Run web typecheck
+        run: pnpm -C wasm/web typecheck
+
       - name: Run web unit tests
         run: pnpm -C wasm/web test
 

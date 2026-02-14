@@ -32,7 +32,6 @@ export const encodeWithUdb = (asmLine, index, xlen) => {
     const vars = encoding.variables || [];
     const values = {};
     let ok = true;
-    let error = '';
 
     for (const variable of vars) {
       const name = variable.name;
@@ -60,7 +59,6 @@ export const encodeWithUdb = (asmLine, index, xlen) => {
 
         if (value === null || value === undefined || Number.isNaN(value)) {
           ok = false;
-          error = `invalid operand for ${name}: ${token}`;
           break;
         }
       } else {
@@ -86,7 +84,6 @@ export const encodeWithUdb = (asmLine, index, xlen) => {
         const mask = (1n << BigInt(leftShift)) - 1n;
         if ((value & mask) !== 0n) {
           ok = false;
-          error = `${name} not aligned for left_shift ${leftShift}`;
           break;
         }
         value >>= BigInt(leftShift);
@@ -97,7 +94,6 @@ export const encodeWithUdb = (asmLine, index, xlen) => {
       }
       if (value < 0 || value >= maxVal) {
         ok = false;
-        error = `${name} out of range`;
         break;
       }
 
@@ -110,7 +106,6 @@ export const encodeWithUdb = (asmLine, index, xlen) => {
           if (bits[idx] === '1' || bits[idx] === '0') {
             if (bits[idx] !== b) {
               ok = false;
-              error = `encoding conflict on ${name}`;
               break;
             }
           }

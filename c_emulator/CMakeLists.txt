@@ -141,41 +141,18 @@ install(TARGETS sail_riscv_sim
     RUNTIME DESTINATION "bin"
 )
 
-## A minimal CLI for web-friendly decode/encode helpers.
-
-add_executable(sail_riscv_web
-    riscv_web.cpp
-)
-
-add_dependencies(sail_riscv_web generated_sail_riscv_model generated_config_schema)
-
-target_link_libraries(sail_riscv_web
-    PRIVATE CLI11 riscv_model
-)
-
-target_compile_options(sail_riscv_web PRIVATE -fexceptions)
-target_link_options(sail_riscv_web PRIVATE -fexceptions)
-
-target_compile_options(sail_riscv_web PRIVATE
-  -Wall
-  -Wextra
-  -Wno-unused-parameter
-)
-
-install(TARGETS sail_riscv_web
-    RUNTIME DESTINATION "bin"
-)
-
 ## Stateful debug entry for web worker (init/step/run/state APIs).
 
 add_executable(sail_riscv_debug
     riscv_debug.cpp
+    riscv_callbacks_log.cpp
+    riscv_callbacks_log.h
 )
 
 add_dependencies(sail_riscv_debug generated_sail_riscv_model generated_config_schema)
 
 target_link_libraries(sail_riscv_debug
-    PRIVATE riscv_model
+    PRIVATE CLI11 riscv_model
 )
 
 target_compile_options(sail_riscv_debug PRIVATE -fexceptions)
@@ -183,7 +160,7 @@ target_link_options(sail_riscv_debug PRIVATE -fexceptions)
 
 if (EMSCRIPTEN)
   target_link_options(sail_riscv_debug PRIVATE
-    "-sEXPORTED_FUNCTIONS=['_main','_debug_init','_debug_init_default','_debug_step','_debug_run','_debug_state_json','_debug_is_halted','_debug_exit_code','_debug_last_error','_debug_reset']"
+    "-sEXPORTED_FUNCTIONS=['_main','_debug_init','_debug_init_default','_debug_set_trace','_debug_step','_debug_run','_debug_state_json','_debug_is_halted','_debug_exit_code','_debug_last_error','_debug_reset']"
   )
 endif()
 

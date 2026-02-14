@@ -1,7 +1,7 @@
 import { atom } from 'jotai';
 import { loadable } from 'jotai/utils';
 
-import { withBase, maybeWithBase } from '../lib/paths.js';
+import { withBase, maybeWithBase } from '../lib/paths';
 
 const configsAtom = atom(async () => {
   const resp = await fetch(`${withBase('/config/configs.json')}?${Date.now()}`);

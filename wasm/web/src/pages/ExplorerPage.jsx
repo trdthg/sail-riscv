@@ -28,6 +28,8 @@ export function ExplorerPage({
   asmDropdownPos,
   setAsmFocused,
   applyAsmSuggestion,
+  autocompleteState,
+  autocompleteMessage,
   runPrintIsa,
   isaState,
   currentInstruction,
@@ -46,27 +48,72 @@ export function ExplorerPage({
   bitLayout,
   binInputRef,
 }) {
+  const panelClass = isDark
+    ? 'rounded-3xl border border-slate-700 bg-slate-900/80 text-slate-200 shadow-sm'
+    : 'rounded-3xl border border-slate-200 bg-white/80 text-slate-700 shadow-sm';
+  const largePanelClass = `${panelClass} p-8 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.55)] backdrop-blur animate-rise animate-rise-delay-1`;
+  const compactPanelClass = `${panelClass} p-6`;
+  const inputClass = isDark
+    ? 'h-11 w-full rounded-xl border border-slate-600 bg-slate-900 px-4 text-sm text-slate-100 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-700'
+    : 'h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200';
+  const mutedInputClass = isDark
+    ? 'h-12 w-full rounded-xl border border-slate-600 bg-slate-950 px-4 text-sm font-medium text-slate-100 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-700'
+    : 'h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200';
+  const fieldLabelClass = isDark
+    ? 'space-y-2 text-sm font-medium text-slate-300'
+    : 'space-y-2 text-sm font-medium text-slate-700';
+  const titleClass = isDark
+    ? 'text-2xl font-semibold tracking-tight text-slate-100 md:text-3xl font-serif'
+    : 'text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl font-serif';
+  const subtitleClass = isDark ? 'max-w-xl text-sm text-slate-400' : 'max-w-xl text-sm text-slate-600';
+  const sectionHeaderClass = isDark
+    ? 'text-[10px] uppercase tracking-[0.2em] text-slate-500'
+    : 'text-[10px] uppercase tracking-[0.2em] text-slate-400';
+  const sectionLabelClass = isDark
+    ? 'text-[10px] uppercase tracking-[0.16em] text-slate-400'
+    : 'text-[10px] uppercase tracking-[0.16em] text-slate-400';
+  const codeBlockClass = isDark
+    ? 'mt-1 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-[11px] text-slate-200 whitespace-pre-wrap'
+    : 'mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-700 whitespace-pre-wrap';
+  const codeTextClass = isDark ? 'font-mono text-xs text-slate-100' : 'font-mono text-xs text-slate-800';
+  const badgeClass = isDark
+    ? 'rounded-full border border-slate-600 bg-slate-950 px-2 py-0.5 text-[10px] font-semibold text-slate-300'
+    : 'rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500';
+  const buttonClass = isDark
+    ? 'rounded-full border border-slate-600 bg-slate-900 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-200 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-400'
+    : 'rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300';
+  const dropdownClass = isDark
+    ? 'max-h-56 overflow-auto rounded-xl border border-slate-600 bg-slate-900 shadow-lg'
+    : 'max-h-56 overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg';
+  const dropdownActiveClass = isDark ? 'bg-slate-700 text-slate-100' : 'bg-slate-100 text-slate-900';
+  const dropdownInactiveClass = isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-50';
+  const helperTextClass = isDark ? 'text-xs text-slate-400' : 'text-xs text-slate-500';
+  const noMatchClass = isDark ? 'mt-4 text-xs text-slate-400' : 'mt-4 text-xs text-slate-500';
+  const autocompleteHintClass = autocompleteState === 'udb-error'
+    ? 'text-xs text-rose-500'
+    : helperTextClass;
+
   return (
-    <main className={`mx-auto grid w-full max-w-[1400px] gap-8 px-6 pb-12 lg:min-h-[calc(100vh-8rem)] lg:grid-cols-[1.08fr_0.92fr] ${isDark ? 'text-slate-100' : ''}`}>
+    <main className={`mx-auto grid w-full max-w-[1400px] gap-8 px-6 pb-12 lg:min-h-[calc(100vh-8rem)] lg:grid-cols-[1.08fr_0.92fr] ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
       <section className="space-y-6">
-        <div className={`rounded-3xl border p-8 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.55)] backdrop-blur animate-rise animate-rise-delay-1 ${isDark ? 'border-slate-700 bg-slate-900/80' : 'border-slate-200 bg-white/80'}`}>
+        <div className={largePanelClass}>
           <div className="mb-6 space-y-3">
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl font-serif">
+            <h1 className={titleClass}>
               Instruction Encode / Decode
             </h1>
-            <p className="max-w-xl text-sm text-slate-600">
+            <p className={subtitleClass}>
               Left side is focused on single-instruction assembly/encoding conversion. Right side shows full instruction metadata.
             </p>
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
-            <label className="space-y-2 text-sm font-medium text-slate-700">
+            <label className={fieldLabelClass}>
               Config
               <select
                 value={configPath}
                 onChange={(e) => setConfigPath(e.target.value)}
                 disabled={configsState.state !== 'hasData'}
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                className={inputClass}
               >
                 <option value="/config.json">runtime config (edited)</option>
                 {configsState.state === 'hasData' && configsState.data.map((cfg) => (
@@ -77,12 +124,12 @@ export function ExplorerPage({
               </select>
             </label>
 
-            <label className="space-y-2 text-sm font-medium text-slate-700">
+            <label className={fieldLabelClass}>
               Decode mode
               <select
                 value={decodeMode}
                 onChange={(e) => setDecodeMode(e.target.value)}
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                className={inputClass}
               >
                 <option value="auto">Auto (by length)</option>
                 <option value="16">16-bit (compressed)</option>
@@ -90,7 +137,7 @@ export function ExplorerPage({
               </select>
             </label>
 
-            <label className="relative space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
+            <label className={`relative ${fieldLabelClass} md:col-span-2`}>
               Hex instruction
               <input
                 type="text"
@@ -109,7 +156,7 @@ export function ExplorerPage({
                   }
                 }}
                 maxLength={MAX_HEX + 2}
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                className={mutedInputClass}
               />
             </label>
 
@@ -134,7 +181,7 @@ export function ExplorerPage({
               }}
             />
 
-            <label className="relative z-30 space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
+            <label className={`relative z-30 ${fieldLabelClass} md:col-span-2`}>
               <div className="flex items-center justify-between">
                 <span>Assembly</span>
                 <span
@@ -177,12 +224,12 @@ export function ExplorerPage({
                     setAsmOpen(false);
                   }
                 }}
-                className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-xs text-slate-900 shadow-sm focus:outline-none"
+                className={`${inputClass} h-12 text-xs`}
               />
               {asmOpen && asmSuggestions.length > 0 && asmDropdownPos &&
                 createPortal(
                   <div
-                    className="max-h-56 overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg"
+                    className={dropdownClass}
                     style={{
                       position: 'fixed',
                       left: asmDropdownPos.left,
@@ -200,9 +247,7 @@ export function ExplorerPage({
                           applyAsmSuggestion(suggestion);
                         }}
                         className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs ${
-                          idx === asmHighlight
-                            ? 'bg-slate-100 text-slate-900'
-                            : 'text-slate-600 hover:bg-slate-50'
+                          idx === asmHighlight ? dropdownActiveClass : dropdownInactiveClass
                         }`}
                       >
                         <span className="font-mono">{suggestion.label}</span>
@@ -211,22 +256,25 @@ export function ExplorerPage({
                   </div>,
                   document.body
                 )}
+              {autocompleteMessage && (
+                <p className={autocompleteHintClass}>{autocompleteMessage}</p>
+              )}
               {assemblyMessage && <p className="text-xs text-rose-600">{assemblyMessage}</p>}
             </label>
           </div>
         </div>
 
-        <div className={`rounded-2xl border p-5 text-sm shadow-sm ${isDark ? 'border-slate-700 bg-slate-900/80 text-slate-300' : 'border-slate-200 bg-white/80 text-slate-600'}`}>
-          <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-slate-400">
+        <div className={`${panelClass} rounded-2xl p-5`}>
+          <div className={`flex items-center justify-between ${sectionHeaderClass}`}>
             <span>ISA string</span>
             <button
               onClick={runPrintIsa}
-              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300"
+              className={buttonClass}
             >
               Refresh
             </button>
           </div>
-          <div className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 whitespace-pre-wrap break-all">
+          <div className={codeBlockClass}>
             {isaState.state === 'loading' && 'Loading...'}
             {isaState.state === 'hasError' && 'Failed to load'}
             {isaState.state === 'hasData' && (isaState.data || 'Not loaded')}
@@ -241,96 +289,100 @@ export function ExplorerPage({
       </section>
 
       <aside className="space-y-6">
-        <div className={`rounded-3xl border p-6 text-sm shadow-sm ${isDark ? 'border-slate-700 bg-slate-900/80 text-slate-300' : 'border-slate-200 bg-white/80 text-slate-600'}`}>
-          <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-slate-400">
+        <div className={compactPanelClass}>
+          <div className={`flex items-center justify-between ${sectionHeaderClass}`}>
             <span>Instruction</span>
             {currentInstruction?.inst?.definedBy?.extension?.name && (
-              <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+              <span className={badgeClass}>
                 {currentInstruction.inst.definedBy.extension.name}
               </span>
             )}
           </div>
           {currentInstruction?.inst ? (
-            <div className="mt-4 space-y-3 text-xs text-slate-700">
+            <div className="mt-4 space-y-4 text-xs">
               <div>
-                <p className="text-sm font-semibold text-slate-900">{currentInstruction.inst.name}</p>
+                <p className={isDark ? 'text-sm font-semibold text-slate-100' : 'text-sm font-semibold text-slate-900'}>{currentInstruction.inst.name}</p>
                 {currentInstruction.inst.longName && (
-                  <p className="text-xs text-slate-500">{currentInstruction.inst.longName}</p>
+                  <p className={helperTextClass}>{currentInstruction.inst.longName}</p>
                 )}
               </div>
               {currentInstruction.inst.assembly && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Assembly</p>
-                  <p className="mt-1 font-mono text-xs text-slate-800">{currentInstruction.inst.name} {currentInstruction.inst.assembly}</p>
+                  <p className={sectionLabelClass}>Assembly</p>
+                  <p className={`mt-1 ${codeTextClass}`}>{currentInstruction.inst.name} {currentInstruction.inst.assembly}</p>
                 </div>
               )}
               {renderUdbValue(currentInstruction.inst.description) && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Description</p>
-                  <p className="mt-1 whitespace-pre-wrap text-xs text-slate-700">{renderUdbValue(currentInstruction.inst.description)}</p>
+                  <p className={sectionLabelClass}>Description</p>
+                  <p className={`mt-1 whitespace-pre-wrap ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>{renderUdbValue(currentInstruction.inst.description)}</p>
                 </div>
               )}
               {renderUdbValue(currentInstruction.inst.access) && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Access</p>
-                  <pre className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-700 whitespace-pre-wrap">
+                  <p className={sectionLabelClass}>Access</p>
+                  <pre className={codeBlockClass}>
                     {renderUdbValue(currentInstruction.inst.access)}
                   </pre>
                 </div>
               )}
               {renderUdbValue(currentInstruction.inst.operation) && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Operation</p>
-                  <pre className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-[11px] text-slate-700 whitespace-pre-wrap">
+                  <p className={sectionLabelClass}>Operation</p>
+                  <pre className={`${codeBlockClass} font-mono`}>
                     {renderUdbValue(currentInstruction.inst.operation)}
                   </pre>
                 </div>
               )}
               {renderUdbValue(currentInstruction.inst.pseudoinstructions) && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Pseudoinstructions</p>
-                  <pre className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-700 whitespace-pre-wrap">
+                  <p className={sectionLabelClass}>Pseudoinstructions</p>
+                  <pre className={codeBlockClass}>
                     {renderUdbValue(currentInstruction.inst.pseudoinstructions)}
                   </pre>
                 </div>
               )}
               {currentInstruction.encoding && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Encoding</p>
-                  <pre className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-[11px] text-slate-700 whitespace-pre-wrap">
+                  <p className={sectionLabelClass}>Encoding</p>
+                  <pre className={`${codeBlockClass} font-mono`}>
                     {renderUdbValue(currentInstruction.encoding)}
                   </pre>
                 </div>
               )}
               {currentInstruction.inst.encodingRaw && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Encoding Raw</p>
-                  <pre className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-700 whitespace-pre-wrap">
+                  <p className={sectionLabelClass}>Encoding Raw</p>
+                  <pre className={codeBlockClass}>
                     {renderUdbValue(currentInstruction.inst.encodingRaw)}
                   </pre>
                 </div>
               )}
               {currentInstruction.inst.full && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">YAML (Full)</p>
-                  <pre className="mt-1 max-h-64 overflow-auto rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-700 whitespace-pre-wrap">
+                  <p className={sectionLabelClass}>YAML (Full)</p>
+                  <pre className={`${codeBlockClass} max-h-64 overflow-auto`}>
                     {renderUdbValue(currentInstruction.inst.full)}
                   </pre>
                 </div>
               )}
             </div>
           ) : (
-            <p className="mt-4 text-xs text-slate-500">No instruction matched yet. Enter assembly or binary.</p>
+            <p className={noMatchClass}>No instruction matched yet. Enter assembly or binary.</p>
           )}
         </div>
 
-        <div className={`rounded-3xl border p-6 text-sm shadow-sm flex flex-col min-h-[520px] ${isDark ? 'border-slate-700 bg-slate-900/80 text-slate-300' : 'border-slate-200 bg-white/80 text-slate-600'}`}>
-          <h3 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl font-serif">Config editor</h3>
-          <p className="mt-2 text-sm text-slate-600">
-            Edit runtime config. Changes are auto-applied to <code className="text-slate-800">/config.json</code>.
+        <div className={`${compactPanelClass} flex min-h-[520px] flex-col`}>
+          <h3 className={titleClass}>Config editor</h3>
+          <p className={subtitleClass}>
+            Edit runtime config. Changes are auto-applied to <code className={isDark ? 'text-slate-200' : 'text-slate-800'}>/config.json</code>.
           </p>
           <textarea
-            className="mt-4 w-full flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 font-mono text-xs leading-relaxed text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+            className={`mt-4 w-full flex-1 resize-none rounded-2xl px-4 py-3 font-mono text-xs leading-relaxed shadow-sm focus:outline-none ${
+              isDark
+                ? 'border border-slate-600 bg-slate-950 text-slate-100 focus:border-slate-400 focus:ring-2 focus:ring-slate-700'
+                : 'border border-slate-200 bg-white text-slate-900 focus:border-slate-400 focus:ring-2 focus:ring-slate-200'
+            }`}
             placeholder="Load and edit config JSON here."
             value={configEditor}
             onChange={(e) => {
@@ -344,7 +396,7 @@ export function ExplorerPage({
               }, 500);
             }}
           />
-          {configEditorStatus && <p className="mt-3 text-xs text-slate-500">{configEditorStatus}</p>}
+          {configEditorStatus && <p className={`mt-3 ${helperTextClass}`}>{configEditorStatus}</p>}
         </div>
       </aside>
     </main>

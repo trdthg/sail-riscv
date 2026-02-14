@@ -2,7 +2,7 @@ import { atom } from 'jotai';
 import { loadable } from 'jotai/utils';
 
 import { configPathAtom, configsLoadableAtom } from './configAtoms.js';
-import { maybeWithBase } from '../lib/paths.js';
+import { maybeWithBase } from '../lib/paths';
 import { getRuntimeModule } from '../lib/sailRuntime.js';
 
 const isaRefreshAtom = atom(0);
@@ -31,7 +31,7 @@ const isaAtom = atom(async (get) => {
   window.__sailOutputSink = null;
   try {
     if (typeof Module.callMain === 'function') {
-      Module.callMain(['--config', '/config.json', '--print-isa-string']);
+      Module.callMain(['web', '--config', '/config.json', '--print-isa-string']);
     }
   } finally {
     window.__sailOutputSink = prevSink || null;

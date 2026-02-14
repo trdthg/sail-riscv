@@ -1,21 +1,27 @@
 #include <array>
 #include <algorithm>
+#include <cctype>
+#include <cerrno>
 #include <cinttypes>
 #include <cstdint>
+#include <cstring>
 #include <cstdio>
 #include <cstdlib>
 #include <iomanip>
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 
+#include "CLI11.hpp"
 #include "config_utils.h"
 #include "elf_loader.h"
 #include "rts.h"
 #include "sail.h"
 #include "sail_config.h"
+#include "riscv_callbacks_log.h"
 #include "riscv_model_impl.h"
 
 #ifdef __EMSCRIPTEN__
@@ -33,11 +39,18 @@ namespace {
 
 struct DebugContext {
   std::unique_ptr<ModelImpl> model;
+  std::unique_ptr<log_callbacks> trace_callbacks;
   std::optional<uint64_t> htif_tohost_address;
   uint64_t insns_per_tick = 1;
   uint64_t insn_cnt = 0;
   uint64_t total_steps = 0;
   mach_int step_no = 0;
+  bool has_last_committed_pc = false;
+  uint64_t last_committed_pc = 0;
+  bool trace_instr = true;
+  bool trace_reg = true;
+  bool trace_mem = true;
+  bool trace_use_abi_names = true;
   bool is_waiting = false;
   bool initialized = false;
   bool halted = false;
@@ -52,26 +65,24 @@ std::string g_state_json_cache;
 std::string json_escape(const std::string &input) {
   std::string out;
   out.reserve(input.size() + 8);
-  for (char c : input) {
+  for (const char c : input) {
     switch (c) {
-    case '\\':
-      out += "\\\\";
-      break;
-    case '"':
-      out += "\\\"";
-      break;
-    case '\n':
-      out += "\\n";
-      break;
-    case '\r':
-      out += "\\r";
-      break;
-    case '\t':
-      out += "\\t";
-      break;
-    default:
-      out += c;
-      break;
+      case '\"': out += "\\\""; break;
+      case '\\': out += "\\\\"; break;
+      case '\b': out += "\\b"; break;
+      case '\f': out += "\\f"; break;
+      case '\n': out += "\\n"; break;
+      case '\r': out += "\\r"; break;
+      case '\t': out += "\\t"; break;
+      default:
+        if (static_cast<unsigned char>(c) < 0x20) {
+          char buf[7];
+          std::snprintf(buf, sizeof(buf), "\\u%04x", c & 0xff);
+          out += buf;
+        } else {
+          out += c;
+        }
+        break;
     }
   }
   return out;
@@ -112,12 +123,15 @@ void capture_term_byte(char c) {
 }
 
 void clear_state_only() {
+  g_ctx.trace_callbacks.reset();
   g_ctx.model.reset();
   g_ctx.htif_tohost_address = std::nullopt;
   g_ctx.insns_per_tick = 1;
   g_ctx.insn_cnt = 0;
   g_ctx.total_steps = 0;
   g_ctx.step_no = 0;
+  g_ctx.has_last_committed_pc = false;
+  g_ctx.last_committed_pc = 0;
   g_ctx.is_waiting = false;
   g_ctx.initialized = false;
   g_ctx.halted = false;
@@ -128,6 +142,81 @@ void clear_state_only() {
 
 void init_platform_constants(ModelImpl &model) {
   model.set_reservation_set_size_exp(get_config_uint64({"platform", "reservation_set_size_exp"}));
+}
+
+void apply_trace_flags(ModelImpl &model) {
+  model.set_config_print_instr(g_ctx.trace_instr);
+  model.set_config_use_abi_names(g_ctx.trace_use_abi_names);
+}
+
+void sync_trace_callbacks(ModelImpl &model) {
+  if (g_ctx.trace_instr || g_ctx.trace_reg || g_ctx.trace_mem) {
+    model.remove_callback(g_ctx.trace_callbacks.get());
+    g_ctx.trace_callbacks = std::make_unique<log_callbacks>(
+      /*config_print_reg=*/g_ctx.trace_reg,
+      /*config_print_mem_access=*/g_ctx.trace_mem,
+      /*config_print_ptw=*/false,
+      /*config_use_abi_names=*/g_ctx.trace_use_abi_names,
+      trace_log
+    );
+    model.register_callback(g_ctx.trace_callbacks.get());
+    return;
+  }
+  model.remove_callback(g_ctx.trace_callbacks.get());
+  g_ctx.trace_callbacks.reset();
+}
+
+bool parse_hex_u64(const std::string &s, uint64_t &out) {
+  std::string value = s;
+  if (value.rfind("0x", 0) == 0 || value.rfind("0X", 0) == 0) {
+    value = value.substr(2);
+  }
+  if (value.empty()) {
+    return false;
+  }
+  char *end = nullptr;
+  errno = 0;
+  out = std::strtoull(value.c_str(), &end, 16);
+  return errno == 0 && end != nullptr && *end == '\0';
+}
+
+void print_isa_json(ModelImpl &model) {
+  sail_string isa;
+  CREATE(sail_string)(&isa);
+  model.zgenerate_canonical_isa_string(&isa, UNIT);
+  std::cout << "{\"type\":\"isa\",\"isa\":\"" << json_escape(isa) << "\"}" << std::endl;
+  KILL(sail_string)(&isa);
+}
+
+void decode_and_print_json(ModelImpl &model, bool compressed, uint64_t bits) {
+  hart::zinstruction insn;
+  if (compressed) {
+    model.zext_decode_compressed(&insn, bits & 0xffffu);
+  } else {
+    model.zext_decode(&insn, bits & 0xffffffffu);
+  }
+
+  sail_string asm_str;
+  CREATE(sail_string)(&asm_str);
+  if (model.zassembly_forwards_matches(insn)) {
+    model.zassembly_forwards(&asm_str, insn);
+  } else {
+    model.zinstruction_to_str(&asm_str, insn);
+  }
+
+  const int width = compressed ? 16 : 32;
+  const uint64_t mask = compressed ? 0xffffu : 0xffffffffu;
+  const uint64_t value = bits & mask;
+  std::string bin;
+  bin.reserve(width);
+  for (int i = width - 1; i >= 0; --i) {
+    bin.push_back(((value >> i) & 1u) ? '1' : '0');
+  }
+  std::cout << "{\"type\":\"decode\",\"width\":" << width
+            << ",\"asm\":\"" << json_escape(asm_str)
+            << "\",\"hex\":\"0x" << std::hex << std::nouppercase << value << std::dec
+            << "\",\"bin\":\"" << bin << "\"}" << std::endl;
+  KILL(sail_string)(&asm_str);
 }
 
 uint64_t load_elf(ModelImpl &model, const std::string &filename, bool main_file) {
@@ -196,6 +285,8 @@ bool init_context(const char *config_path, const char *elf_path) {
 
   init_platform_constants(model);
   model.model_init();
+  apply_trace_flags(model);
+  sync_trace_callbacks(model);
 
   if (!model.zconfig_is_valid(UNIT)) {
     set_error("configuration is invalid.");
@@ -218,6 +309,8 @@ bool init_context(const char *config_path, const char *elf_path) {
   }
   model.zinit_model(config_file.empty() ? "" : config_file.c_str());
   model.zinit_boot_requirements(UNIT);
+  apply_trace_flags(model);
+  sync_trace_callbacks(model);
 
   g_ctx.insns_per_tick = get_config_uint64({"platform", "instructions_per_tick"});
   if (g_ctx.insns_per_tick == 0) {
@@ -247,8 +340,11 @@ int do_step(uint32_t commit_budget) {
   uint64_t raw_loops = 0;
   const uint64_t max_raw_loops = static_cast<uint64_t>(commit_budget) * 4096 + 4096;
   auto &model = *g_ctx.model;
+  apply_trace_flags(model);
+  sync_trace_callbacks(model);
 
   while (!g_ctx.halted && committed < commit_budget) {
+    const uint64_t committed_pc_candidate = model.zPC.bits;
     if (++raw_loops > max_raw_loops) {
       set_error("step loop exceeded safety budget while waiting.");
       return -2;
@@ -272,6 +368,8 @@ int do_step(uint32_t commit_budget) {
     model.call_post_step_callbacks(g_ctx.is_waiting);
 
     if (!g_ctx.is_waiting) {
+      g_ctx.last_committed_pc = committed_pc_candidate;
+      g_ctx.has_last_committed_pc = true;
       g_ctx.step_no++;
       g_ctx.insn_cnt++;
       g_ctx.total_steps++;
@@ -395,6 +493,11 @@ std::string build_state_json() {
   oss << ",\"xlen\":" << model.zxlen;
   oss << ",\"flen\":" << model.zflen;
   oss << ",\"pc\":\"0x" << std::hex << pc << std::dec << "\"";
+  if (g_ctx.has_last_committed_pc) {
+    oss << ",\"lastCommittedPc\":\"0x" << std::hex << g_ctx.last_committed_pc << std::dec << "\"";
+  } else {
+    oss << ",\"lastCommittedPc\":null";
+  }
   oss << ",\"inst16\":\"0x" << std::hex << inst16 << std::dec << "\"";
   oss << ",\"inst32\":\"0x" << std::hex << inst32 << std::dec << "\"";
   oss << ",\"instWidth\":" << decoded.width;
@@ -427,6 +530,92 @@ void reset_context() {
   kill_mem();
 }
 
+int run_debug_subcommand(
+    const std::string &config_file,
+    const std::string &elf_file,
+    int max_steps,
+    bool trace_enabled) {
+  g_ctx.trace_instr = trace_enabled;
+  g_ctx.trace_reg = trace_enabled;
+  g_ctx.trace_mem = trace_enabled;
+  g_ctx.trace_use_abi_names = trace_enabled;
+  if (!init_context(config_file.empty() ? nullptr : config_file.c_str(), elf_file.c_str())) {
+    fprintf(stderr, "%s\n", g_ctx.last_error.c_str());
+    return 1;
+  }
+
+  max_steps = std::max(1, max_steps);
+  int total = 0;
+  while (total < max_steps && !g_ctx.halted) {
+    const int done = do_step(1);
+    if (done < 0) {
+      break;
+    }
+    total += done;
+    if (done == 0 && g_ctx.halted) {
+      break;
+    }
+  }
+  fprintf(stdout, "%s\n", build_state_json().c_str());
+  return 0;
+}
+
+int run_web_subcommand(
+    const std::string &config_file,
+    bool print_isa_flag,
+    const std::string &decode16_hex,
+    const std::string &decode32_hex) {
+  if (!print_isa_flag && decode16_hex.empty() && decode32_hex.empty()) {
+    std::cout << "{\"error\":\"no action specified\"}" << std::endl;
+    return 1;
+  }
+
+  try {
+    validate_config_schema(config_file);
+    if (!config_file.empty()) {
+      sail_config_set_file(config_file.c_str());
+    } else {
+      sail_config_set_string(get_default_config());
+    }
+  } catch (const std::exception &exc) {
+    std::cout << "{\"error\":\"" << json_escape(exc.what()) << "\"}" << std::endl;
+    return 1;
+  }
+
+  ModelImpl model;
+  init_platform_constants(model);
+  model.model_init();
+
+  int exit_code = 0;
+  if (print_isa_flag) {
+    print_isa_json(model);
+  }
+
+  if (!decode16_hex.empty()) {
+    uint64_t bits = 0;
+    if (!parse_hex_u64(decode16_hex, bits)) {
+      std::cout << "{\"type\":\"decode\",\"error\":\"invalid hex\",\"input\":\""
+                << json_escape(decode16_hex) << "\"}" << std::endl;
+      exit_code = 1;
+    } else {
+      decode_and_print_json(model, /*compressed=*/true, bits);
+    }
+  }
+
+  if (!decode32_hex.empty()) {
+    uint64_t bits = 0;
+    if (!parse_hex_u64(decode32_hex, bits)) {
+      std::cout << "{\"type\":\"decode\",\"error\":\"invalid hex\",\"input\":\""
+                << json_escape(decode32_hex) << "\"}" << std::endl;
+      exit_code = 1;
+    } else {
+      decode_and_print_json(model, /*compressed=*/false, bits);
+    }
+  }
+  model.model_fini();
+  return exit_code;
+}
+
 } // namespace
 
 extern "C" EMSCRIPTEN_KEEPALIVE int debug_init(const char *config_path, const char *elf_path) {
@@ -435,6 +624,17 @@ extern "C" EMSCRIPTEN_KEEPALIVE int debug_init(const char *config_path, const ch
 
 extern "C" EMSCRIPTEN_KEEPALIVE int debug_init_default(void) {
   return init_context("/debug/config.json", "/debug/program.elf") ? 0 : -1;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE void debug_set_trace(int enabled) {
+  g_ctx.trace_instr = (enabled != 0);
+  g_ctx.trace_reg = (enabled != 0);
+  g_ctx.trace_mem = (enabled != 0);
+  g_ctx.trace_use_abi_names = (enabled != 0);
+  if (g_ctx.model != nullptr) {
+    apply_trace_flags(*g_ctx.model);
+    sync_trace_callbacks(*g_ctx.model);
+  }
 }
 
 extern "C" EMSCRIPTEN_KEEPALIVE int debug_step(int committed_steps) {
@@ -484,23 +684,40 @@ extern "C" EMSCRIPTEN_KEEPALIVE void debug_reset(void) {
 }
 
 int main(int argc, char **argv) {
-  if (argc < 3) {
-    fprintf(stderr, "usage: %s <config.json> <program.elf> [steps]\n", argv[0]);
-    return 0;
+  CLI::App app("Sail RISC-V Debug/Web CLI");
+  app.require_subcommand(1);
+
+  std::string web_config_file;
+  std::string decode16_hex;
+  std::string decode32_hex;
+  bool print_isa_flag = false;
+  auto *web_sub = app.add_subcommand("web", "Web tools (decode + ISA string)");
+  web_sub->add_option("--config", web_config_file, "Configuration file")->option_text("<file>");
+  web_sub->add_flag("--print-isa-string", print_isa_flag, "Print ISA string");
+  web_sub->add_option("--decode16", decode16_hex, "Decode 16-bit (compressed) instruction hex")->option_text("<hex>");
+  web_sub->add_option("--decode32", decode32_hex, "Decode 32-bit instruction hex")->option_text("<hex>");
+
+  std::string debug_config_file;
+  std::string debug_elf_file;
+  int debug_steps = 1;
+  bool debug_trace = false;
+  auto *debug_sub = app.add_subcommand("debug", "Run ELF with debug runtime");
+  debug_sub->add_option("--config", debug_config_file, "Configuration file")->option_text("<file>");
+  debug_sub->add_option("--elf", debug_elf_file, "ELF file to load and run")->required()->option_text("<path>");
+  debug_sub->add_option("--steps", debug_steps, "Maximum committed steps to execute")->option_text("<count>");
+  debug_sub->add_flag("--trace", debug_trace, "Enable instruction trace output");
+
+  try {
+    app.parse(argc, argv);
+  } catch (const CLI::ParseError &e) {
+    return app.exit(e);
   }
 
-  int max_steps = 1;
-  if (argc >= 4) {
-    max_steps = std::max(1, std::atoi(argv[3]));
+  if (*web_sub) {
+    return run_web_subcommand(web_config_file, print_isa_flag, decode16_hex, decode32_hex);
   }
-
-  int rc = debug_init(argv[1], argv[2]);
-  if (rc != 0) {
-    fprintf(stderr, "%s\n", debug_last_error());
-    return 1;
+  if (*debug_sub) {
+    return run_debug_subcommand(debug_config_file, debug_elf_file, debug_steps, debug_trace);
   }
-
-  (void)debug_run(max_steps);
-  fprintf(stdout, "%s\n", debug_state_json());
-  return 0;
+  return 1;
 }

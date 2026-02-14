@@ -1,5 +1,4 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
+import { test, expect } from 'vitest';
 
 import {
   runtimeWorkspaceInitialState,
@@ -35,8 +34,8 @@ test('switching upload -> edit keeps program.S content', () => {
     },
   });
 
-  assert.equal(backToEdit.asmSourceInput, 'addi x1, x2, 1');
-  assert.notEqual(backToEdit.asmSourceInput, '; upload an ELF to generate disassembly');
+  expect(backToEdit.asmSourceInput).toBe('addi x1, x2, 1');
+  expect(backToEdit.asmSourceInput).not.toBe('; upload an ELF to generate disassembly');
 });
 
 test('resetEditDefaults resets program/linker to defaults', () => {
@@ -52,9 +51,9 @@ test('resetEditDefaults resets program/linker to defaults', () => {
   });
 
   const reset = runtimeWorkspaceReducer(dirty, { type: 'resetEditDefaults' });
-  assert.notEqual(reset.asmSourceInput, 'li a0, 1');
-  assert.notEqual(reset.linkerScriptInput, 'ENTRY(foo)');
-  assert.equal(reset.gasMarchInput, 'rv64imac');
-  assert.equal(reset.gasAbiInput, 'lp64');
-  assert.equal(reset.uploadDisasmInput, '');
+  expect(reset.asmSourceInput).not.toBe('li a0, 1');
+  expect(reset.linkerScriptInput).not.toBe('ENTRY(foo)');
+  expect(reset.gasMarchInput).toBe('rv64imac');
+  expect(reset.gasAbiInput).toBe('lp64');
+  expect(reset.uploadDisasmInput).toBe('');
 });

@@ -1,5 +1,5 @@
-const TRACE_PATTERN = /^(\[\d+\]|mem\[|x\d+\s<-|f\d+\s<-|v\d+\s<-|clint |csr |htif\[|htif-(?:syscall-proxy|term|debug)|pma|ptw|exception|interrupt)/i;
-const TRACE_INLINE_PATTERN = /(\[\d+\]|mem\[|x\d+\s<-|f\d+\s<-|v\d+\s<-|clint |csr |htif\[|htif-(?:syscall-proxy|term|debug)|pma|ptw|exception|interrupt)/i;
+const TRACE_PATTERN = /^(\[\d+\]|mem\[|[A-Za-z_][A-Za-z0-9_]*\s<-|clint |csr |htif\[|htif-(?:syscall-proxy|term|debug)|pma|ptw|exception|interrupt)/i;
+const TRACE_INLINE_PATTERN = /(\[\d+\]|mem\[|[A-Za-z_][A-Za-z0-9_]*\s<-|clint |csr |htif\[|htif-(?:syscall-proxy|term|debug)|pma|ptw|exception|interrupt)/i;
 const RUNTIME_PATTERN = /^(running|run watchdog|run timed out|run finished|selected:|htif located|entry point|success|failure:|program exited|committed steps:|exitstatus|debug error:|gas:|ld:|readelf:|\[gas\]|\[ld\]|\[readelf\])/i;
 const HTIF_TERM_CMD_PATTERN = /htif-(?:term|syscall-proxy)\s+cmd:\s*0x([0-9a-fA-F]+)/i;
 const HTIF_TERM_COMPAT_PATTERN = /htif-term compat byte:\s*0x([0-9a-fA-F]+)/i;

@@ -9,10 +9,10 @@ let readelfFactory = null;
 let objdumpFactory = null;
 let debugLineEntries = null;
 let debugLineFile = '';
-let debugSectionAddresses = {};
 let expandedSourceEntries = null;
 let expandedSourceText = '';
 let expandedSourceFile = '';
+let expandedSourceLinks = [];
 let debugDisassemblyText = '';
 let debugDisassemblyEntries = null;
 
@@ -23,6 +23,9 @@ const MAX_OUTPUT_LINES = 40000;
 const TMP_ROOT_DIR = '/tmp';
 const EDIT_TMP_DIR = '/tmp/edit';
 const UPLOAD_TMP_DIR = '/tmp/upload';
+const TRACE_INSN_PC_PATTERN = /^\[\d+\]\s+\[[A-Z]\]:\s+0x([0-9a-fA-F]+)/;
+const TRACE_REG_WRITE_PATTERN = /^([A-Za-z_][A-Za-z0-9_]*)\s*<-\s*(0x[0-9a-fA-F]+)/;
+const TRACE_MEM_WRITE_PATTERN = /^mem\[([A-Za-z]),0x([0-9a-fA-F]+)\]\s*<-\s*0x([0-9a-fA-F]+)/i;
 
 const normalizeBaseUrl = (baseUrl) => {
   if (!baseUrl || typeof baseUrl !== 'string') {
@@ -54,6 +57,125 @@ const flushOutput = (requestId, force = false) => {
   if (lines.length > 0 || force) {
     self.postMessage({ type: 'lines', requestId, lines });
   }
+};
+
+const collectOutputSince = (startIndex) => {
+  const start = Number.isInteger(startIndex) && startIndex >= 0 ? startIndex : 0;
+  if (start >= outputLines.length) {
+    return [];
+  }
+  return outputLines.slice(start).map((line) => String(line));
+};
+
+const extractTraceRegWrites = (lines, committedPcValue = null) => {
+  if (!Array.isArray(lines) || lines.length === 0) {
+    return [];
+  }
+
+  const blocks = [];
+  let currentBlock = null;
+
+  const pushCurrentBlock = () => {
+    if (!currentBlock) {
+      return;
+    }
+    blocks.push(currentBlock);
+    currentBlock = null;
+  };
+
+  for (const rawLine of lines) {
+    const trimmed = String(rawLine || '').trim();
+    if (!trimmed) {
+      continue;
+    }
+    const instructionMatch = trimmed.match(TRACE_INSN_PC_PATTERN);
+    if (instructionMatch) {
+      pushCurrentBlock();
+      const pc = Number.parseInt(instructionMatch[1], 16);
+      currentBlock = {
+        pc: Number.isFinite(pc) ? pc : null,
+        writes: [],
+      };
+      continue;
+    }
+    const match = trimmed.match(TRACE_REG_WRITE_PATTERN);
+    if (match) {
+      if (!currentBlock) {
+        currentBlock = { pc: null, writes: [] };
+      }
+      currentBlock.writes.push({
+        kind: 'reg',
+        name: match[1],
+        value: match[2],
+      });
+      continue;
+    }
+    const memMatch = trimmed.match(TRACE_MEM_WRITE_PATTERN);
+    if (memMatch) {
+      if (!currentBlock) {
+        currentBlock = { pc: null, writes: [] };
+      }
+      currentBlock.writes.push({
+        kind: 'mem',
+        access: String(memMatch[1] || '').toUpperCase(),
+        address: `0x${String(memMatch[2] || '').toUpperCase()}`,
+        value: `0x${String(memMatch[3] || '').toUpperCase()}`,
+      });
+    }
+  }
+  pushCurrentBlock();
+
+  if (blocks.length === 0) {
+    return [];
+  }
+
+  const committedPc = parsePcValue(committedPcValue);
+  let selectedBlock = null;
+  if (Number.isFinite(committedPc)) {
+    for (let index = blocks.length - 1; index >= 0; index -= 1) {
+      const block = blocks[index];
+      if (block.pc === committedPc && Array.isArray(block.writes) && block.writes.length > 0) {
+        selectedBlock = block;
+        break;
+      }
+    }
+    if (!selectedBlock) {
+      for (let index = blocks.length - 1; index >= 0; index -= 1) {
+        const block = blocks[index];
+        if (block.pc === committedPc) {
+          selectedBlock = block;
+          break;
+        }
+      }
+    }
+  }
+  if (!selectedBlock) {
+    for (let index = blocks.length - 1; index >= 0; index -= 1) {
+      const block = blocks[index];
+      if (Array.isArray(block.writes) && block.writes.length > 0) {
+        selectedBlock = block;
+        break;
+      }
+    }
+  }
+  if (!selectedBlock) {
+    selectedBlock = blocks[blocks.length - 1];
+  }
+
+  const selected = Array.isArray(selectedBlock?.writes) ? selectedBlock.writes : [];
+  if (!selected.length) {
+    return [];
+  }
+  const dedupMap = new Map();
+  const memWrites = [];
+  for (const write of selected) {
+    if (write && write.kind === 'mem') {
+      memWrites.push(write);
+      continue;
+    }
+    dedupMap.set(String(write.name), write);
+  }
+  return [...Array.from(dedupMap.values()), ...memWrites];
 };
 
 const ensureDir = (Module, path) => {
@@ -113,6 +235,16 @@ const sanitizeFileName = (name, fallback = 'program.elf') => {
 
 const toUploadElfPath = (name, fallback = 'upload.elf') =>
   `${UPLOAD_TMP_DIR}/${sanitizeFileName(name, fallback)}`;
+
+const basenameFromPath = (path, fallback = 'program.elf') => {
+  const raw = String(path || '').trim();
+  if (!raw) {
+    return fallback;
+  }
+  const parts = raw.split('/');
+  const name = parts[parts.length - 1] || fallback;
+  return name;
+};
 
 const withCacheBust = (url, cacheBust) => {
   if (!cacheBust) {
@@ -223,10 +355,13 @@ const getDebugModule = async (baseUrl, cacheBust) => {
   return debugModuleInstance;
 };
 
-const initDebugSessionWithElf = ({ requestId, Module, configText, elfBytes }) => {
+const initDebugSessionWithElf = ({ requestId, Module, configText, elfBytes, traceEnabled = true }) => {
   ensureDir(Module, '/debug');
   Module._debug_reset();
   debugSessionReady = false;
+  if (typeof Module._debug_set_trace === 'function') {
+    Module._debug_set_trace(traceEnabled ? 1 : 0);
+  }
 
   Module.FS.writeFile('/debug/config.json', String(configText || ''));
   Module.FS.writeFile('/debug/program.elf', new Uint8Array(elfBytes));
@@ -235,6 +370,9 @@ const initDebugSessionWithElf = ({ requestId, Module, configText, elfBytes }) =>
   const initRc = Number(Module._debug_init_default());
   if (initRc !== 0) {
     throw new Error(readDebugError(Module) || `debug_init_default failed (${initRc})`);
+  }
+  if (typeof Module._debug_set_trace === 'function') {
+    Module._debug_set_trace(traceEnabled ? 1 : 0);
   }
 
   debugSessionReady = true;
@@ -319,159 +457,23 @@ const parseReadelfDecodedLine = (lines) => {
   };
 };
 
-const parseReadelfSectionAddresses = (lines) => {
-  const sections = {};
-  for (const rawLine of lines) {
-    const line = String(rawLine || '');
-    const match = line.match(/^\s*\[\s*\d+\]\s+(\S+)\s+\S+\s+([0-9a-fA-F]{8,16})\s+[0-9a-fA-F]+\b/);
-    if (!match) {
-      continue;
-    }
-    const name = match[1];
-    const address = Number.parseInt(match[2], 16);
-    if (!Number.isFinite(address)) {
-      continue;
-    }
-    sections[name] = address;
-  }
-  return sections;
-};
-
-const resolveSectionAddress = (sectionAddresses, sectionName) => {
-  if (!sectionName) {
+const findNearestSourceLineByAddress = (lineEntries, address) => {
+  if (!Array.isArray(lineEntries) || lineEntries.length === 0) {
     return null;
   }
-  if (Object.prototype.hasOwnProperty.call(sectionAddresses, sectionName)) {
-    return sectionAddresses[sectionName];
-  }
-  if (sectionName.startsWith('.text') && Object.prototype.hasOwnProperty.call(sectionAddresses, '.text')) {
-    return sectionAddresses['.text'];
-  }
-  if (sectionName.startsWith('.rodata') && Object.prototype.hasOwnProperty.call(sectionAddresses, '.rodata')) {
-    return sectionAddresses['.rodata'];
-  }
-  if (sectionName.startsWith('.data') && Object.prototype.hasOwnProperty.call(sectionAddresses, '.data')) {
-    return sectionAddresses['.data'];
-  }
-  return null;
-};
-
-const detectSectionFromListingText = (rawText, currentSection) => {
-  const text = String(rawText || '').replace(/^>\s*/, '').trim();
-  if (!text) {
-    return currentSection;
-  }
-  const sectionMatch = text.match(/^\.section\s+([^\s,]+)/);
-  if (sectionMatch) {
-    return sectionMatch[1];
-  }
-  if (/^\.text\b/.test(text)) {
-    return '.text';
-  }
-  if (/^\.rodata\b/.test(text)) {
-    return '.rodata';
-  }
-  if (/^\.data\b/.test(text)) {
-    return '.data';
-  }
-  if (/^\.bss\b/.test(text)) {
-    return '.bss';
-  }
-  return currentSection;
-};
-
-const parseListingAddressMap = (listingText, sectionAddresses) => {
-  const lines = String(listingText || '').split(/\r?\n/);
-  const entries = [];
-  const perSectionCursor = {};
-  let currentSection = '.text';
-
-  for (let index = 0; index < lines.length; index += 1) {
-    const rawLine = lines[index];
-    const lineNumber = index + 1;
-    const splitAt = rawLine.indexOf('\t');
-    const left = splitAt >= 0 ? rawLine.slice(0, splitAt) : rawLine;
-    const right = splitAt >= 0 ? rawLine.slice(splitAt + 1) : '';
-    const sourceText = right.trimEnd();
-    currentSection = detectSectionFromListingText(sourceText, currentSection);
-
-    const columns = left.trim();
-    if (!columns) {
-      continue;
-    }
-    const tokens = columns.split(/\s+/);
-    if (tokens.length < 2 || !/^\d+$/.test(tokens[0])) {
-      continue;
-    }
-
-    const sourceLine = Number.parseInt(tokens[0], 10);
-    const second = tokens[1] || '';
-    const third = tokens[2] || '';
-    const hasAddressToken = /^[0-9a-fA-F?]{4,16}$/.test(second) && /^[0-9a-fA-F]+$/.test(third);
-    const hasBytesOnly = !hasAddressToken && /^[0-9a-fA-F]+$/.test(second);
-    if (!hasAddressToken && !hasBytesOnly) {
-      continue;
-    }
-
-    const bytesToken = hasAddressToken ? third : second;
-    if (!bytesToken || !/^[0-9a-fA-F]+$/.test(bytesToken)) {
-      continue;
-    }
-
-    const sizeBytes = Math.max(1, Math.ceil(bytesToken.length / 2));
-    const sectionKey = currentSection || '.text';
-    const cursor = perSectionCursor[sectionKey] || { lastOffset: null, lastSize: 0 };
-
-    let offset = null;
-    if (hasAddressToken && /^[0-9a-fA-F]+$/.test(second)) {
-      offset = Number.parseInt(second, 16);
-    } else if (cursor.lastOffset !== null) {
-      offset = cursor.lastOffset + cursor.lastSize;
-    }
-    if (!Number.isFinite(offset)) {
-      continue;
-    }
-
-    cursor.lastOffset = offset;
-    cursor.lastSize = sizeBytes;
-    perSectionCursor[sectionKey] = cursor;
-
-    const sectionAddress = resolveSectionAddress(sectionAddresses, sectionKey);
-    if (!Number.isFinite(sectionAddress)) {
-      continue;
-    }
-
-    entries.push({
-      address: sectionAddress + offset,
-      line: lineNumber,
-      sourceLine: Number.isFinite(sourceLine) ? sourceLine : null,
-      section: sectionKey,
-      text: sourceText.replace(/^>\s*/, ''),
-    });
-  }
-
-  entries.sort((left, right) => left.address - right.address);
-  return {
-    sourceText: lines.join('\n'),
-    entries,
-  };
-};
-
-const lookupSourceLineByPc = (pcValue) => {
-  if (!Array.isArray(debugLineEntries) || debugLineEntries.length === 0) {
-    return null;
-  }
-  const pc = Number(pcValue);
-  if (!Number.isFinite(pc)) {
+  if (!Number.isFinite(address)) {
     return null;
   }
   let left = 0;
-  let right = debugLineEntries.length - 1;
+  let right = lineEntries.length - 1;
   let best = -1;
   while (left <= right) {
     const mid = (left + right) >> 1;
-    const address = debugLineEntries[mid].address;
-    if (address <= pc) {
+    const entryAddress = Number(lineEntries[mid]?.address);
+    if (!Number.isFinite(entryAddress)) {
+      break;
+    }
+    if (entryAddress <= address) {
       best = mid;
       left = mid + 1;
     } else {
@@ -479,7 +481,7 @@ const lookupSourceLineByPc = (pcValue) => {
     }
   }
   while (best >= 0) {
-    const entry = debugLineEntries[best];
+    const entry = lineEntries[best];
     if (entry && Number.isInteger(entry.line) && entry.line > 0) {
       return entry.line;
     }
@@ -488,35 +490,42 @@ const lookupSourceLineByPc = (pcValue) => {
   return null;
 };
 
-const lookupExpandedSourceByPc = (pcValue) => {
-  if (!Array.isArray(expandedSourceEntries) || expandedSourceEntries.length === 0) {
-    return null;
+const buildSourceToDisasmLinks = (lineEntries, disasmEntries) => {
+  if (!Array.isArray(lineEntries) || lineEntries.length === 0) {
+    return [];
   }
-  const pc = Number(pcValue);
-  if (!Number.isFinite(pc)) {
-    return null;
+  if (!Array.isArray(disasmEntries) || disasmEntries.length === 0) {
+    return [];
   }
-  let left = 0;
-  let right = expandedSourceEntries.length - 1;
-  let best = -1;
-  while (left <= right) {
-    const mid = (left + right) >> 1;
-    const address = expandedSourceEntries[mid].address;
-    if (address <= pc) {
-      best = mid;
-      left = mid + 1;
-    } else {
-      right = mid - 1;
+  const buckets = new Map();
+  for (const disasmEntry of disasmEntries) {
+    const disasmLine = Number(disasmEntry?.line);
+    const disasmAddress = Number(disasmEntry?.address);
+    if (!Number.isInteger(disasmLine) || disasmLine <= 0) {
+      continue;
     }
+    if (!Number.isFinite(disasmAddress)) {
+      continue;
+    }
+    const sourceLine = findNearestSourceLineByAddress(lineEntries, disasmAddress);
+    if (!Number.isInteger(sourceLine) || sourceLine <= 0) {
+      continue;
+    }
+    if (!buckets.has(sourceLine)) {
+      buckets.set(sourceLine, new Set());
+    }
+    buckets.get(sourceLine).add(disasmLine);
   }
-  if (best < 0) {
-    return null;
-  }
-  const entry = expandedSourceEntries[best];
-  if (!entry || !Number.isInteger(entry.line) || entry.line <= 0) {
-    return null;
-  }
-  return entry;
+  return Array.from(buckets.entries())
+    .map(([sourceLine, linesSet]) => ({
+      sourceLine,
+      expandedLines: Array.from(linesSet).sort((left, right) => left - right),
+    }))
+    .sort((left, right) => left.sourceLine - right.sourceLine);
+};
+
+const lookupSourceLineByPc = (pcValue) => {
+  return findNearestSourceLineByAddress(debugLineEntries, Number(pcValue));
 };
 
 const parseObjdumpAddressMap = (text) => {
@@ -524,7 +533,7 @@ const parseObjdumpAddressMap = (text) => {
   const entries = [];
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
-    const match = line.match(/^\s*([0-9a-fA-F]+):\s+([0-9a-fA-F]{2}(?:\s+[0-9a-fA-F]{2})*|[0-9a-fA-F]{4,})\s+\S/);
+    const match = line.match(/^\s*([0-9a-fA-F]+):\s+([0-9a-fA-F]{2}(?:\s+[0-9a-fA-F]{2})*|[0-9a-fA-F]{4,})\s+(.*)$/);
     if (!match) {
       continue;
     }
@@ -535,27 +544,41 @@ const parseObjdumpAddressMap = (text) => {
     entries.push({
       address,
       line: index + 1,
+      text: line,
+      sourceLine: null,
     });
   }
   entries.sort((left, right) => left.address - right.address);
   return entries;
 };
 
-const lookupUploadDisasmLineByPc = (pcValue) => {
-  if (!Array.isArray(debugDisassemblyEntries) || debugDisassemblyEntries.length === 0) {
+const annotateDisassemblyEntriesWithSource = (lineEntries, disasmEntries) => {
+  if (!Array.isArray(disasmEntries) || disasmEntries.length === 0) {
+    return [];
+  }
+  return disasmEntries.map((entry) => ({
+    ...entry,
+    sourceLine: findNearestSourceLineByAddress(lineEntries, Number(entry.address)),
+  }));
+};
+
+const findNearestDisassemblyEntryByAddress = (entries, address) => {
+  if (!Array.isArray(entries) || entries.length === 0) {
     return null;
   }
-  const pc = Number(pcValue);
-  if (!Number.isFinite(pc)) {
+  if (!Number.isFinite(address)) {
     return null;
   }
   let left = 0;
-  let right = debugDisassemblyEntries.length - 1;
+  let right = entries.length - 1;
   let best = -1;
   while (left <= right) {
     const mid = (left + right) >> 1;
-    const address = debugDisassemblyEntries[mid].address;
-    if (address <= pc) {
+    const currentAddress = Number(entries[mid]?.address);
+    if (!Number.isFinite(currentAddress)) {
+      break;
+    }
+    if (currentAddress <= address) {
       best = mid;
       left = mid + 1;
     } else {
@@ -565,18 +588,54 @@ const lookupUploadDisasmLineByPc = (pcValue) => {
   if (best < 0) {
     return null;
   }
-  const entry = debugDisassemblyEntries[best];
+  return entries[best] || null;
+};
+
+const lookupExpandedSourceByPc = (pcValue) => {
+  const pc = Number(pcValue);
+  const entry = findNearestDisassemblyEntryByAddress(debugDisassemblyEntries, pc);
+  if (!entry || !Number.isInteger(entry.line) || entry.line <= 0) {
+    return null;
+  }
+  return {
+    line: entry.line,
+    sourceLine: Number.isInteger(entry.sourceLine) && entry.sourceLine > 0 ? entry.sourceLine : null,
+    text: String(entry.text || ''),
+    section: 'objdump',
+  };
+};
+
+const lookupUploadDisasmLineByPc = (pcValue) => {
+  const pc = Number(pcValue);
+  const entry = findNearestDisassemblyEntryByAddress(debugDisassemblyEntries, pc);
   if (!entry || !Number.isInteger(entry.line) || entry.line <= 0) {
     return null;
   }
   return entry.line;
 };
 
+const parsePcValue = (value) => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const text = value.trim();
+    if (!text) {
+      return Number.NaN;
+    }
+    if (text.startsWith('0x') || text.startsWith('0X')) {
+      return Number.parseInt(text.slice(2), 16);
+    }
+    return Number(text);
+  }
+  return Number.NaN;
+};
+
 const augmentStateWithSourceLine = (state) => {
   if (!state || typeof state !== 'object') {
     return state;
   }
-  const pc = typeof state.pc === 'string' ? Number.parseInt(state.pc, 16) : Number(state.pc);
+  const pc = parsePcValue(state.pc);
   const sourceLine = lookupSourceLineByPc(pc);
   if (sourceLine !== null) {
     state.sourceLine = sourceLine;
@@ -587,6 +646,11 @@ const augmentStateWithSourceLine = (state) => {
   const expandedSource = lookupExpandedSourceByPc(pc);
   if (expandedSource) {
     state.expandedSourceLine = expandedSource.line;
+    if (Number.isInteger(expandedSource.sourceLine) && expandedSource.sourceLine > 0) {
+      state.expandedSourceOriginLine = expandedSource.sourceLine;
+    } else if (sourceLine !== null) {
+      state.expandedSourceOriginLine = sourceLine;
+    }
     state.expandedSourceText = expandedSource.text;
     state.expandedSourceSection = expandedSource.section;
   }
@@ -596,6 +660,17 @@ const augmentStateWithSourceLine = (state) => {
   const uploadDisasmLine = lookupUploadDisasmLineByPc(pc);
   if (uploadDisasmLine !== null) {
     state.uploadDisasmLine = uploadDisasmLine;
+  }
+  const lastCommittedPc = parsePcValue(state.lastCommittedPc);
+  if (Number.isFinite(lastCommittedPc)) {
+    const lastCommittedExpanded = lookupExpandedSourceByPc(lastCommittedPc);
+    if (lastCommittedExpanded && Number.isInteger(lastCommittedExpanded.line) && lastCommittedExpanded.line > 0) {
+      state.lastCommittedExpandedSourceLine = lastCommittedExpanded.line;
+    }
+    const lastCommittedSourceLine = lookupSourceLineByPc(lastCommittedPc);
+    if (Number.isInteger(lastCommittedSourceLine) && lastCommittedSourceLine > 0) {
+      state.lastCommittedSourceLine = lastCommittedSourceLine;
+    }
   }
   return state;
 };
@@ -609,7 +684,6 @@ const refreshLineMapFromElf = async ({
 }) => {
   debugLineEntries = null;
   debugLineFile = '';
-  debugSectionAddresses = {};
   const factory = getReadelfFactory({ baseUrl, cacheBust });
   const decodedLine = await runBinutilsModule({
     requestId,
@@ -626,17 +700,6 @@ const refreshLineMapFromElf = async ({
     debugLineEntries = parsed.entries;
     debugLineFile = parsed.sourceFile;
   }
-  const sectionHeaders = await runBinutilsModule({
-    requestId,
-    factory,
-    label: 'readelf',
-    args: ['-S', elfPath],
-    preRun: (module) => {
-      module.FS.writeFile(elfPath, new Uint8Array(elfBytes));
-    },
-    silent: true,
-  });
-  debugSectionAddresses = parseReadelfSectionAddresses(sectionHeaders.stdoutLines);
   return parsed.entries.length;
 };
 
@@ -644,6 +707,7 @@ const clearExpandedSourceMap = () => {
   expandedSourceEntries = null;
   expandedSourceText = '';
   expandedSourceFile = '';
+  expandedSourceLinks = [];
 };
 
 const clearDisassemblyText = () => {
@@ -651,20 +715,23 @@ const clearDisassemblyText = () => {
   debugDisassemblyEntries = null;
 };
 
-const refreshExpandedSourceMapFromListing = (listingText) => {
+const refreshExpandedSourceMapFromDisassembly = (disassemblyText, disassemblyEntries, elfPath) => {
   clearExpandedSourceMap();
-  const parsed = parseListingAddressMap(listingText, debugSectionAddresses);
-  if (parsed.entries.length > 0) {
-    expandedSourceEntries = parsed.entries;
-    expandedSourceText = parsed.sourceText;
-    expandedSourceFile = `${EDIT_TMP_DIR}/program.S (expanded listing)`;
+  if (typeof disassemblyText !== 'string' || !disassemblyText.trim()) {
+    return 0;
   }
-  return parsed.entries.length;
+  expandedSourceText = disassemblyText;
+  expandedSourceEntries = Array.isArray(disassemblyEntries) ? disassemblyEntries : [];
+  expandedSourceLinks = buildSourceToDisasmLinks(debugLineEntries, expandedSourceEntries);
+  const elfName = basenameFromPath(elfPath, 'generated_program.elf');
+  expandedSourceFile = `${elfName} (objdump)`;
+  return expandedSourceLinks.length;
 };
 
 const expandedSourcePayload = () => ({
   expandedSourceText,
   expandedSourceFile,
+  expandedSourceLinks,
   expandedSourceEntries: Array.isArray(expandedSourceEntries) ? expandedSourceEntries.length : 0,
   disassemblyText: debugDisassemblyText,
 });
@@ -695,7 +762,11 @@ const refreshDisassemblyFromElf = async ({
   });
   const text = result.stdoutLines.join('\n');
   debugDisassemblyText = text;
-  debugDisassemblyEntries = parseObjdumpAddressMap(text);
+  debugDisassemblyEntries = annotateDisassemblyEntriesWithSource(
+    debugLineEntries,
+    parseObjdumpAddressMap(text)
+  );
+  refreshExpandedSourceMapFromDisassembly(text, debugDisassemblyEntries, elfPath);
   return text;
 };
 
@@ -730,7 +801,15 @@ const getStepAnchor = (state) => {
   return 'none';
 };
 
-const startSession = async ({ requestId, baseUrl, cacheBust, configText, elfBytes, elfName }) => {
+const startSession = async ({
+  requestId,
+  baseUrl,
+  cacheBust,
+  configText,
+  elfBytes,
+  elfName,
+  traceEnabled = true,
+}) => {
   const Module = await getDebugModule(baseUrl, cacheBust);
   const elfPath = toUploadElfPath(elfName, 'upload.elf');
   clearOutput();
@@ -744,6 +823,7 @@ const startSession = async ({ requestId, baseUrl, cacheBust, configText, elfByte
       Module,
       configText,
       elfBytes,
+      traceEnabled,
     })),
     ...expandedSourcePayload(),
   };
@@ -758,6 +838,7 @@ const assembleAndStartSession = async ({
   linkScriptText,
   gasMarch,
   gasAbi,
+  traceEnabled = true,
 }) => {
   const Module = await getDebugModule(baseUrl, cacheBust);
   const sourceText = String(asmText || '');
@@ -772,7 +853,6 @@ const assembleAndStartSession = async ({
   clearOutput();
   clearDisassemblyText();
   const sourcePath = `${EDIT_TMP_DIR}/program.S`;
-  const listingPath = `${EDIT_TMP_DIR}/program.lst`;
   const objectPath = `${EDIT_TMP_DIR}/program.o`;
   const linkerPath = `${EDIT_TMP_DIR}/link.ld`;
   const generatedElfPath = `${EDIT_TMP_DIR}/generated_program.elf`;
@@ -785,7 +865,6 @@ const assembleAndStartSession = async ({
 
   const gasArgs = [
     '-g',
-    `-almhnd=${listingPath}`,
     `-march=${String(gasMarch || 'rv64imac')}`,
     `-mabi=${String(gasAbi || 'lp64')}`,
     '-o',
@@ -818,13 +897,6 @@ const assembleAndStartSession = async ({
 
   pushOutputLine(`gas: produced ${objectPath} (${objectFile.length} bytes)`);
   flushOutput(requestId, false);
-
-  let listingText = '';
-  try {
-    listingText = gasResult.module.FS.readFile(listingPath, { encoding: 'utf8' });
-  } catch {
-    listingText = '';
-  }
 
   const ldArgs = [
     '-m',
@@ -877,13 +949,13 @@ const assembleAndStartSession = async ({
     elfBytes,
     elfPath: generatedElfPath,
   });
-  const expandedCount = refreshExpandedSourceMapFromListing(listingText);
+  const expandedCount = expandedSourceLinks.length;
   if (lineCount > 0) {
     pushOutputLine(`readelf: loaded ${lineCount} debug line entries`);
     flushOutput(requestId, false);
   }
   if (expandedCount > 0) {
-    pushOutputLine(`gas: loaded ${expandedCount} expanded listing entries`);
+    pushOutputLine(`objdump: mapped ${expandedCount} source/disasm groups`);
     flushOutput(requestId, false);
   }
 
@@ -893,6 +965,7 @@ const assembleAndStartSession = async ({
       Module,
       configText,
       elfBytes,
+      traceEnabled,
     })),
     ...expandedSourcePayload(),
     elfSize: elfBytes.length,
@@ -904,22 +977,36 @@ const assembleAndStartSession = async ({
 const stepSession = async ({ requestId, steps = 1 }) => {
   const Module = debugModuleInstance;
   requireSession(Module);
+  if (typeof Module._debug_set_trace === 'function') {
+    Module._debug_set_trace(1);
+  }
+  const outputStart = outputLines.length;
 
   const committed = Number(Module._debug_step(Math.max(1, steps | 0)));
   if (committed < 0) {
     throw new Error(readDebugError(Module) || `debug_step failed (${committed})`);
   }
 
+  const state = augmentStateWithSourceLine(readDebugState(Module));
   flushOutput(requestId, false);
+  const traceRegWrites = extractTraceRegWrites(
+    collectOutputSince(outputStart),
+    state?.lastCommittedPc ?? null
+  );
   return {
-    state: augmentStateWithSourceLine(readDebugState(Module)),
+    state,
     committed,
+    traceRegWrites,
   };
 };
 
 const stepLineSession = async ({ requestId, maxSteps = 4096 }) => {
   const Module = debugModuleInstance;
   requireSession(Module);
+  if (typeof Module._debug_set_trace === 'function') {
+    Module._debug_set_trace(1);
+  }
+  const outputStart = outputLines.length;
 
   const initialState = augmentStateWithSourceLine(readDebugState(Module));
   const initialAnchor = getStepAnchor(initialState);
@@ -939,26 +1026,42 @@ const stepLineSession = async ({ requestId, maxSteps = 4096 }) => {
     latestState = augmentStateWithSourceLine(readDebugState(Module));
     const latestAnchor = getStepAnchor(latestState);
     if (latestAnchor !== initialAnchor) {
+      const committedPc = latestState?.lastCommittedPc ?? null;
       flushOutput(requestId, false);
+      const traceRegWrites = extractTraceRegWrites(
+        collectOutputSince(outputStart),
+        committedPc
+      );
       return {
         state: latestState,
         committed: committedTotal,
         reachedNext: true,
+        traceRegWrites,
       };
     }
   }
 
+  const committedPc = latestState?.lastCommittedPc ?? null;
   flushOutput(requestId, false);
+  const traceRegWrites = extractTraceRegWrites(
+    collectOutputSince(outputStart),
+    committedPc
+  );
   return {
     state: latestState,
     committed: committedTotal,
     reachedNext: false,
+    traceRegWrites,
   };
 };
 
 const runSession = async ({ requestId, chunk = 5000, watchdogMs = 15000 }) => {
   const Module = debugModuleInstance;
   requireSession(Module);
+  if (typeof Module._debug_set_trace === 'function') {
+    Module._debug_set_trace(1);
+  }
+  const outputStart = outputLines.length;
 
   const runChunk = Math.max(1, chunk | 0);
   const startedAt = Date.now();
@@ -982,9 +1085,15 @@ const runSession = async ({ requestId, chunk = 5000, watchdogMs = 15000 }) => {
   }
 
   flushOutput(requestId, true);
+  const state = augmentStateWithSourceLine(readDebugState(Module));
+  const traceRegWrites = extractTraceRegWrites(
+    collectOutputSince(outputStart),
+    state?.lastCommittedPc ?? null
+  );
   return {
-    state: augmentStateWithSourceLine(readDebugState(Module)),
+    state,
     committed: committedTotal,
+    traceRegWrites,
   };
 };
 
@@ -995,7 +1104,6 @@ const resetSession = async () => {
   debugSessionReady = false;
   debugLineEntries = null;
   debugLineFile = '';
-  debugSectionAddresses = {};
   clearExpandedSourceMap();
   clearDisassemblyText();
   clearOutput();
@@ -1023,6 +1131,19 @@ const sendError = (requestId, error) => {
   });
 };
 
+if (
+  typeof globalThis !== 'undefined' &&
+  globalThis.__SAIL_DEBUG_WORKER_TEST_API__ &&
+  typeof globalThis.__SAIL_DEBUG_WORKER_TEST_API__ === 'object'
+) {
+  Object.assign(globalThis.__SAIL_DEBUG_WORKER_TEST_API__, {
+    buildSourceToDisasmLinks,
+    extractTraceRegWrites,
+    findNearestSourceLineByAddress,
+    parseObjdumpAddressMap,
+  });
+}
+
 self.onmessage = async (event) => {
   const message = event.data || {};
   if (message.type !== 'rpc') {
@@ -1041,6 +1162,7 @@ self.onmessage = async (event) => {
           configText: message.configText,
           elfBytes: message.elfBytes,
           elfName: message.elfName,
+          traceEnabled: message.traceEnabled,
         });
         break;
       case 'assembleStart':
@@ -1053,6 +1175,7 @@ self.onmessage = async (event) => {
           linkScriptText: message.linkScriptText,
           gasMarch: message.gasMarch,
           gasAbi: message.gasAbi,
+          traceEnabled: message.traceEnabled,
         });
         break;
       case 'step':

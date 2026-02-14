@@ -51,22 +51,19 @@ docker run --rm -i \
       -DCMAKE_EXE_LINKER_FLAGS=\"\${link_flags}\" \\
       -DCMAKE_CROSSCOMPILING_EMULATOR=\"/bin/true\"
 
-    cmake --build \"\${build_dir}\" --target sail_riscv_web sail_riscv_sim sail_riscv_debug -j
+    cmake --build \"\${build_dir}\" --target sail_riscv_debug -j
 
   "
 
 # Organize public assets for the web build.
 mkdir -p "${repo_root}/wasm/web/public/wasm" "${repo_root}/wasm/web/public/config"
-cp -f "${repo_root}/build-emscripten/c_emulator/sail_riscv_web.js" "${repo_root}/wasm/web/public/sail_riscv_web.js"
-cp -f "${repo_root}/build-emscripten/c_emulator/sail_riscv_web.wasm" "${repo_root}/wasm/web/public/sail_riscv_web.wasm"
-cp -f "${repo_root}/build-emscripten/c_emulator/sail_riscv_sim.js" "${repo_root}/wasm/web/public/sail_riscv_sim.js"
-cp -f "${repo_root}/build-emscripten/c_emulator/sail_riscv_sim.wasm" "${repo_root}/wasm/web/public/sail_riscv_sim.wasm"
+rm -f "${repo_root}/wasm/web/public/sail_riscv_web.js" "${repo_root}/wasm/web/public/sail_riscv_web.wasm"
+rm -f "${repo_root}/wasm/web/public/sail_riscv_sim.js" "${repo_root}/wasm/web/public/sail_riscv_sim.wasm"
+rm -f "${repo_root}/wasm/web/public/wasm/sail_riscv_web.js" "${repo_root}/wasm/web/public/wasm/sail_riscv_web.wasm"
+rm -f "${repo_root}/wasm/web/public/wasm/sail_riscv_sim.js" "${repo_root}/wasm/web/public/wasm/sail_riscv_sim.wasm"
+rm -f "${repo_root}/wasm/web/public/wasm/sim-worker.js"
 cp -f "${repo_root}/build-emscripten/c_emulator/sail_riscv_debug.js" "${repo_root}/wasm/web/public/sail_riscv_debug.js"
 cp -f "${repo_root}/build-emscripten/c_emulator/sail_riscv_debug.wasm" "${repo_root}/wasm/web/public/sail_riscv_debug.wasm"
-echo "built: ${repo_root}/wasm/web/public/sail_riscv_web.js"
-echo "built: ${repo_root}/wasm/web/public/sail_riscv_web.wasm"
-echo "built: ${repo_root}/wasm/web/public/sail_riscv_sim.js"
-echo "built: ${repo_root}/wasm/web/public/sail_riscv_sim.wasm"
 echo "built: ${repo_root}/wasm/web/public/sail_riscv_debug.js"
 echo "built: ${repo_root}/wasm/web/public/sail_riscv_debug.wasm"
 
