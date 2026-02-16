@@ -1,7 +1,7 @@
 import { atom } from 'jotai';
 import { loadable } from 'jotai/utils';
 
-import { configPathAtom, configsLoadableAtom } from './configAtoms.js';
+import { configEditorAtom, configPathAtom, configsLoadableAtom } from './configAtoms.js';
 import { maybeWithBase } from '../lib/paths';
 import { getRuntimeModule } from '../lib/sailRuntime.js';
 
@@ -12,11 +12,20 @@ const isaAtom = atom(async (get) => {
   const configsState = get(configsLoadableAtom);
   const currentPath = get(configPathAtom);
   if (!currentPath || configsState.state !== 'hasData') return '';
-  const configResp = await fetch(`${maybeWithBase(currentPath)}?${Date.now()}`);
-  if (!configResp.ok) {
-    throw new Error(`config: ${configResp.status} ${configResp.statusText}`);
+  const editorConfigText = get(configEditorAtom);
+  let configText = typeof editorConfigText === 'string' ? editorConfigText : '';
+
+  if (!configText.trim()) {
+    if (currentPath === '/config.json') {
+      return '';
+    }
+    const configResp = await fetch(`${maybeWithBase(currentPath)}?${Date.now()}`);
+    if (!configResp.ok) {
+      throw new Error(`config: ${configResp.status} ${configResp.statusText}`);
+    }
+    configText = await configResp.text();
   }
-  const configText = await configResp.text();
+
   const Module = await getRuntimeModule();
   if (!Module.FS || !Module.FS.writeFile) {
     return '';

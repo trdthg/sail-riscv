@@ -25,7 +25,7 @@ import {
   configPathAtom,
   configsLoadableAtom,
 } from './state/configAtoms.js';
-import { isaLoadableAtom, isaRefreshAtom } from './state/isaAtoms.js';
+import { isaLoadableAtom } from './state/isaAtoms.js';
 
 const PREFERRED_DEFAULT_CONFIG_PATH = '/config/rv64d_v128_e64.json';
 
@@ -33,7 +33,6 @@ function App() {
   const [configsState] = useAtom(configsLoadableAtom);
   const [configPath, setConfigPath] = useAtom(configPathAtom);
   const [isaState] = useAtom(isaLoadableAtom);
-  const [, refreshIsa] = useAtom(isaRefreshAtom);
   const [udbState] = useAtom(udbIndexLoadableAtom);
   const [configEditor, setConfigEditor] = useAtom(configEditorAtom);
   const [, setConfigEditorByPath] = useAtom(configEditorByPathAtom);
@@ -95,11 +94,6 @@ function App() {
 
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
-    if (activePage !== 'runtime') {
-      document.body.style.overflow = '';
-      document.documentElement.style.overflow = '';
-      return undefined;
-    }
     const prevBodyOverflow = document.body.style.overflow;
     const prevHtmlOverflow = document.documentElement.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -108,7 +102,7 @@ function App() {
       document.body.style.overflow = prevBodyOverflow;
       document.documentElement.style.overflow = prevHtmlOverflow;
     };
-  }, [activePage]);
+  }, []);
 
   useEffect(() => {
     if (configsState.state !== 'hasData' || !Array.isArray(configsState.data) || configsState.data.length === 0) {
@@ -227,10 +221,6 @@ function App() {
     udbState,
   });
 
-  const runPrintIsa = useCallback(async () => {
-    refreshIsa((value) => value + 1);
-  }, [refreshIsa]);
-
   const renderUdbValue = (value) => {
     if (!value) return null;
     if (typeof value === 'string') return value;
@@ -340,8 +330,6 @@ function App() {
     applyAsmSuggestion,
     autocompleteState,
     autocompleteMessage,
-    runPrintIsa,
-    isaState,
     currentInstruction,
     renderUdbValue,
     configEditor,
@@ -399,7 +387,7 @@ function App() {
         isDark
           ? 'bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 text-slate-100'
           : 'bg-gradient-to-b from-slate-100 via-slate-50 to-slate-100 text-slate-900'
-      } ${activePage === 'runtime' ? 'h-screen flex flex-col' : 'min-h-screen'}`}
+      } h-screen flex flex-col`}
     >
       <AppHeader
         isDark={isDark}

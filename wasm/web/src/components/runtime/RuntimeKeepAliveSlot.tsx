@@ -15,7 +15,7 @@ export function RuntimeKeepAliveSlot({
 }: RuntimeKeepAliveSlotProps) {
   return (
     <>
-      <div hidden={activePage !== 'explorer'}>
+      <div className={activePage === 'explorer' ? 'flex-1 min-h-0' : 'hidden'}>
         {explorerContent}
       </div>
       {runtimeEverMounted ? (
