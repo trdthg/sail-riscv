@@ -48,6 +48,44 @@ jobs:
         with:
           version: 9
 
+      - name: Cache binutils-wasm artifacts
+        uses: actions/cache@v5
+        with:
+          path: |
+            wasm/binutils-wasm/.cache/binutils-gdb
+            wasm/binutils-wasm/packages/gas/build/dist
+            wasm/binutils-wasm/packages/binutils/build/dist
+          key: binutils-wasm-${{ runner.os }}-${{ hashFiles('wasm/binutils-wasm/packages/gas/build/build.sh', 'wasm/binutils-wasm/packages/gas/build/docker-run.sh', 'wasm/binutils-wasm/packages/binutils/build/build.sh', 'wasm/binutils-wasm/packages/binutils/build/docker-run.sh') }}
+          restore-keys: |
+            binutils-wasm-${{ runner.os }}-
+
+      - name: Install binutils-wasm dependencies
+        run: pnpm -C wasm/binutils-wasm install
+
+      - name: Patch binutils-wasm build (enable ld)
+        run: |
+          set -euxo pipefail
+          script="wasm/binutils-wasm/packages/binutils/build/build.sh"
+          sed -i '/"--disable-ld"/d' "${script}"
+          grep -q '"ld/ld-new"' "${script}" || sed -i '/"binutils\/elfedit"/a\    "ld/ld-new"' "${script}"
+
+      - name: Build binutils wasm tools
+        env:
+          BINUTILS_REPO_URL: https://sourceware.org/git/binutils-gdb.git
+        run: |
+          pnpm -C wasm/binutils-wasm/packages/gas run build:wasm
+          pnpm -C wasm/binutils-wasm/packages/binutils run build:wasm
+
+      - name: Verify binutils wasm artifacts
+        run: |
+          set -euxo pipefail
+          ls -lah wasm/binutils-wasm/packages/gas/build/dist/cjs
+          ls -lah wasm/binutils-wasm/packages/binutils/build/dist/cjs
+          test -f wasm/binutils-wasm/packages/gas/build/dist/cjs/riscv64-linux-gnu.js
+          test -f wasm/binutils-wasm/packages/binutils/build/dist/cjs/ld.js
+          test -f wasm/binutils-wasm/packages/binutils/build/dist/cjs/readelf.js
+          test -f wasm/binutils-wasm/packages/binutils/build/dist/cjs/objdump.js
+
       - name: Install web dependencies
         run: pnpm -C wasm/web install
 
@@ -66,6 +104,7 @@ jobs:
       - name: Build web
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
+          REQUIRE_BINUTILS_ASSETS: '1'
         run: pnpm -C wasm/web build
 
       - name: Deploy to GitHub Pages
