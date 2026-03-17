@@ -91,6 +91,7 @@ private function execute_vsetvl_type(
   avl : xlenbits,
   requires_fixed_vlmax : bool,
   rd : regidx,
+  base_vtype : Vtype,
 ) -> ExecutionResult = {
   // Check new SEW and LMUL have legal encodings. There are some reserved values.
   if is_invalid_lmul_pow(lmul) | is_invalid_sew_pow(sew) then {
@@ -119,7 +120,7 @@ private function execute_vsetvl_type(
   vl = to_bits(calculate_new_vl(avl, VLMAX));
   X(rd) = vl;
 
-  vtype = [Mk_Vtype(zeros()) with
+  vtype = [base_vtype with
     vill = 0b0,
     vma = ma,
     vta = ta,
@@ -152,7 +153,7 @@ function clause execute VSETVLI(ma, ta, sew, lmul, rs1, rd) = {
 
   let requires_fixed_vlmax = rd == zreg & rs1 == zreg;
 
-  execute_vsetvl_type(ma, ta, sew, lmul, avl, requires_fixed_vlmax, rd)
+  execute_vsetvl_type(ma, ta, sew, lmul, avl, requires_fixed_vlmax, rd, Mk_Vtype(zeros()))
 }
 
 mapping clause assembly = VSETVLI(ma, ta, sew, lmul, rs1, rd)
@@ -178,7 +179,7 @@ function clause execute VSETVL(rs2, rs1, rd) = {
 
   let requires_fixed_vlmax = rd == zreg & rs1 == zreg;
 
-  execute_vsetvl_type(vt[vma], vt[vta], vt[vsew], vt[vlmul], avl, requires_fixed_vlmax, rd)
+  execute_vsetvl_type(vt[vma], vt[vta], vt[vsew], vt[vlmul], avl, requires_fixed_vlmax, rd, vt)
 }
 
 mapping clause assembly = VSETVL(rs2, rs1, rd)
@@ -193,7 +194,7 @@ mapping clause encdec = VSETIVLI(ma, ta, sew, lmul, uimm, rd)
 
 function clause execute VSETIVLI(ma, ta, sew, lmul, uimm, rd) = {
   let avl : xlenbits = zero_extend(uimm);
-  execute_vsetvl_type(ma, ta, sew, lmul, avl, false, rd)
+  execute_vsetvl_type(ma, ta, sew, lmul, avl, false, rd, Mk_Vtype(zeros()))
 }
 
 mapping clause assembly = VSETIVLI(ma, ta, sew, lmul, uimm, rd)

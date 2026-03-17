@@ -41,8 +41,15 @@ function check_CSR_priv(csr : csreg, p : Privilege) -> bool =
   privLevel_to_CSR_privbits(p) >=_u csrPriv(csr)
 
 // Check that the CSR access isn't a write to a read-only CSR.
+private function extension_writable_readonly_csr(csr : csreg) -> bool =
+  csr == 0xC21 & currentlyEnabled(Ext_Zve32x)
+
 function check_CSR_access(csr : csreg, access_type : CSRAccessType) -> bool =
-  not((access_type == CSRWrite | access_type == CSRReadWrite) & (csrAccess(csr) == 0b11))
+  not(
+    (access_type == CSRWrite | access_type == CSRReadWrite)
+    & (csrAccess(csr) == 0b11)
+    & not(extension_writable_readonly_csr(csr))
+  )
 
 function check_CSR(csr : csreg, p : Privilege, access_type : CSRAccessType) -> bool =
     check_CSR_priv(csr, p)

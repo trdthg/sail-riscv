@@ -235,7 +235,12 @@ let VLENB : xlenbits = to_bits(vlen / 8)
 
 bitfield Vtype  : xlenbits = {
   vill      : xlen - 1,
-  reserved  : xlen - 2 .. 8,
+  vlambda   : xlen - 2 .. xlen - 4,
+  reserved  : xlen - 5 .. 12,
+  bs        : 11,
+  altfmt_B  : 10,
+  altfmt_A  : 9,
+  altfmt    : 8,
   vma       : 7,
   vta       : 6,
   vsew      : 5 .. 3,
@@ -338,7 +343,20 @@ private function write_vcsr(vxrm_val : bits(2), vxsat_val : bits(1)) -> unit = {
   dirty_v_context()
 }
 
+private function write_vtype(value : xlenbits) -> unit = {
+  let vt = Mk_Vtype(value);
+
+  dirty_v_context();
+
+  if vt[vill] == 0b1 | is_invalid_lmul_pow(vt[vlmul]) | is_invalid_sew_pow(vt[vsew]) | vt[reserved] != zeros()
+  then vtype.bits = 0b1 @ zeros(xlen - 1)
+  else vtype = vt;
+
+  csr_write_callback("vtype", vtype.bits)
+}
+
 function clause write_CSR(0x008, value) = { set_vstart(value[15 .. 0]); Ok(vstart) }
 function clause write_CSR(0x009, value) = { write_vcsr (vcsr[vxrm], value[0 .. 0]); Ok(zero_extend(vcsr[vxsat])) }
 function clause write_CSR(0x00A, value) = { write_vcsr (value[1 .. 0], vcsr[vxsat]); Ok(zero_extend(vcsr[vxrm])) }
 function clause write_CSR(0x00F, value) = { write_vcsr (value [2 .. 1], value [0 .. 0]); Ok(zero_extend(vcsr.bits)) }
+function clause write_CSR(0xC21, value) = { write_vtype(value); Ok(vtype.bits) }

@@ -225,6 +225,7 @@ extensions {
         extensions/V/vext_utils_insts.sail,
         extensions/V/vext_fp_utils_insts.sail,
         extensions/V/vext_vset_insts.sail,
+        extensions/V/vext_ime_insts.sail,
         extensions/V/vext_arith_insts.sail,
         extensions/V/vext_fp_insts.sail,
         extensions/V/vext_mem_insts.sail,
