@@ -10,9 +10,9 @@
 #    compiler. You can download a binary from https://github.com/riscv-collab/riscv-gnu-toolchain/releases
 # 3. GCC via riscv64-unknown-elf-gcc, but only if it has "multilib" support, so we'll try riscv32-... first.
 
-find_program(CLANG_BIN "clang")
-find_program(GCC_BIN_RV32 "riscv32-unknown-elf-gcc")
-find_program(GCC_BIN_RV64 "riscv64-unknown-elf-gcc")
+find_program(CLANG_BIN NAMES "clang")
+find_program(GCC_BIN_RV32 NAMES "riscv32-unknown-elf-gcc" "riscv32-elf-gcc")
+find_program(GCC_BIN_RV64 NAMES "riscv64-unknown-elf-gcc" "riscv64-elf-gcc")
 
 if (CLANG_BIN)
     message(STATUS "Found clang: ${CLANG_BIN}")
@@ -80,6 +80,7 @@ message(STATUS "Compiling RV64 tests with: ${CROSS_COMPILER_COMMAND_RV64}")
 set(common_deps
     "src/common/crt0.S"
     "src/common/encoding.h"
+    "src/common/ime_macros.h"
     "src/common/link.ld"
     "src/common/nanoprintf.c"
     "src/common/nanoprintf.h"
@@ -96,6 +97,10 @@ macro(add_first_party_test name)
     add_first_party_test_with_config("${name}" "rv32${isa_extension}" 32 "no_override.json")
     add_first_party_test_with_config("${name}" "rv64${isa_extension}" 64 "no_override.json")
 endmacro()
+macro(add_first_party_test_rv64 name)
+    set(isa_extension gcv_zfbfmin)
+    add_first_party_test_with_config("${name}" "rv64${isa_extension}" 64 "no_override.json")
+endmacro()
 
 add_first_party_test("test_bf16_nan_boxing.S")
 add_first_party_test("test_hello_world.c")
@@ -105,6 +110,9 @@ add_first_party_test("test_misaligned_vector_register_groups.S")
 add_first_party_test("test_pmp_access.c")
 add_first_party_test("test_phys_perms_on_failing_sc.S")
 add_first_party_test("test_wfi_wait.S")
+add_first_party_test_rv64("test_ime_integer.S")
+add_first_party_test_rv64("test_ime_fp.S")
+add_first_party_test_rv64("test_ime_tile.S")
 
 list(LENGTH tests tests_len)
 math(EXPR test_last "${tests_len} - 1")
