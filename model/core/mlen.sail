@@ -20,7 +20,7 @@ type ame_unit_dtype_size : Int = 2 ^ ame_unit_dtype_size_pow
 let ame_unit_dtype_size = sizeof(ame_unit_dtype_size)
 
 type ame_max_dtype_size_pow : Int = config extensions.Zvame.ame_max_dtype_size_pow
-constraint 3 <= ame_max_dtype_size_pow <= 63 & ame_unit_dtype_size_pow <= ame_max_dtype_size_pow
+constraint 7 <= ame_max_dtype_size_pow <= 63 & ame_unit_dtype_size_pow <= ame_max_dtype_size_pow
 let ame_max_dtype_size_pow = sizeof(ame_max_dtype_size_pow)
 type ame_max_dtype_size : Int = 2 ^ ame_max_dtype_size_pow
 let ame_max_dtype_size = sizeof(ame_max_dtype_size)
