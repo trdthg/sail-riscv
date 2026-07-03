@@ -33,11 +33,22 @@ type ame_matrix = vector(ame_nlen, dec, ame_row)
 //   others      : type-specific (exp_width, rounding_mode, inf, denorm for FP)
 // =========================================================================
 
+type ame_dtype_bitsize = {0, 4, 8, 16, 32, 64, 128}
+type is_ame_dtype_bitsize('n) -> Bool = 'n in {0, 4, 8, 16, 32, 64, 128}
+
 /* Extract the element size in bits from the dtype register.
    Returns 0 if the dtype is uninitialized or invalid. */
-function ame_dtype_size(dtype : bits(32)) -> nat = {
+function ame_dtype_size(dtype : bits(32)) -> ame_dtype_bitsize = {
   let s = unsigned(dtype[7 .. 0]);
-  if s > 128 then 0 else s
+  match s {
+     4 => 4,
+     8 => 8,
+    16 => 16,
+    32 => 32,
+    64 => 64,
+   128 => 128,
+     _ => 0
+  }
 }
 
 /* Check if the dtype is a storage-only type.
@@ -119,6 +130,14 @@ function ameregidx_nat(i : ameregidx) -> nat = unsigned(ameregidx_bits(i))
 function nat_to_ameregidx(n : nat) -> ameregidx = Ameregidx(to_bits(5, n % 32))
 function ameregidx_add(i : ameregidx, offset : nat) -> ameregidx =
   nat_to_ameregidx(ameregidx_nat(i) + offset)
+
+function ame_check_mreg_group(base_reg : ameregidx, nregs : nat) -> bool = {
+  let count = max(1, nregs);
+  count <= ame_num_m_regs &
+    ameregidx_nat(base_reg) < ame_num_m_regs &
+    ameregidx_nat(base_reg) + count <= ame_num_m_regs &
+    ameregidx_nat(base_reg) % count == 0
+}
 
 // =========================================================================
 // M register element read/write
@@ -435,4 +454,70 @@ function write_acc_matrix(dtype : bits(32), acc_reg : ameaccregidx,
     acc_data = insert_row_rm(acc_data, size, i, mat[i]);
   };
   ACC(acc_reg) = acc_data;
+}
+
+// =========================================================================
+// Matrix multiply-accumulate helpers
+// =========================================================================
+
+/* Perform integer acc[i,k] += sum_j lhs[i,j] * rhs[j,k].
+   This is the executable integer path for mmulacc.2d.  The arithmetic wraps
+   to the destination element size, matching ordinary fixed-width AME element
+   storage. */
+function ame_mmulacc_2d_integer(dest_dtype : bits(32), src1_dtype : bits(32),
+                                src2_dtype : bits(32), acc_reg : ameaccregidx,
+                                src1_reg : ameregidx, src2_reg : ameregidx)
+  -> unit = {
+  let dest_size = ame_dtype_size(dest_dtype);
+  let src1_size = ame_dtype_size(src1_dtype);
+  let src2_size = ame_dtype_size(src2_dtype);
+
+  assert(dest_size > 0, "ame_mmulacc_2d_integer: invalid destination dtype");
+  assert(src1_size > 0, "ame_mmulacc_2d_integer: invalid source 1 dtype");
+  assert(src2_size > 0, "ame_mmulacc_2d_integer: invalid source 2 dtype");
+  assert(dest_size == src1_size & dest_size == src2_size,
+    "ame_mmulacc_2d_integer: mixed element sizes are not implemented yet");
+
+  let lhs = read_m_square_rm(src1_dtype, src1_reg);
+  let rhs = read_m_square_rm(src2_dtype, src2_reg);
+  var acc_data = ACC(acc_reg);
+
+  foreach (i from 0 to (ame_nlen - 1)) {
+    foreach (k from 0 to (ame_nlen - 1)) {
+      let dst_idx = i * ame_nlen + k;
+      var sum : int = unsigned(extract_elem_rm(acc_data, dest_size, dst_idx));
+      foreach (j from 0 to (ame_nlen - 1)) {
+        let a : int = unsigned(extract_elem_rm(lhs, src1_size, i * ame_nlen + j));
+        let b : int = unsigned(extract_elem_rm(rhs, src2_size, j * ame_nlen + k));
+        sum = sum + (a * b);
+      };
+      acc_data = insert_elem_rm(acc_data, dest_size, dst_idx, to_bits_unsafe(ame_max_dtype_size, sum));
+    }
+  };
+
+  ACC(acc_reg) = acc_data
+}
+
+function ame_mmulacc_2d(dest_dtype : bits(32), src1_dtype : bits(32),
+                        src2_dtype : bits(32), acc_reg : ameaccregidx,
+                        src1_reg : ameregidx, src2_reg : ameregidx)
+  -> bool = {
+  let dest_size = ame_dtype_size(dest_dtype);
+  let src1_size = ame_dtype_size(src1_dtype);
+  let src2_size = ame_dtype_size(src2_dtype);
+  let dest_nregs = ame_nregs(dest_size);
+  let src1_nregs = ame_nregs(src1_size);
+  let src2_nregs = ame_nregs(src2_size);
+
+  if dest_size == 0 | src1_size == 0 | src2_size == 0 then false
+  else if ame_is_storage_only(dest_dtype) | ame_is_storage_only(src1_dtype) | ame_is_storage_only(src2_dtype) then false
+  else if not(ame_is_integer(dest_dtype) & ame_is_integer(src1_dtype) & ame_is_integer(src2_dtype)) then false
+  else if dest_size != src1_size | dest_size != src2_size then false
+  else if not(ame_check_mreg_group(src1_reg, src1_nregs)) then false
+  else if not(ame_check_mreg_group(src2_reg, src2_nregs)) then false
+  else if dest_nregs == 0 then false
+  else {
+    ame_mmulacc_2d_integer(dest_dtype, src1_dtype, src2_dtype, acc_reg, src1_reg, src2_reg);
+    true
+  }
 }

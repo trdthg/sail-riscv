@@ -8,19 +8,37 @@ if (NOT GCC_BIN_RV64)
 endif()
 
 set(ame_test_sources
-    "msettyp.S"
+    "src/msettyp.S"
 )
+
+set(AME_GENERATED_TEST_DIR "${CMAKE_BINARY_DIR}/test/ame/generated" CACHE PATH
+    "Directory containing generated AME test sources")
+
+file(GLOB generated_ame_test_sources CONFIGURE_DEPENDS
+    "${AME_GENERATED_TEST_DIR}/*.S"
+)
+list(APPEND ame_test_sources ${generated_ame_test_sources})
+
+file(GLOB example_ame_test_sources CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/examples/*.S"
+)
+list(APPEND ame_test_sources ${example_ame_test_sources})
 
 set(ame_config "${CMAKE_BINARY_DIR}/config/rv64d_v256_e64.json")
 
 foreach(test_source IN LISTS ame_test_sources)
+    set(test_source_path "${test_source}")
+    if (NOT IS_ABSOLUTE "${test_source_path}")
+        set(test_source_path "${CMAKE_CURRENT_SOURCE_DIR}/${test_source_path}")
+    endif()
+
     get_filename_component(test_name "${test_source}" NAME_WE)
-    set(elf "rv64_ame_${test_source}.elf")
+    set(elf "rv64_ame_${test_name}.elf")
 
     add_custom_command(
         OUTPUT ${elf}
         DEPENDS
-            "src/${test_source}"
+            "${test_source_path}"
             "src/test.inc"
             "src/ame_macros.inc"
             "src/link.ld"
@@ -33,7 +51,7 @@ foreach(test_source IN LISTS ame_test_sources)
             -T "${CMAKE_CURRENT_SOURCE_DIR}/src/link.ld"
             -I "${CMAKE_CURRENT_SOURCE_DIR}/src"
             -o ${elf}
-            "${CMAKE_CURRENT_SOURCE_DIR}/src/${test_source}"
+            "${test_source_path}"
         VERBATIM
         COMMENT "Compiling AME ${test_source}"
     )

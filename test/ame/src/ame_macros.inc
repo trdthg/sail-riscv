@@ -4,6 +4,11 @@
 
 # Usage: .include "ame_macros.inc"
 
+# ── AME CSR numbers ──────────────────────────────────────────────────────────
+.equ amenlen,  0xC01
+.equ amenxlen, 0xC01
+.equ ameudsz,  0xC02
+
 # ── AME datatype constants ────────────────────────────────────────────────────
 # Integer types (bit 30=sign, bit 29=sat, bit 8=0, bits 7:0=size)
 .equ AME_UINT4_DTYPE,      0x00000004

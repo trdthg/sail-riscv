@@ -647,8 +647,8 @@
       "ame_nlen_pow": 3,
       "ame_num_m_regs": 32,
       "ame_num_acc_regs": 4,
-      "ame_unit_dtype_size_pow": 5,
-      "ame_max_dtype_size_pow": 6
+      "ame_unit_dtype_size_pow": 3,
+      "ame_max_dtype_size_pow": 7
     },
     "Zvabd": {
       "supported": true

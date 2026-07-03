@@ -7,6 +7,62 @@
 
 function clause currentlyEnabled(Ext_Zvame) = hartSupports(Ext_Zvame)
 
+// Helpers for raw AME memory transfers.
+//
+// IDL names mls/mss as read_memory_ame/write_memory_ame over the raw
+// implementation-defined M register representation.  In this Sail model,
+// an M square may occupy a group of consecutive M registers, so these helpers
+// copy that raw register group in 8-byte chunks without interpreting layout.
+
+function ame_mreg_group_bytes(dtype : bits(32)) -> nat =
+  (ame_nregs(ame_dtype_size(dtype)) * mlen) / 8
+
+function ame_check_mreg_group_operand(reg : bits(5), nregs : nat) -> bool = {
+  let count = max(1, nregs);
+  count <= ame_num_m_regs &
+    unsigned(reg) < ame_num_m_regs &
+    unsigned(reg) + count <= ame_num_m_regs &
+    unsigned(reg) % count == 0
+}
+
+function ame_load_mreg_group_raw(base_reg : ameregidx, rs_addr : regidx, nregs : nat)
+  -> ExecutionResult = {
+  let max_regs = acclen / mlen;
+  foreach (r from 0 to (max_regs - 1)) {
+    if r < nregs then {
+      var reg_data : bits(mlen) = zeros();
+      foreach (byte_in_reg from 0 to (mlen / 8 - 8) by 8) {
+        let byte_offset = r * (mlen / 8) + byte_in_reg;
+        match vmem_read(rs_addr, to_bits_unsafe(xlen, byte_offset), 8, Load(Data), false, false, false) {
+          Ok(data) => reg_data = [reg_data with (byte_in_reg * 8 + 63) .. (byte_in_reg * 8) = data],
+          Err(e) => return e,
+        }
+      };
+      M(ameregidx_add(base_reg, r)) = reg_data
+    }
+  };
+  RETIRE_SUCCESS
+}
+
+function ame_store_mreg_group_raw(base_reg : ameregidx, rs_addr : regidx, nregs : nat)
+  -> ExecutionResult = {
+  let max_regs = acclen / mlen;
+  foreach (r from 0 to (max_regs - 1)) {
+    if r < nregs then {
+      let reg_data = M(ameregidx_add(base_reg, r));
+      foreach (byte_in_reg from 0 to (mlen / 8 - 8) by 8) {
+        let byte_offset = r * (mlen / 8) + byte_in_reg;
+        let data : bits(64) = reg_data[(byte_in_reg * 8 + 63) .. (byte_in_reg * 8)];
+        match vmem_write(rs_addr, to_bits_unsafe(xlen, byte_offset), 8, data, Store(Data), false, false, false) {
+          Ok(_) => (),
+          Err(e) => return e,
+        }
+      }
+    }
+  };
+  RETIRE_SUCCESS
+}
+
 // *****************************************************************
 // agettyp: xd, ad
 union clause instruction = AME_AGETTYP : (bits(5), bits(2))
@@ -41,7 +97,11 @@ function clause execute AME_ASETTYP(ad, xs1) = {
   //   Ad[ad] = X[xs1];
   //   Acc[ad] = 0;
   // }
-  internal_error(__FILE__, __LINE__, "Zvame execute stub: asettyp")
+  let dtype : bits(32) = X(Regidx(trunc(xs1)))[31..0];
+  if ame_dtype_size(dtype) == 0 then return Illegal_Instruction();
+  AD(Ameadregidx(ad)) = dtype;
+  ACC(Ameaccregidx(ad)) = zeros();
+  RETIRE_SUCCESS
 }
 
 // *****************************************************************
@@ -866,6 +926,48 @@ function clause execute AME_MANDNOT_EW(md, ms1, ms2) = {
   // M[md + dest_regno] = ame_xform_rm_to_impl(result, dest_dtype);
   // }
   internal_error(__FILE__, __LINE__, "Zvame execute stub: mandnot.ew")
+}
+
+// *****************************************************************
+// mzero.2d: acc
+union clause instruction = AME_MZERO_2D : (bits(2))
+
+mapping clause encdec = AME_MZERO_2D(acc)
+  <-> 0b0001000000000000001000 @ acc : bits(2) @ 0b00101011
+  when currentlyEnabled(Ext_Zvame)
+
+function clause execute AME_MZERO_2D(acc) = {
+  // TODO: implement mzero.2d semantics.
+  // UDB operation():
+  // Bits<32> dest_dtype = Ad[acc];
+  //
+  // if (!ame_op_supported(AmeOperation::ZERO1D, dest_dtype, dest_dtype, dest_dtype)) {
+  //   CSR[amestatus].UN = 1;
+  // } else if (ame_dtype_is_storage_only(dest_dtype)) {
+  //   CSR[amestatus].UN = 1;
+  // } else {
+  //
+  //
+  // U32 dest_element_size = ame_dtype_val_to_size(dest_dtype);
+  //
+  // if (!ame_op_supported(AmeOperation::ZERO1D, dest_dtype, dest_dtype, dest_dtype)) {
+  //   raise(ExceptionCode::IllegalInstruction, mode(), $encoding);
+  // }
+  //
+  // Bits<AME_MAX_SQUARE_SIZE> result = 0;
+  //
+  // for (U32 e = 0; e < AME_NELEM; e++) {
+  //   U32 dest_hi = ((e + 1) * dest_element_size);
+  //   U32 dest_lo = ((e + 1) * dest_element_size);
+  //   result[dest_hi:dest_lo] = 0;
+  // }
+  //
+  // Acc[acc] = ame_xform_rm_to_impl(result, dest_dtype);
+  // }
+  let dtype : bits(32) = AD(Ameadregidx(acc));
+  if ame_dtype_size(dtype) == 0 | ame_is_storage_only(dtype) then return Illegal_Instruction();
+  ACC(Ameaccregidx(acc)) = zeros();
+  RETIRE_SUCCESS
 }
 
 // *****************************************************************
@@ -2223,7 +2325,7 @@ function clause execute AME_MGETTYP(xd, ms1) = {
   // }
   //
   // X[xd] = Md[ms1];
-  X(Regidx(xd)) = zero_extend(MD(Mdregidx(ms1)));
+  X(Regidx(trunc(xd))) = zero_extend(MD(Mdregidx(ms1)));
   RETIRE_SUCCESS
 }
 
@@ -3192,7 +3294,14 @@ function clause execute AME_MLS(md, xs1) = {
   // }
   //
   // M[md] = read_memory_ame(address, $encoding, impl_size_bytes);
-  internal_error(__FILE__, __LINE__, "Zvame execute stub: mls")
+  let dtype : bits(32) = MD(Mdregidx(md));
+  if ame_dtype_size(dtype) == 0 then return Illegal_Instruction();
+  let nregs = ame_nregs(ame_dtype_size(dtype));
+  if not(ame_check_mreg_group_operand(md, nregs)) then return Illegal_Instruction();
+  let byte_count = ame_mreg_group_bytes(dtype);
+  if unsigned(X(Regidx(trunc(xs1)))) % max(1, byte_count) != 0 then
+    return memory_exception(Virtaddr(X(Regidx(trunc(xs1)))), E_Load_Addr_Align());
+  ame_load_mreg_group_raw(Ameregidx(md), Regidx(trunc(xs1)), nregs)
 }
 
 // *****************************************************************
@@ -3979,7 +4088,15 @@ function clause execute AME_MMOV_A_M(md, acc) = {
   // }
   // }
   // }
-  internal_error(__FILE__, __LINE__, "Zvame execute stub: mmov.a.m")
+  let dest_dtype : bits(32) = MD(Mdregidx(md));
+  let src_dtype : bits(32) = AD(Ameadregidx(acc));
+  let dest_size = ame_dtype_size(dest_dtype);
+  let src_size = ame_dtype_size(src_dtype);
+  if dest_size == 0 | src_size == 0 | dest_size != src_size then return Illegal_Instruction();
+  let dest_nregs = ame_nregs(dest_size);
+  if not(ame_check_mreg_group_operand(md, dest_nregs)) then return Illegal_Instruction();
+  write_m_square_rm(dest_dtype, Ameregidx(md), ACC(Ameaccregidx(acc)));
+  RETIRE_SUCCESS
 }
 
 // *****************************************************************
@@ -4441,7 +4558,13 @@ function clause execute AME_MMULACC_2D(acc, ms1, ms2) = {
   //   }
   // }
   // }
-  internal_error(__FILE__, __LINE__, "Zvame execute stub: mmulacc.2d")
+  let dest_dtype : bits(32) = AD(Ameadregidx(acc));
+  let src1_dtype : bits(32) = MD(Mdregidx(ms1));
+  let src2_dtype : bits(32) = MD(Mdregidx(ms2));
+  if ame_mmulacc_2d(dest_dtype, src1_dtype, src2_dtype, Ameaccregidx(acc), Ameregidx(ms1), Ameregidx(ms2)) then
+    RETIRE_SUCCESS
+  else
+    Illegal_Instruction()
 }
 
 // *****************************************************************
@@ -8426,9 +8549,16 @@ function clause execute AME_MSETTYP(md, xs1) = {
   //   Md[md] = X[xs1];
   //   M[md] = 0;
   // }
-  let dtype : bits(32) = X(Regidx(xs1))[31..0];
+  let dtype : bits(32) = X(Regidx(trunc(xs1)))[31..0];
+  let size = ame_dtype_size(dtype);
+  if size == 0 then return Illegal_Instruction();
+  let nregs = ame_nregs(size);
+  if not(ame_check_mreg_group_operand(md, nregs)) then return Illegal_Instruction();
   MD(Mdregidx(md)) = dtype;
-  M(Ameregidx(md)) = zeros();
+  let max_regs = acclen / mlen;
+  foreach (r from 0 to (max_regs - 1)) {
+    if r < nregs then M(ameregidx_add(Ameregidx(md), r)) = zeros()
+  };
   RETIRE_SUCCESS
 }
 
@@ -8557,7 +8687,14 @@ function clause execute AME_MSS(ms1, xs1) = {
   // }
   //
   // write_memory_ame(address, $encoding, M[ms1], impl_size_bytes);
-  internal_error(__FILE__, __LINE__, "Zvame execute stub: mss")
+  let dtype : bits(32) = MD(Mdregidx(ms1));
+  if ame_dtype_size(dtype) == 0 then return Illegal_Instruction();
+  let nregs = ame_nregs(ame_dtype_size(dtype));
+  if not(ame_check_mreg_group_operand(ms1, nregs)) then return Illegal_Instruction();
+  let byte_count = ame_mreg_group_bytes(dtype);
+  if unsigned(X(Regidx(trunc(xs1)))) % max(1, byte_count) != 0 then
+    return memory_exception(Virtaddr(X(Regidx(trunc(xs1)))), E_SAMO_Addr_Align());
+  ame_store_mreg_group_raw(Ameregidx(ms1), Regidx(trunc(xs1)), nregs)
 }
 
 // *****************************************************************
@@ -9278,43 +9415,4 @@ function clause execute AME_MXOR_EW_X(md, xs1, ms2) = {
   // M[md + dest_regno] = ame_xform_rm_to_impl(result, dest_dtype);
   // }
   internal_error(__FILE__, __LINE__, "Zvame execute stub: mxor.ew.x")
-}
-
-// *****************************************************************
-// mzero.2d: acc
-union clause instruction = AME_MZERO_2D : (bits(2))
-
-mapping clause encdec = AME_MZERO_2D(acc)
-  <-> 0b0001000000000000001000 @ acc : bits(2) @ 0b00101011
-  when currentlyEnabled(Ext_Zvame)
-
-function clause execute AME_MZERO_2D(acc) = {
-  // TODO: implement mzero.2d semantics.
-  // UDB operation():
-  // Bits<32> dest_dtype = Ad[acc];
-  //
-  // if (!ame_op_supported(AmeOperation::ZERO1D, dest_dtype, dest_dtype, dest_dtype)) {
-  //   CSR[amestatus].UN = 1;
-  // } else if (ame_dtype_is_storage_only(dest_dtype)) {
-  //   CSR[amestatus].UN = 1;
-  // } else {
-  //
-  //
-  // U32 dest_element_size = ame_dtype_val_to_size(dest_dtype);
-  //
-  // if (!ame_op_supported(AmeOperation::ZERO1D, dest_dtype, dest_dtype, dest_dtype)) {
-  //   raise(ExceptionCode::IllegalInstruction, mode(), $encoding);
-  // }
-  //
-  // Bits<AME_MAX_SQUARE_SIZE> result = 0;
-  //
-  // for (U32 e = 0; e < AME_NELEM; e++) {
-  //   U32 dest_hi = ((e + 1) * dest_element_size);
-  //   U32 dest_lo = ((e + 1) * dest_element_size);
-  //   result[dest_hi:dest_lo] = 0;
-  // }
-  //
-  // Acc[acc] = ame_xform_rm_to_impl(result, dest_dtype);
-  // }
-  internal_error(__FILE__, __LINE__, "Zvame execute stub: mzero.2d")
 }
