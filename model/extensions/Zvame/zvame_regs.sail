@@ -314,6 +314,16 @@ register acc1 : ameaccreglen
 register acc2 : ameaccreglen
 register acc3 : ameaccreglen
 
+mapping ameaccreg_name_raw : bits(2) <-> string = {
+  0b00 <-> "acc0",
+  0b01 <-> "acc1",
+  0b10 <-> "acc2",
+  0b11 <-> "acc3"
+}
+
+mapping ameaccreg_name : ameaccregidx <-> string = { Ameaccregidx(i) <-> ameaccreg_name_raw(i) }
+mapping ameadreg_name : ameadregidx <-> string = { Ameadregidx(i) <-> ameaccreg_name_raw(i) }
+
 function rACC(Ameaccregno(i) : ameaccregno) -> ameaccreglen = {
   match i {
     0 => acc0,

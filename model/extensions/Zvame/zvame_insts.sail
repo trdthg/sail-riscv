@@ -71,6 +71,9 @@ mapping clause encdec = AME_AGETTYP(xd, ad)
   <-> 0b000010000000000 @ ad : bits(2) @ 0b101 @ xd : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_AGETTYP(xd, ad)
+  <-> "agettyp" ^ spc() ^ reg_name(encdec_reg(xd)) ^ sep() ^ ameaccreg_name_raw(ad)
+
 function clause execute AME_AGETTYP(xd, ad) = {
   // TODO: implement agettyp semantics.
   // UDB operation():
@@ -85,6 +88,9 @@ union clause instruction = AME_ASETTYP : (bits(2), bits(5))
 mapping clause encdec = AME_ASETTYP(ad, xs1)
   <-> 0b000001100000 @ xs1 : bits(5) @ 0b10100 @ ad : bits(2) @ 0b00101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_ASETTYP(ad, xs1)
+  <-> "asettyp" ^ spc() ^ ameaccreg_name_raw(ad) ^ sep() ^ reg_name(encdec_reg(xs1))
 
 function clause execute AME_ASETTYP(ad, xs1) = {
   // TODO: implement asettyp semantics.
@@ -111,6 +117,9 @@ union clause instruction = AME_MABS_EW : (bits(5), bits(5))
 mapping clause encdec = AME_MABS_EW(md, ms1)
   <-> 0b000000000000 @ ms1 : bits(5) @ 0b001 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MABS_EW(md, ms1)
+  <-> "mabs.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1)
 
 function clause execute AME_MABS_EW(md, ms1) = {
   // TODO: implement mabs.ew semantics.
@@ -201,6 +210,9 @@ union clause instruction = AME_MABSDIFF_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MABSDIFF_EW(md, ms1, ms2)
   <-> 0b0000100 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MABSDIFF_EW(md, ms1, ms2)
+  <-> "mabsdiff.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MABSDIFF_EW(md, ms1, ms2) = {
   // TODO: implement mabsdiff.ew semantics.
@@ -310,6 +322,9 @@ mapping clause encdec = AME_MABSDIFF_EW_X(md, xs1, ms2)
   <-> 0b0000101 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MABSDIFF_EW_X(md, xs1, ms2)
+  <-> "mabsdiff.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MABSDIFF_EW_X(md, xs1, ms2) = {
   // TODO: implement mabsdiff.ew.x semantics.
   // UDB operation():
@@ -407,6 +422,9 @@ union clause instruction = AME_MADD_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MADD_EW(md, ms1, ms2)
   <-> 0b0000000 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MADD_EW(md, ms1, ms2)
+  <-> "madd.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MADD_EW(md, ms1, ms2) = {
   // TODO: implement madd.ew semantics.
@@ -524,6 +542,9 @@ mapping clause encdec = AME_MADD_EW_X(md, xs1, ms2)
   <-> 0b0000000 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MADD_EW_X(md, xs1, ms2)
+  <-> "madd.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MADD_EW_X(md, xs1, ms2) = {
   // TODO: implement madd.ew.x semantics.
   // UDB operation():
@@ -621,6 +642,9 @@ union clause instruction = AME_MAND_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MAND_EW(md, ms1, ms2)
   <-> 0b0000111 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MAND_EW(md, ms1, ms2)
+  <-> "mand.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MAND_EW(md, ms1, ms2) = {
   // TODO: implement mand.ew semantics.
@@ -730,6 +754,9 @@ mapping clause encdec = AME_MAND_EW_X(md, xs1, ms2)
   <-> 0b0000111 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MAND_EW_X(md, xs1, ms2)
+  <-> "mand.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MAND_EW_X(md, xs1, ms2) = {
   // TODO: implement mand.ew.x semantics.
   // UDB operation():
@@ -827,6 +854,9 @@ union clause instruction = AME_MANDNOT_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MANDNOT_EW(md, ms1, ms2)
   <-> 0b0001000 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MANDNOT_EW(md, ms1, ms2)
+  <-> "mandnot.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MANDNOT_EW(md, ms1, ms2) = {
   // TODO: implement mandnot.ew semantics.
@@ -936,6 +966,9 @@ mapping clause encdec = AME_MZERO_2D(acc)
   <-> 0b0001000000000000001000 @ acc : bits(2) @ 0b00101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MZERO_2D(acc)
+  <-> "mzero.2d" ^ spc() ^ ameaccreg_name_raw(acc)
+
 function clause execute AME_MZERO_2D(acc) = {
   // TODO: implement mzero.2d semantics.
   // UDB operation():
@@ -977,6 +1010,9 @@ union clause instruction = AME_MANDNOT_EW_X : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MANDNOT_EW_X(md, xs1, ms2)
   <-> 0b0001000 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MANDNOT_EW_X(md, xs1, ms2)
+  <-> "mandnot.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MANDNOT_EW_X(md, xs1, ms2) = {
   // TODO: implement mandnot.ew.x semantics.
@@ -1076,6 +1112,9 @@ mapping clause encdec = AME_MBCAST_F(md, fs1)
   <-> 0b000000100000 @ fs1 : bits(5) @ 0b100 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MBCAST_F(md, fs1)
+  <-> "mbcast.f" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ freg_name(encdec_freg(fs1))
+
 function clause execute AME_MBCAST_F(md, fs1) = {
   // TODO: implement mbcast.f semantics.
   // UDB operation():
@@ -1120,6 +1159,9 @@ mapping clause encdec = AME_MBCAST_X(md, xs1)
   <-> 0b000000000000 @ xs1 : bits(5) @ 0b100 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MBCAST_X(md, xs1)
+  <-> "mbcast.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1))
+
 function clause execute AME_MBCAST_X(md, xs1) = {
   // TODO: implement mbcast.x semantics.
   // UDB operation():
@@ -1163,6 +1205,9 @@ union clause instruction = AME_MCMOVGE_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MCMOVGE_EW(md, ms1, ms2)
   <-> 0b0010000 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MCMOVGE_EW(md, ms1, ms2)
+  <-> "mcmovge.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MCMOVGE_EW(md, ms1, ms2) = {
   // TODO: implement mcmovge.ew semantics.
@@ -1276,6 +1321,9 @@ mapping clause encdec = AME_MCMOVLT_EW(md, ms1, ms2)
   <-> 0b0010001 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MCMOVLT_EW(md, ms1, ms2)
+  <-> "mcmovlt.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MCMOVLT_EW(md, ms1, ms2) = {
   // TODO: implement mcmovlt.ew semantics.
   // UDB operation():
@@ -1388,6 +1436,9 @@ mapping clause encdec = AME_MCMPGE_EW(md, ms1, ms2)
   <-> 0b0001100 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MCMPGE_EW(md, ms1, ms2)
+  <-> "mcmpge.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MCMPGE_EW(md, ms1, ms2) = {
   // TODO: implement mcmpge.ew semantics.
   // UDB operation():
@@ -1496,6 +1547,9 @@ mapping clause encdec = AME_MCMPGE_EW_X(md, xs1, ms2)
   <-> 0b0001100 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MCMPGE_EW_X(md, xs1, ms2)
+  <-> "mcmpge.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MCMPGE_EW_X(md, xs1, ms2) = {
   // TODO: implement mcmpge.ew.x semantics.
   // UDB operation():
@@ -1593,6 +1647,9 @@ union clause instruction = AME_MCMPLT_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MCMPLT_EW(md, ms1, ms2)
   <-> 0b0001101 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MCMPLT_EW(md, ms1, ms2)
+  <-> "mcmplt.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MCMPLT_EW(md, ms1, ms2) = {
   // TODO: implement mcmplt.ew semantics.
@@ -1702,6 +1759,9 @@ mapping clause encdec = AME_MCMPLT_EW_X(md, xs1, ms2)
   <-> 0b0001101 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MCMPLT_EW_X(md, xs1, ms2)
+  <-> "mcmplt.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MCMPLT_EW_X(md, xs1, ms2) = {
   // TODO: implement mcmplt.ew.x semantics.
   // UDB operation():
@@ -1799,6 +1859,9 @@ union clause instruction = AME_MCOLUNZIP_EW : (bits(5), bits(5))
 mapping clause encdec = AME_MCOLUNZIP_EW(md, ms1)
   <-> 0b000010000000 @ ms1 : bits(5) @ 0b001 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MCOLUNZIP_EW(md, ms1)
+  <-> "mcolunzip.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1)
 
 function clause execute AME_MCOLUNZIP_EW(md, ms1) = {
   // TODO: implement mcolunzip.ew semantics.
@@ -1906,6 +1969,9 @@ mapping clause encdec = AME_MCOLZIP_EW(md, ms1)
   <-> 0b000001100000 @ ms1 : bits(5) @ 0b001 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MCOLZIP_EW(md, ms1)
+  <-> "mcolzip.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1)
+
 function clause execute AME_MCOLZIP_EW(md, ms1) = {
   // TODO: implement mcolzip.ew semantics.
   // UDB operation():
@@ -2012,6 +2078,9 @@ mapping clause encdec = AME_MCONV_EW(md, ms1)
   <-> 0b000000000000 @ ms1 : bits(5) @ 0b101 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MCONV_EW(md, ms1)
+  <-> "mconv.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1)
+
 function clause execute AME_MCONV_EW(md, ms1) = {
   // TODO: implement mconv.ew semantics.
   // UDB operation():
@@ -2114,6 +2183,9 @@ mapping clause encdec = AME_MEXP2_EW(md, ms1)
   <-> 0b000000100000 @ ms1 : bits(5) @ 0b001 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MEXP2_EW(md, ms1)
+  <-> "mexp2.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1)
+
 function clause execute AME_MEXP2_EW(md, ms1) = {
   // TODO: implement mexp2.ew semantics.
   // UDB operation():
@@ -2203,6 +2275,9 @@ union clause instruction = AME_MGATHER_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MGATHER_EW(md, ms1, ms2)
   <-> 0b0011000 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MGATHER_EW(md, ms1, ms2)
+  <-> "mgather.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MGATHER_EW(md, ms1, ms2) = {
   // TODO: implement mgather.ew semantics.
@@ -2315,6 +2390,9 @@ mapping clause encdec = AME_MGETTYP(xd, ms1)
   <-> 0b000001000000 @ ms1 : bits(5) @ 0b101 @ xd : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MGETTYP(xd, ms1)
+  <-> "mgettyp" ^ spc() ^ reg_name(encdec_reg(xd)) ^ sep() ^ amereg_name_raw(ms1)
+
 function clause execute AME_MGETTYP(xd, ms1) = {
   // TODO: implement mgettyp semantics.
   // UDB operation():
@@ -2336,6 +2414,9 @@ union clause instruction = AME_MHDIFF_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MHDIFF_EW(md, ms1, ms2)
   <-> 0b0000011 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MHDIFF_EW(md, ms1, ms2)
+  <-> "mhdiff.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MHDIFF_EW(md, ms1, ms2) = {
   // TODO: implement mhdiff.ew semantics.
@@ -2445,6 +2526,9 @@ mapping clause encdec = AME_MHDIFF_EW_X(md, xs1, ms2)
   <-> 0b0000110 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MHDIFF_EW_X(md, xs1, ms2)
+  <-> "mhdiff.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MHDIFF_EW_X(md, xs1, ms2) = {
   // TODO: implement mhdiff.ew.x semantics.
   // UDB operation():
@@ -2544,6 +2628,9 @@ union clause instruction = AME_MLDEXP_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MLDEXP_EW(md, ms1, ms2)
   <-> 0b0010010 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MLDEXP_EW(md, ms1, ms2)
+  <-> "mldexp.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MLDEXP_EW(md, ms1, ms2) = {
   // TODO: implement mldexp.ew semantics.
@@ -2653,6 +2740,9 @@ mapping clause encdec = AME_MLDEXP_EW_X(md, xs1, ms2)
   <-> 0b0010000 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MLDEXP_EW_X(md, xs1, ms2)
+  <-> "mldexp.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MLDEXP_EW_X(md, xs1, ms2) = {
   // TODO: implement mldexp.ew.x semantics.
   // UDB operation():
@@ -2756,6 +2846,9 @@ union clause instruction = AME_MLDEXPACC_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MLDEXPACC_EW(md, ms1, ms2)
   <-> 0b0010011 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MLDEXPACC_EW(md, ms1, ms2)
+  <-> "mldexpacc.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MLDEXPACC_EW(md, ms1, ms2) = {
   // TODO: implement mldexpacc.ew semantics.
@@ -2868,6 +2961,9 @@ mapping clause encdec = AME_MLDEXPACC_EW_X(md, xs1, ms2)
   <-> 0b0010001 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MLDEXPACC_EW_X(md, xs1, ms2)
+  <-> "mldexpacc.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MLDEXPACC_EW_X(md, xs1, ms2) = {
   // TODO: implement mldexpacc.ew.x semantics.
   // UDB operation():
@@ -2975,6 +3071,9 @@ mapping clause encdec = AME_MLOG2_EW(md, ms1)
   <-> 0b000001000000 @ ms1 : bits(5) @ 0b001 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MLOG2_EW(md, ms1)
+  <-> "mlog2.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1)
+
 function clause execute AME_MLOG2_EW(md, ms1) = {
   // TODO: implement mlog2.ew semantics.
   // UDB operation():
@@ -3064,6 +3163,9 @@ union clause instruction = AME_MLOG2SUB_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MLOG2SUB_EW(md, ms1, ms2)
   <-> 0b0010110 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MLOG2SUB_EW(md, ms1, ms2)
+  <-> "mlog2sub.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MLOG2SUB_EW(md, ms1, ms2) = {
   // TODO: implement mlog2sub.ew semantics.
@@ -3173,6 +3275,9 @@ mapping clause encdec = AME_MLOG2SUB_EW_X(md, xs1, ms2)
   <-> 0b0001110 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MLOG2SUB_EW_X(md, xs1, ms2)
+  <-> "mlog2sub.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MLOG2SUB_EW_X(md, xs1, ms2) = {
   // TODO: implement mlog2sub.ew.x semantics.
   // UDB operation():
@@ -3273,6 +3378,9 @@ mapping clause encdec = AME_MLS(md, xs1)
   <-> 0b000001000000 @ xs1 : bits(5) @ 0b011 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MLS(md, xs1)
+  <-> "mls" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1))
+
 function clause execute AME_MLS(md, xs1) = {
   // TODO: implement mls semantics.
   // UDB operation():
@@ -3311,6 +3419,9 @@ union clause instruction = AME_MLS_CM : (bits(5), bits(5))
 mapping clause encdec = AME_MLS_CM(md, xs1)
   <-> 0b000000100000 @ xs1 : bits(5) @ 0b011 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MLS_CM(md, xs1)
+  <-> "mls.cm" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1))
 
 function clause execute AME_MLS_CM(md, xs1) = {
   // TODO: implement mls.cm semantics.
@@ -3363,6 +3474,9 @@ mapping clause encdec = AME_MLS_RM(md, xs1)
   <-> 0b000000000000 @ xs1 : bits(5) @ 0b011 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MLS_RM(md, xs1)
+  <-> "mls.rm" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1))
+
 function clause execute AME_MLS_RM(md, xs1) = {
   // TODO: implement mls.rm semantics.
   // UDB operation():
@@ -3413,6 +3527,9 @@ union clause instruction = AME_MMAX_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MMAX_EW(md, ms1, ms2)
   <-> 0b0000101 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MMAX_EW(md, ms1, ms2)
+  <-> "mmax.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MMAX_EW(md, ms1, ms2) = {
   // TODO: implement mmax.ew semantics.
@@ -3522,6 +3639,9 @@ mapping clause encdec = AME_MMAX_EW_X(md, xs1, ms2)
   <-> 0b0000011 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MMAX_EW_X(md, xs1, ms2)
+  <-> "mmax.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MMAX_EW_X(md, xs1, ms2) = {
   // TODO: implement mmax.ew.x semantics.
   // UDB operation():
@@ -3619,6 +3739,9 @@ union clause instruction = AME_MMEAN_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MMEAN_EW(md, ms1, ms2)
   <-> 0b0000010 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MMEAN_EW(md, ms1, ms2)
+  <-> "mmean.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MMEAN_EW(md, ms1, ms2) = {
   // TODO: implement mmean.ew semantics.
@@ -3728,6 +3851,9 @@ mapping clause encdec = AME_MMEAN_EW_X(md, xs1, ms2)
   <-> 0b0000100 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MMEAN_EW_X(md, xs1, ms2)
+  <-> "mmean.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MMEAN_EW_X(md, xs1, ms2) = {
   // TODO: implement mmean.ew.x semantics.
   // UDB operation():
@@ -3825,6 +3951,9 @@ union clause instruction = AME_MMIN_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MMIN_EW(md, ms1, ms2)
   <-> 0b0000110 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MMIN_EW(md, ms1, ms2)
+  <-> "mmin.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MMIN_EW(md, ms1, ms2) = {
   // TODO: implement mmin.ew semantics.
@@ -3934,6 +4063,9 @@ mapping clause encdec = AME_MMIN_EW_X(md, xs1, ms2)
   <-> 0b0000010 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MMIN_EW_X(md, xs1, ms2)
+  <-> "mmin.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MMIN_EW_X(md, xs1, ms2) = {
   // TODO: implement mmin.ew.x semantics.
   // UDB operation():
@@ -4032,6 +4164,9 @@ mapping clause encdec = AME_MMOV_A_M(md, acc)
   <-> 0b0000011000 @ acc : bits(2) @ 0b00000100 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MMOV_A_M(md, acc)
+  <-> "mmov.a.m" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ ameaccreg_name_raw(acc)
+
 function clause execute AME_MMOV_A_M(md, acc) = {
   // TODO: implement mmov.a.m semantics.
   // UDB operation():
@@ -4107,6 +4242,9 @@ mapping clause encdec = AME_MMOV_M_M(md, ms)
   <-> 0b0000010 @ ms : bits(5) @ 0b00000100 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MMOV_M_M(md, ms)
+  <-> "mmov.m.m" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms)
+
 function clause execute AME_MMOV_M_M(md, ms) = {
   // TODO: implement mmov.m.m semantics.
   // UDB operation():
@@ -4156,6 +4294,9 @@ union clause instruction = AME_MMUL_2D : (bits(2), bits(5), bits(5))
 mapping clause encdec = AME_MMUL_2D(acc, ms1, ms2)
   <-> 0b0000000 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b01000 @ acc : bits(2) @ 0b00101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MMUL_2D(acc, ms1, ms2)
+  <-> "mmul.2d" ^ spc() ^ ameaccreg_name_raw(acc) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MMUL_2D(acc, ms1, ms2) = {
   // TODO: implement mmul.2d semantics.
@@ -4255,6 +4396,9 @@ union clause instruction = AME_MMUL_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MMUL_EW(md, ms1, ms2)
   <-> 0b0011100 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MMUL_EW(md, ms1, ms2)
+  <-> "mmul.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MMUL_EW(md, ms1, ms2) = {
   // TODO: implement mmul.ew semantics.
@@ -4370,6 +4514,9 @@ mapping clause encdec = AME_MMUL_EW_X(md, xs1, ms2)
   <-> 0b0010010 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MMUL_EW_X(md, xs1, ms2)
+  <-> "mmul.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MMUL_EW_X(md, xs1, ms2) = {
   // TODO: implement mmul.ew.x semantics.
   // UDB operation():
@@ -4467,6 +4614,9 @@ union clause instruction = AME_MMULACC_2D : (bits(2), bits(5), bits(5))
 mapping clause encdec = AME_MMULACC_2D(acc, ms1, ms2)
   <-> 0b0000001 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b01000 @ acc : bits(2) @ 0b00101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MMULACC_2D(acc, ms1, ms2)
+  <-> "mmulacc.2d" ^ spc() ^ ameaccreg_name_raw(acc) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MMULACC_2D(acc, ms1, ms2) = {
   // TODO: implement mmulacc.2d semantics.
@@ -4574,6 +4724,9 @@ union clause instruction = AME_MMULACC_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MMULACC_EW(md, ms1, ms2)
   <-> 0b0011101 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MMULACC_EW(md, ms1, ms2)
+  <-> "mmulacc.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MMULACC_EW(md, ms1, ms2) = {
   // TODO: implement mmulacc.ew semantics.
@@ -4686,6 +4839,9 @@ mapping clause encdec = AME_MMULACC_EW_X(md, xs1, ms2)
   <-> 0b0010011 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MMULACC_EW_X(md, xs1, ms2)
+  <-> "mmulacc.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MMULACC_EW_X(md, xs1, ms2) = {
   // TODO: implement mmulacc.ew.x semantics.
   // UDB operation():
@@ -4787,6 +4943,9 @@ mapping clause encdec = AME_MMULACCNEG_2D(acc, ms1, ms2)
   <-> 0b0000011 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b01000 @ acc : bits(2) @ 0b00101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MMULACCNEG_2D(acc, ms1, ms2)
+  <-> "mmulaccneg.2d" ^ spc() ^ ameaccreg_name_raw(acc) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MMULACCNEG_2D(acc, ms1, ms2) = {
   // TODO: implement mmulaccneg.2d semantics.
   // UDB operation():
@@ -4887,6 +5046,9 @@ union clause instruction = AME_MMULACCNEG_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MMULACCNEG_EW(md, ms1, ms2)
   <-> 0b0100000 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MMULACCNEG_EW(md, ms1, ms2)
+  <-> "mmulaccneg.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MMULACCNEG_EW(md, ms1, ms2) = {
   // TODO: implement mmulaccneg.ew semantics.
@@ -4999,6 +5161,9 @@ mapping clause encdec = AME_MMULACCNEG_EW_X(md, xs1, ms2)
   <-> 0b0010110 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MMULACCNEG_EW_X(md, xs1, ms2)
+  <-> "mmulaccneg.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MMULACCNEG_EW_X(md, xs1, ms2) = {
   // TODO: implement mmulaccneg.ew.x semantics.
   // UDB operation():
@@ -5099,6 +5264,9 @@ union clause instruction = AME_MMULADD_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MMULADD_EW(md, ms1, ms2)
   <-> 0b0011110 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MMULADD_EW(md, ms1, ms2)
+  <-> "mmuladd.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MMULADD_EW(md, ms1, ms2) = {
   // TODO: implement mmuladd.ew semantics.
@@ -5212,6 +5380,9 @@ mapping clause encdec = AME_MMULADD_EW_X(md, xs1, ms2)
   <-> 0b0010100 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MMULADD_EW_X(md, xs1, ms2)
+  <-> "mmuladd.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MMULADD_EW_X(md, xs1, ms2) = {
   // TODO: implement mmuladd.ew.x semantics.
   // UDB operation():
@@ -5314,6 +5485,9 @@ mapping clause encdec = AME_MMULAT_2D(acc, ms1, ms2)
   <-> 0b0000100 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b01000 @ acc : bits(2) @ 0b00101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MMULAT_2D(acc, ms1, ms2)
+  <-> "mmulat.2d" ^ spc() ^ ameaccreg_name_raw(acc) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MMULAT_2D(acc, ms1, ms2) = {
   // TODO: implement mmulat.2d semantics.
   // UDB operation():
@@ -5414,6 +5588,9 @@ union clause instruction = AME_MMULATACC_2D : (bits(2), bits(5), bits(5))
 mapping clause encdec = AME_MMULATACC_2D(acc, ms1, ms2)
   <-> 0b0000101 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b01000 @ acc : bits(2) @ 0b00101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MMULATACC_2D(acc, ms1, ms2)
+  <-> "mmulatacc.2d" ^ spc() ^ ameaccreg_name_raw(acc) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MMULATACC_2D(acc, ms1, ms2) = {
   // TODO: implement mmulatacc.2d semantics.
@@ -5518,6 +5695,9 @@ mapping clause encdec = AME_MMULBT_2D(acc, ms1, ms2)
   <-> 0b0000110 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b01000 @ acc : bits(2) @ 0b00101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MMULBT_2D(acc, ms1, ms2)
+  <-> "mmulbt.2d" ^ spc() ^ ameaccreg_name_raw(acc) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MMULBT_2D(acc, ms1, ms2) = {
   // TODO: implement mmulbt.2d semantics.
   // UDB operation():
@@ -5618,6 +5798,9 @@ union clause instruction = AME_MMULBTACC_2D : (bits(2), bits(5), bits(5))
 mapping clause encdec = AME_MMULBTACC_2D(acc, ms1, ms2)
   <-> 0b0000111 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b01000 @ acc : bits(2) @ 0b00101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MMULBTACC_2D(acc, ms1, ms2)
+  <-> "mmulbtacc.2d" ^ spc() ^ ameaccreg_name_raw(acc) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MMULBTACC_2D(acc, ms1, ms2) = {
   // TODO: implement mmulbtacc.2d semantics.
@@ -5722,6 +5905,9 @@ mapping clause encdec = AME_MMULNEG_2D(acc, ms1, ms2)
   <-> 0b0000010 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b01000 @ acc : bits(2) @ 0b00101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MMULNEG_2D(acc, ms1, ms2)
+  <-> "mmulneg.2d" ^ spc() ^ ameaccreg_name_raw(acc) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MMULNEG_2D(acc, ms1, ms2) = {
   // TODO: implement mmulneg.2d semantics.
   // UDB operation():
@@ -5820,6 +6006,9 @@ union clause instruction = AME_MMULNEG_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MMULNEG_EW(md, ms1, ms2)
   <-> 0b0100001 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MMULNEG_EW(md, ms1, ms2)
+  <-> "mmulneg.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MMULNEG_EW(md, ms1, ms2) = {
   // TODO: implement mmulneg.ew semantics.
@@ -5935,6 +6124,9 @@ mapping clause encdec = AME_MMULNEG_EW_X(md, xs1, ms2)
   <-> 0b0010111 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MMULNEG_EW_X(md, xs1, ms2)
+  <-> "mmulneg.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MMULNEG_EW_X(md, xs1, ms2) = {
   // TODO: implement mmulneg.ew.x semantics.
   // UDB operation():
@@ -6032,6 +6224,9 @@ union clause instruction = AME_MMULSUB_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MMULSUB_EW(md, ms1, ms2)
   <-> 0b0011111 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MMULSUB_EW(md, ms1, ms2)
+  <-> "mmulsub.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MMULSUB_EW(md, ms1, ms2) = {
   // TODO: implement mmulsub.ew semantics.
@@ -6145,6 +6340,9 @@ mapping clause encdec = AME_MMULSUB_EW_X(md, xs1, ms2)
   <-> 0b0010101 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MMULSUB_EW_X(md, xs1, ms2)
+  <-> "mmulsub.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MMULSUB_EW_X(md, xs1, ms2) = {
   // TODO: implement mmulsub.ew.x semantics.
   // UDB operation():
@@ -6246,6 +6444,9 @@ union clause instruction = AME_MOR_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MOR_EW(md, ms1, ms2)
   <-> 0b0001001 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MOR_EW(md, ms1, ms2)
+  <-> "mor.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MOR_EW(md, ms1, ms2) = {
   // TODO: implement mor.ew semantics.
@@ -6355,6 +6556,9 @@ mapping clause encdec = AME_MOR_EW_X(md, xs1, ms2)
   <-> 0b0001001 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MOR_EW_X(md, xs1, ms2)
+  <-> "mor.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MOR_EW_X(md, xs1, ms2) = {
   // TODO: implement mor.ew.x semantics.
   // UDB operation():
@@ -6452,6 +6656,9 @@ union clause instruction = AME_MORNOT_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MORNOT_EW(md, ms1, ms2)
   <-> 0b0001010 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MORNOT_EW(md, ms1, ms2)
+  <-> "mornot.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MORNOT_EW(md, ms1, ms2) = {
   // TODO: implement mornot.ew semantics.
@@ -6561,6 +6768,9 @@ mapping clause encdec = AME_MORNOT_EW_X(md, xs1, ms2)
   <-> 0b0001010 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MORNOT_EW_X(md, xs1, ms2)
+  <-> "mornot.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MORNOT_EW_X(md, xs1, ms2) = {
   // TODO: implement mornot.ew.x semantics.
   // UDB operation():
@@ -6659,6 +6869,9 @@ mapping clause encdec = AME_MPREFIXADD_COL(md, ms1)
   <-> 0b000110000000 @ ms1 : bits(5) @ 0b001 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MPREFIXADD_COL(md, ms1)
+  <-> "mprefixadd.col" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1)
+
 function clause execute AME_MPREFIXADD_COL(md, ms1) = {
   // TODO: implement mprefixadd.col semantics.
   // UDB operation():
@@ -6748,6 +6961,9 @@ union clause instruction = AME_MPREFIXADD_ROW : (bits(5), bits(5))
 mapping clause encdec = AME_MPREFIXADD_ROW(md, ms1)
   <-> 0b000100000000 @ ms1 : bits(5) @ 0b001 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MPREFIXADD_ROW(md, ms1)
+  <-> "mprefixadd.row" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1)
 
 function clause execute AME_MPREFIXADD_ROW(md, ms1) = {
   // TODO: implement mprefixadd.row semantics.
@@ -6839,6 +7055,9 @@ mapping clause encdec = AME_MPREFIXMAX_COL(md, ms1)
   <-> 0b000110100000 @ ms1 : bits(5) @ 0b001 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MPREFIXMAX_COL(md, ms1)
+  <-> "mprefixmax.col" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1)
+
 function clause execute AME_MPREFIXMAX_COL(md, ms1) = {
   // TODO: implement mprefixmax.col semantics.
   // UDB operation():
@@ -6929,6 +7148,9 @@ mapping clause encdec = AME_MPREFIXMAX_ROW(md, ms1)
   <-> 0b000100100000 @ ms1 : bits(5) @ 0b001 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MPREFIXMAX_ROW(md, ms1)
+  <-> "mprefixmax.row" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1)
+
 function clause execute AME_MPREFIXMAX_ROW(md, ms1) = {
   // TODO: implement mprefixmax.row semantics.
   // UDB operation():
@@ -7018,6 +7240,9 @@ union clause instruction = AME_MRDEXP_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MRDEXP_EW(md, ms1, ms2)
   <-> 0b0010100 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MRDEXP_EW(md, ms1, ms2)
+  <-> "mrdexp.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MRDEXP_EW(md, ms1, ms2) = {
   // TODO: implement mrdexp.ew semantics.
@@ -7126,6 +7351,9 @@ union clause instruction = AME_MRDEXPACC_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MRDEXPACC_EW(md, ms1, ms2)
   <-> 0b0010101 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MRDEXPACC_EW(md, ms1, ms2)
+  <-> "mrdexpacc.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MRDEXPACC_EW(md, ms1, ms2) = {
   // TODO: implement mrdexpacc.ew semantics.
@@ -7238,6 +7466,9 @@ mapping clause encdec = AME_MREDUCEADD_COL(md, ms1)
   <-> 0b000101000000 @ ms1 : bits(5) @ 0b001 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MREDUCEADD_COL(md, ms1)
+  <-> "mreduceadd.col" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1)
+
 function clause execute AME_MREDUCEADD_COL(md, ms1) = {
   // TODO: implement mreduceadd.col semantics.
   // UDB operation():
@@ -7330,6 +7561,9 @@ union clause instruction = AME_MREDUCEADD_ROW : (bits(5), bits(5))
 mapping clause encdec = AME_MREDUCEADD_ROW(md, ms1)
   <-> 0b000011000000 @ ms1 : bits(5) @ 0b001 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MREDUCEADD_ROW(md, ms1)
+  <-> "mreduceadd.row" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1)
 
 function clause execute AME_MREDUCEADD_ROW(md, ms1) = {
   // TODO: implement mreduceadd.row semantics.
@@ -7424,6 +7658,9 @@ mapping clause encdec = AME_MREDUCEMAX_COL(md, ms1)
   <-> 0b000101100000 @ ms1 : bits(5) @ 0b001 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MREDUCEMAX_COL(md, ms1)
+  <-> "mreducemax.col" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1)
+
 function clause execute AME_MREDUCEMAX_COL(md, ms1) = {
   // TODO: implement mreducemax.col semantics.
   // UDB operation():
@@ -7517,6 +7754,9 @@ mapping clause encdec = AME_MREDUCEMAX_ROW(md, ms1)
   <-> 0b000011100000 @ ms1 : bits(5) @ 0b001 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MREDUCEMAX_ROW(md, ms1)
+  <-> "mreducemax.row" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1)
+
 function clause execute AME_MREDUCEMAX_ROW(md, ms1) = {
   // TODO: implement mreducemax.row semantics.
   // UDB operation():
@@ -7609,6 +7849,9 @@ union clause instruction = AME_MROWUNZIP_EW : (bits(5), bits(5))
 mapping clause encdec = AME_MROWUNZIP_EW(md, ms1)
   <-> 0b000010100000 @ ms1 : bits(5) @ 0b001 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MROWUNZIP_EW(md, ms1)
+  <-> "mrowunzip.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1)
 
 function clause execute AME_MROWUNZIP_EW(md, ms1) = {
   // TODO: implement mrowunzip.ew semantics.
@@ -7727,6 +7970,9 @@ union clause instruction = AME_MROWZIP_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MROWZIP_EW(md, ms1, ms2)
   <-> 0b0011011 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MROWZIP_EW(md, ms1, ms2)
+  <-> "mrowzip.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MROWZIP_EW(md, ms1, ms2) = {
   // TODO: implement mrowzip.ew semantics.
@@ -7860,6 +8106,9 @@ mapping clause encdec = AME_MSCATADD_COL(md, ms1, ms2)
   <-> 0b0100010 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MSCATADD_COL(md, ms1, ms2)
+  <-> "mscatadd.col" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MSCATADD_COL(md, ms1, ms2) = {
   // TODO: implement mscatadd.col semantics.
   // UDB operation():
@@ -7973,6 +8222,9 @@ union clause instruction = AME_MSCATADD_ROW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MSCATADD_ROW(md, ms1, ms2)
   <-> 0b0011001 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MSCATADD_ROW(md, ms1, ms2)
+  <-> "mscatadd.row" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MSCATADD_ROW(md, ms1, ms2) = {
   // TODO: implement mscatadd.row semantics.
@@ -8088,6 +8340,9 @@ mapping clause encdec = AME_MSCATMAX_COL(md, ms1, ms2)
   <-> 0b0100011 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MSCATMAX_COL(md, ms1, ms2)
+  <-> "mscatmax.col" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MSCATMAX_COL(md, ms1, ms2) = {
   // TODO: implement mscatmax.col semantics.
   // UDB operation():
@@ -8201,6 +8456,9 @@ union clause instruction = AME_MSCATMAX_ROW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MSCATMAX_ROW(md, ms1, ms2)
   <-> 0b0011010 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MSCATMAX_ROW(md, ms1, ms2)
+  <-> "mscatmax.row" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MSCATMAX_ROW(md, ms1, ms2) = {
   // TODO: implement mscatmax.row semantics.
@@ -8316,6 +8574,9 @@ mapping clause encdec = AME_MSELGE_EW(md, ms1, ms2)
   <-> 0b0001110 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MSELGE_EW(md, ms1, ms2)
+  <-> "mselge.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MSELGE_EW(md, ms1, ms2) = {
   // TODO: implement mselge.ew semantics.
   // UDB operation():
@@ -8423,6 +8684,9 @@ union clause instruction = AME_MSELLT_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MSELLT_EW(md, ms1, ms2)
   <-> 0b0001111 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MSELLT_EW(md, ms1, ms2)
+  <-> "msellt.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MSELLT_EW(md, ms1, ms2) = {
   // TODO: implement msellt.ew semantics.
@@ -8532,6 +8796,9 @@ mapping clause encdec = AME_MSETTYP(md, xs1)
   <-> 0b000000100000 @ xs1 : bits(5) @ 0b101 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MSETTYP(md, xs1)
+  <-> "msettyp" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1))
+
 function clause execute AME_MSETTYP(md, xs1) = {
   // TODO: implement msettyp semantics.
   // UDB operation():
@@ -8569,6 +8836,9 @@ union clause instruction = AME_MSHIFT_EW : (bits(5), bits(5), bits(7))
 mapping clause encdec = AME_MSHIFT_EW(md, ms1, imm)
   <-> 0b00000 @ imm : bits(7) @ ms1 : bits(5) @ 0b110 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MSHIFT_EW(md, ms1, imm)
+  <-> "mshift.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ hex_bits_signed_7(imm)
 
 function clause execute AME_MSHIFT_EW(md, ms1, imm) = {
   // TODO: implement mshift.ew semantics.
@@ -8666,6 +8936,9 @@ mapping clause encdec = AME_MSS(ms1, xs1)
   <-> 0b000010100000 @ xs1 : bits(5) @ 0b011 @ ms1 : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MSS(ms1, xs1)
+  <-> "mss" ^ spc() ^ amereg_name_raw(ms1) ^ sep() ^ reg_name(encdec_reg(xs1))
+
 function clause execute AME_MSS(ms1, xs1) = {
   // TODO: implement mss semantics.
   // UDB operation():
@@ -8704,6 +8977,9 @@ union clause instruction = AME_MSS_CM : (bits(5), bits(5))
 mapping clause encdec = AME_MSS_CM(ms1, xs1)
   <-> 0b000010000000 @ xs1 : bits(5) @ 0b011 @ ms1 : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MSS_CM(ms1, xs1)
+  <-> "mss.cm" ^ spc() ^ amereg_name_raw(ms1) ^ sep() ^ reg_name(encdec_reg(xs1))
 
 function clause execute AME_MSS_CM(ms1, xs1) = {
   // TODO: implement mss.cm semantics.
@@ -8754,6 +9030,9 @@ mapping clause encdec = AME_MSS_RM(ms1, xs1)
   <-> 0b000001100000 @ xs1 : bits(5) @ 0b011 @ ms1 : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MSS_RM(ms1, xs1)
+  <-> "mss.rm" ^ spc() ^ amereg_name_raw(ms1) ^ sep() ^ reg_name(encdec_reg(xs1))
+
 function clause execute AME_MSS_RM(ms1, xs1) = {
   // TODO: implement mss.rm semantics.
   // UDB operation():
@@ -8802,6 +9081,9 @@ union clause instruction = AME_MSUB_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MSUB_EW(md, ms1, ms2)
   <-> 0b0000001 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MSUB_EW(md, ms1, ms2)
+  <-> "msub.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MSUB_EW(md, ms1, ms2) = {
   // TODO: implement msub.ew semantics.
@@ -8911,6 +9193,9 @@ mapping clause encdec = AME_MSUB_EW_X(md, xs1, ms2)
   <-> 0b0000001 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MSUB_EW_X(md, xs1, ms2)
+  <-> "msub.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MSUB_EW_X(md, xs1, ms2) = {
   // TODO: implement msub.ew.x semantics.
   // UDB operation():
@@ -9010,6 +9295,9 @@ union clause instruction = AME_MSUBLOG2_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MSUBLOG2_EW(md, ms1, ms2)
   <-> 0b0010111 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MSUBLOG2_EW(md, ms1, ms2)
+  <-> "msublog2.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MSUBLOG2_EW(md, ms1, ms2) = {
   // TODO: implement msublog2.ew semantics.
@@ -9119,6 +9407,9 @@ mapping clause encdec = AME_MSUBLOG2_EW_X(md, xs1, ms2)
   <-> 0b0001111 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
 
+mapping clause assembly = AME_MSUBLOG2_EW_X(md, xs1, ms2)
+  <-> "msublog2.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
+
 function clause execute AME_MSUBLOG2_EW_X(md, xs1, ms2) = {
   // TODO: implement msublog2.ew.x semantics.
   // UDB operation():
@@ -9218,6 +9509,9 @@ union clause instruction = AME_MXOR_EW : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MXOR_EW(md, ms1, ms2)
   <-> 0b0001011 @ ms2 : bits(5) @ ms1 : bits(5) @ 0b000 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MXOR_EW(md, ms1, ms2)
+  <-> "mxor.ew" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ amereg_name_raw(ms1) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MXOR_EW(md, ms1, ms2) = {
   // TODO: implement mxor.ew semantics.
@@ -9326,6 +9620,9 @@ union clause instruction = AME_MXOR_EW_X : (bits(5), bits(5), bits(5))
 mapping clause encdec = AME_MXOR_EW_X(md, xs1, ms2)
   <-> 0b0001011 @ ms2 : bits(5) @ xs1 : bits(5) @ 0b010 @ md : bits(5) @ 0b0101011
   when currentlyEnabled(Ext_Zvame)
+
+mapping clause assembly = AME_MXOR_EW_X(md, xs1, ms2)
+  <-> "mxor.ew.x" ^ spc() ^ amereg_name_raw(md) ^ sep() ^ reg_name(encdec_reg(xs1)) ^ sep() ^ amereg_name_raw(ms2)
 
 function clause execute AME_MXOR_EW_X(md, xs1, ms2) = {
   // TODO: implement mxor.ew.x semantics.

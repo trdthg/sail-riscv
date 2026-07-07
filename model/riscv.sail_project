@@ -338,7 +338,7 @@ extensions {
       files extensions/Zvame/zvame_utils.sail
     }
     Zvame_insts {
-      requires sys, Zvame_types, Zvame_regs, Zvame_utils
+      requires sys, FD_core, Zvame_types, Zvame_regs, Zvame_utils
       files extensions/Zvame/zvame_insts.sail
     }
   }
